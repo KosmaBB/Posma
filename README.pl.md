@@ -121,6 +121,22 @@ ale nigdy nie zostały uruchomione na Macu. Ich weryfikacja to najbliższy etap.
 Każda krytyczna operacja na Windowsie najpierw tworzy punkt przywracania
 systemu — to wymóg projektowy, nie opcja.
 
+### Planowane, jeszcze poza katalogiem
+
+Te są przesądzone, ale nie mają jeszcze wpisu w katalogu, więc nie liczą się
+do powyższych 22:
+
+| Moduł | Co ma robić | Dla |
+|---|---|---|
+| **Inteligentne przypomnienia** | Dyskretne powiadomienie, gdy dysk przekroczy ~85% zajętości albo pamięci chronicznie brakuje — podpowiedź wtedy, kiedy jest przydatna, nigdy uprzykrzanie się | Wszystkie systemy |
+| **Personalizacja pulpitu** | Motywy, czcionki i ustawienia powłoki dla GNOME i KDE Plasma, wgrywane tak samo jednym kliknięciem, jak edytor GRUB obsługuje motywy rozruchu | Linux |
+| **LaunchAgents i LaunchDaemons** | Macowa strona autostartu, łącznie z agentami systemowymi, które Apple trzyma w ukryciu | macOS |
+
+Dwa istniejące moduły również mają docelowo działać wieloplatformowo, zamiast
+zostać wyłącznie linuksowe: **menedżer autostartu** (klucze Run w rejestrze
+Windows, elementy logowania macOS) oraz **uninstaller** (pozostałości w
+rejestrze Windows, `/Applications` i porozrzucane pliki wsparcia na macOS).
+
 ### O co moduł może poprosić
 
 Każdy moduł deklaruje we własnym manifeście, o jakie klasy dostępu może

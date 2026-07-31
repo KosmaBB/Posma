@@ -124,6 +124,22 @@ Mac. Verifying them is the next milestone.
 Every critical Windows operation creates a System Restore point first — that
 is a design requirement, not an option.
 
+### Planned, not yet in the catalog
+
+These are committed to but have no catalog entry yet, so they are not counted
+in the 22 above:
+
+| Module | What it would do | For |
+|---|---|---|
+| **Smart reminders** | Quiet background notice when a disk passes ~85% or memory is chronically short — a nudge when it's useful, never a nag | All systems |
+| **Desktop personalisation** | Themes, fonts and shell tweaks for GNOME and KDE Plasma, applied the same one-click way the GRUB editor handles boot themes | Linux |
+| **LaunchAgents and LaunchDaemons** | The macOS side of autostart, including the system-level agents Apple hides away | macOS |
+
+Two existing modules are also planned to go cross-platform rather than stay
+Linux-only: the **autostart manager** (Windows registry Run keys, macOS login
+items) and the **uninstaller** (Windows registry leftovers, macOS
+`/Applications` and its scattered support files).
+
 ### What a module may ask for
 
 Each module declares, in its own manifest, which classes of access it can
