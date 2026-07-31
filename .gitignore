@@ -23,8 +23,16 @@ node_modules/
 /frontend_plan.txt
 Project_plan.txt
 
-# Scratch notes kept locally (invite links, drafts, working files).
+# The Discord bot is a separate project that happens to be developed in this
+# tree. It is not part of POSMA and is not published here — the whole
+# directory stays out, source included.
 /Discord/
+
+# Bot credentials. A Discord token is a full account takeover for the bot:
+# anyone holding it can act as it, in every server it has joined.
+token.txt
+*token*.json
+bot-config.json
 
 # Design/planning artefacts kept locally (hand-drawn mind map etc.).
 # Both spellings: the file predates the POSAM->POSMA rename.
