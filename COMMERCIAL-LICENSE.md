@@ -1,5 +1,7 @@
 # Commercial License — POSMA
 
+*[Wersja polska →](COMMERCIAL-LICENSE.pl.md)*
+
 POSMA is **dual-licensed**:
 
 | Who you are | What applies | Cost |

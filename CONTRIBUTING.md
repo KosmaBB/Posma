@@ -1,5 +1,7 @@
 # Contributing to POSMA
 
+*[Wersja polska →](CONTRIBUTING.pl.md)*
+
 Issues and pull requests are welcome. This file covers the rules that are
 specific to this project; [docs/](docs/) covers how everything works.
 

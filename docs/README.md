@@ -26,6 +26,14 @@ much of what's described here:
   matrix, §4 the broker design, §6 the implementation order. Referenced by
   name throughout the source.
 
+## Policy documents
+
+These live at the repository root and exist in both English and Polish:
+
+- Security policy — [English](https://github.com/KosmaBB/Posma/blob/master/SECURITY.md) · [polski](https://github.com/KosmaBB/Posma/blob/master/SECURITY.pl.md)
+- Contributing guide — [English](https://github.com/KosmaBB/Posma/blob/master/CONTRIBUTING.md) · [polski](https://github.com/KosmaBB/Posma/blob/master/CONTRIBUTING.pl.md)
+- Licence — [binding text](https://github.com/KosmaBB/Posma/blob/master/LICENSE.md), explained in [English](https://github.com/KosmaBB/Posma/blob/master/COMMERCIAL-LICENSE.md) and [polski](https://github.com/KosmaBB/Posma/blob/master/COMMERCIAL-LICENSE.pl.md)
+
 ## A note on accuracy
 
 These documents describe what the code does *today*, including where it falls

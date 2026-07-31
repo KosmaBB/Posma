@@ -412,6 +412,28 @@ site distributing something called POSMA as unaffiliated.
 The site will host downloads, the custom-module directory, documentation and
 a link back here.
 
+## Documentation and reference
+
+| | |
+|---|---|
+| [Architecture](https://kosmabb.github.io/Posma/architecture.html) | How core, modules and brokers fit together, and why it is split that way |
+| [Security model](https://kosmabb.github.io/Posma/security-model.html) | What can reach root, what stops it, and an explicit list of what is *not* protected |
+| [Writing a module](https://kosmabb.github.io/Posma/writing-a-module.html) | The module contract — protocol, manifest, capabilities, per-OS logic, safety rules |
+| [Building and development](https://kosmabb.github.io/Posma/building.html) | Toolchain, build order, the sidecar sync step, testing |
+| [`Access_plan.md`](Access_plan.md) | The original permission and capability design (Polish) |
+
+| | |
+|---|---|
+| [SECURITY.md](SECURITY.md) · [po polsku](SECURITY.pl.md) | Reporting a vulnerability, and what is in and out of scope |
+| [CONTRIBUTING.md](CONTRIBUTING.md) · [po polsku](CONTRIBUTING.pl.md) | Ground rules, expectations and the development loop |
+| [LICENSE.md](LICENSE.md) | The binding noncommercial terms |
+| [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md) · [po polsku](COMMERCIAL-LICENSE.pl.md) | Who pays, who doesn't, and how to arrange it |
+
+The documentation is written in English so it stays usable for contributors
+who don't read Polish. Everything a *user* needs — this README, the security
+policy, the contributing guide and the licence explanations — exists in both
+languages.
+
 ## Licensing
 
 POSMA's source is published in full and dual-licensed, on the model WinRAR

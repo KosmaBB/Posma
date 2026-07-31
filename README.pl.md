@@ -131,11 +131,6 @@ do powyższych 22:
 | **Inteligentne przypomnienia** | Dyskretne powiadomienie, gdy dysk przekroczy ~85% zajętości albo pamięci chronicznie brakuje — podpowiedź wtedy, kiedy jest przydatna, nigdy uprzykrzanie się | Wszystkie systemy |
 | **Personalizacja pulpitu** | Motywy, czcionki i ustawienia powłoki dla GNOME i KDE Plasma, wgrywane tak samo jednym kliknięciem, jak edytor GRUB obsługuje motywy rozruchu | Linux |
 | **LaunchAgents i LaunchDaemons** | Macowa strona autostartu, łącznie z agentami systemowymi, które Apple trzyma w ukryciu | macOS |
-
-Cztery kolejne są już wybrane i stoją w kolejce, w takiej kolejności:
-
-| Moduł | Co ma robić | Dla |
-|---|---|---|
 | **Cache narzędzi programistycznych** | Osobne, bezpieczne czyszczenie cache npm, cargo, pip, gradle, go i Mavena — na maszynie używanej do programowania rutynowo kilkadziesiąt gigabajtów, w całości odtwarzalnych | Wszystkie systemy |
 | **Harmonogram konserwacji** | Uruchamia wybrane moduły cyklicznie. Domyślnie wyłącznie skanowanie: zaplanowane zadanie pokazuje, co znalazło, i czeka, a działa bezobsługowo tylko tam, gdzie zostanie to wprost włączone, moduł po module | Wszystkie systemy |
 | **Menedżer czcionek** | Duplikaty, uszkodzone czcionki i przebudowa cache — zdublowane rodziny po cichu rozstrajają listy wyboru czcionek i spowalniają start programów | Wszystkie systemy |
@@ -422,6 +417,28 @@ stronę dystrybuującą coś pod nazwą POSMA należy traktować jako niepowiąz
 
 Na stronie znajdą się pliki do pobrania, katalog modułów własnych,
 dokumentacja i odnośnik z powrotem tutaj.
+
+## Dokumentacja i odnośniki
+
+| | |
+|---|---|
+| [Architektura](https://kosmabb.github.io/Posma/architecture.html) | Jak rdzeń, moduły i brokery łączą się w całość i dlaczego podział wygląda właśnie tak |
+| [Model bezpieczeństwa](https://kosmabb.github.io/Posma/security-model.html) | Co może sięgnąć do roota, co go przed tym powstrzymuje i jawna lista tego, co **nie** jest chronione |
+| [Pisanie modułu](https://kosmabb.github.io/Posma/writing-a-module.html) | Kontrakt modułu — protokół, manifest, uprawnienia, logika per system, zasady bezpieczeństwa |
+| [Budowanie i praca z kodem](https://kosmabb.github.io/Posma/building.html) | Wymagania, kolejność budowania, krok synchronizacji modułów, testowanie |
+| [`Access_plan.md`](Access_plan.md) | Pierwotny projekt systemu uprawnień (po polsku) |
+
+| | |
+|---|---|
+| [SECURITY.pl.md](SECURITY.pl.md) · [English](SECURITY.md) | Zgłaszanie podatności oraz co jest i co nie jest w zakresie |
+| [CONTRIBUTING.pl.md](CONTRIBUTING.pl.md) · [English](CONTRIBUTING.md) | Zasady, oczekiwania i tryb pracy z kodem |
+| [LICENSE.md](LICENSE.md) | Wiążące warunki niekomercyjne (tekst angielski) |
+| [COMMERCIAL-LICENSE.pl.md](COMMERCIAL-LICENSE.pl.md) · [English](COMMERCIAL-LICENSE.md) | Kto płaci, kto nie i jak to uzgodnić |
+
+Dokumentacja techniczna prowadzona jest po angielsku, żeby pozostała
+użyteczna dla osób, które nie czytają po polsku. Wszystko, czego potrzebuje
+*użytkownik* — to README, polityka bezpieczeństwa, przewodnik dla
+współtwórców i wyjaśnienia licencji — istnieje w obu językach.
 
 ## Licencja
 

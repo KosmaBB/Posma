@@ -10,6 +10,19 @@
 
 Required Notice: Copyright (c) 2026 Kosma (KosmaBB) — POSMA. Commercial use requires a paid license — see COMMERCIAL-LICENSE.md
 
+> **This English text is the binding one.** A licence is not translated here
+> on purpose: a translation would create ambiguity about which version
+> governs. Plain-language explanations of what these terms mean in practice
+> are available in [English](COMMERCIAL-LICENSE.md) and
+> [Polish](COMMERCIAL-LICENSE.pl.md), and neither replaces the text below.
+>
+> **Ten angielski tekst jest wiążący.** Licencja celowo nie jest tu
+> tłumaczona — tłumaczenie rodziłoby wątpliwość, która wersja obowiązuje.
+> Wyjaśnienia tych warunków prostym językiem znajdziesz po
+> [angielsku](COMMERCIAL-LICENSE.md) i po
+> [polsku](COMMERCIAL-LICENSE.pl.md); żadne z nich nie zastępuje poniższego
+> tekstu.
+
 # PolyForm Noncommercial License 1.0.0
 
 <https://polyformproject.org/licenses/noncommercial/1.0.0>

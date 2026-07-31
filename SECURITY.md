@@ -1,5 +1,7 @@
 # Security policy
 
+*[Wersja polska →](SECURITY.pl.md)*
+
 POSMA performs system maintenance and asks for administrator rights to do
 parts of it. Security reports are taken seriously and are welcome.
 
