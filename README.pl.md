@@ -66,8 +66,7 @@ dlatego, że każda platforma ma zadania konserwacyjne, których pozostałe po
 prostu nie mają.
 
 Status oznacza to, co zostało faktycznie uruchomione, a nie to, co się
-kompiluje: **✅ zbudowany i działa** · **🧪 zbudowany, niezweryfikowany na tym
-systemie** · **📋 planowany**
+kompiluje: **✅ zbudowany i działa** · **🧪 zbudowany, niezweryfikowany na tym systemie** · **📋 planowany**
 
 ### Wieloplatformowe — 9 modułów
 
@@ -249,7 +248,7 @@ Intune i Jamf istnieją, ale ceną i skalą celują w organizacje znacznie
 większe niż te, które faktycznie mają ten problem.
 
 Master Control to plan, żeby to rozwiązać: jedna konsola, działająca na
-dowolnej maszynie w sieci z uruchomioną POSMA — konserwacja całej floty,
+dowolnej maszynie w sieci z uruchomionym POSMA — konserwacja całej floty,
 przygotowywanie stanowisk, rejestr haseł do kont firmowych oraz harmonogramy
 i polityki konkretnych akcji.
 
@@ -341,8 +340,8 @@ zostaną zsynchronizowane.
 
 ## Bezpieczeństwo modułów
 
-Moduły to jedyne miejsce, w którym POSMA mogłaby realnie zostać obrócona
-przeciwko osobie, która ją uruchomiła, więc wszystko dystrybuowane
+Moduły to jedyne miejsce, w którym POSMA mógłby realnie zostać obrócony
+przeciwko osobie, która go uruchomiła, więc wszystko dystrybuowane
 oficjalnym kanałem (patrz [1.0 — dystrybucja modułów](#10--dystrybucja-modułów))
 podlega stałemu standardowi:
 
@@ -379,7 +378,7 @@ To uzupełnia — i w niczym nie zawęża — wyłączenie odpowiedzialności za
 
 ## Autor i własność
 
-POSMA jest tworzona, posiadana i rozwijana przez **Kosmę (KosmaBB)**,
+POSMA jest tworzony, posiadany i rozwijany przez **Kosmę (KosmaBB)**,
 jedynego autora i jedynego właściciela praw autorskich.
 
 Wszelkie prawa do projektu, jego nazwy i jego źródła są zastrzeżone przez
