@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE policyconfig PUBLIC "-//freedesktop//DTD PolicyKit Policy Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
+<policyconfig>
+  <!--
+    Not installed by the app itself — packaging concern, not runtime.
+    `org.freedesktop.policykit.exec.path` below must exactly match the real
+    installed path of the linux-broker binary, or pkexec silently falls
+    back to the generic org.freedesktop.policykit.exec action instead of
+    this one. In dev, that's target/debug/linux-broker (absolute path);
+    a real .deb/.rpm postinst script needs to substitute the actual
+    install path (e.g. /opt/posma/linux-broker) before copying this file —
+    not solved yet, this is dev-only for now.
+
+    Install (dev): sudo install -Dm644 com.posma.broker.policy
+      /usr/share/polkit-1/actions/com.posma.broker.policy
+
+    Until installed, pkexec still works via the generic
+    org.freedesktop.policykit.exec action (Access_plan.md §6 step 3's
+    "działa najpierw" cut) — it just re-prompts every single call. Once
+    installed, allow_active uses auth_admin_keep: polkit caches the admin
+    auth for a short window (a few minutes of inactivity, agent-dependent)
+    so the user isn't re-prompted on every action within a session — not
+    the full "Pełny" no-repeat-ever design (that needs a persistent root
+    daemon instead of per-call pkexec), but a real reduction in friction
+    with no new code.
+  -->
+  <vendor>POSMA</vendor>
+  <action id="com.posma.broker">
+    <description>Wykonaj uprzywilejowaną operację POSMA</description>
+    <message>POSMA potrzebuje uprawnień administratora, aby wykonać tę operację</message>
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>auth_admin_keep</allow_active>
+    </defaults>
+    <annotate key="org.freedesktop.policykit.exec.path">/media/kosma/Yes/Linuch/Projekty/Wlasne/Posma/target/debug/linux-broker</annotate>
+  </action>
+</policyconfig>

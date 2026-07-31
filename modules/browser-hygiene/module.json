@@ -1,0 +1,9 @@
+{
+  "id": "browser-hygiene",
+  "name": "Higiena przeglądarek",
+  "description": "Detects installed browser profiles (Firefox, Chrome-family) and clears cache/cookies/history per profile after confirmation",
+  "version": "0.1.0",
+  "platforms": ["windows", "linux", "macos"],
+  "binary": "browser-hygiene",
+  "capabilities": ["fs-user", "fda"]
+}

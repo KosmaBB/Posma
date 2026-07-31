@@ -19,7 +19,9 @@ node_modules/
 /website/
 /frontend_plan.txt
 
-# Design/planning artefacts kept locally (hand-drawn mind map etc.)
+# Design/planning artefacts kept locally (hand-drawn mind map etc.).
+# Both spellings: the file predates the POSAM->POSMA rename.
+/POSMAv1.jpg
 /POSAMv1.jpg
 
 # ------------------------------------------------------------- security
@@ -41,19 +43,19 @@ secrets.*
 *.keystore
 
 # Signing / release material for Tauri updater — publishing the private
-# key would let anyone ship a signed "update" to POSAM users.
+# key would let anyone ship a signed "update" to POSMA users.
 *.jks
 tauri-private.key
 *.tauri-key
 
 # ------------------------------------------------ user data produced at runtime
-# POSAM's own state, written into the OS app-data dir in normal use, but
+# POSMA's own state, written into the OS app-data dir in normal use, but
 # easy to end up in the tree while testing. The vault is an encrypted
 # password database — it must never be committed.
 vault.db
 vault.db-*
 permissions.json
-posam-*.log
+posma-*.log
 
 # --------------------------------------------------------------- OS noise
 .DS_Store

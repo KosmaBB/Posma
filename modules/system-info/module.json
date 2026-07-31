@@ -1,0 +1,9 @@
+{
+  "id": "system-info",
+  "name": "System Info",
+  "description": "CPU, RAM and disk usage dashboard",
+  "version": "0.1.0",
+  "platforms": ["windows", "linux", "macos"],
+  "binary": "system-info",
+  "capabilities": []
+}

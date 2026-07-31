@@ -1,0 +1,9 @@
+{
+  "id": "metadata",
+  "name": "Usuwanie metadanych",
+  "description": "Inspects user-picked JPEG/PNG files for embedded EXIF/GPS/XMP metadata and strips it in place on request",
+  "version": "0.1.0",
+  "platforms": ["windows", "linux", "macos"],
+  "binary": "metadata",
+  "capabilities": ["fs-user"]
+}

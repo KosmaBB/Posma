@@ -1,0 +1,9 @@
+{
+  "id": "disk-map",
+  "name": "Mapa dysków",
+  "description": "Lists immediate children of a directory (default: home) ranked by size, drillable one level at a time",
+  "version": "0.1.0",
+  "platforms": ["windows", "linux", "macos"],
+  "binary": "disk-map",
+  "capabilities": ["fs-user", "fs-scan"]
+}

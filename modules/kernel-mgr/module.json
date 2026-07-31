@@ -1,0 +1,9 @@
+{
+  "id": "kernel-mgr",
+  "name": "Zarządzanie wersjami jądra",
+  "description": "Lists installed Linux kernels (unprivileged, read-only) and removes old ones via the privileged broker, which independently re-derives and locks the running and latest-installed kernel — never trusts the sidecar or frontend on that. Only linux-image-* packages with a real /boot/vmlinuz-<version> file are shown; stale dpkg records and meta-packages (e.g. linux-image-generic-hwe-24.04) are silently excluded, not offered as removable",
+  "version": "0.1.0",
+  "platforms": ["linux"],
+  "binary": "kernel-mgr",
+  "capabilities": ["boot", "pkg"]
+}

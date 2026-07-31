@@ -1,0 +1,16 @@
+[Unit]
+Description=POSMA privileged broker
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/opt/posma/linux-broker --daemon
+Restart=on-failure
+RestartSec=2
+# Hardening on top of SO_PEERCRED (main.rs's real access control): this
+# process never needs to gain MORE privilege than root already has.
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

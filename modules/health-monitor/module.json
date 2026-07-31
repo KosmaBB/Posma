@@ -1,0 +1,9 @@
+{
+  "id": "health-monitor",
+  "name": "Monitor zdrowia",
+  "description": "Live CPU/RAM/process snapshot on request (frontend polls), plus best-effort S.M.A.R.T. disk health via smartctl when available",
+  "version": "0.1.0",
+  "platforms": ["windows", "linux", "macos"],
+  "binary": "health-monitor",
+  "capabilities": ["disk-smart"]
+}

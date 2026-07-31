@@ -1,0 +1,9 @@
+{
+  "id": "shredder",
+  "name": "Niszczarka plików",
+  "description": "Irreversibly destroys picked files/folders via multi-pass overwrite, rename, then delete",
+  "version": "0.1.0",
+  "platforms": ["windows", "linux", "macos"],
+  "binary": "shredder",
+  "capabilities": ["fs-user"]
+}

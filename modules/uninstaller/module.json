@@ -1,0 +1,9 @@
+{
+  "id": "uninstaller",
+  "name": "Uninstaller",
+  "description": "Lists installed apt/flatpak/snap applications, attempts to uninstall a chosen one via its own package manager (fails with a clear permission error and manual command when root is needed — no pkexec/sudo added by this app), then finds leftover config/cache/data tied to it. Also includes a secondary blind heuristic leftover scan of ~/.config and ~/.cache.",
+  "version": "0.1.0",
+  "platforms": ["linux"],
+  "binary": "uninstaller",
+  "capabilities": ["fs-user", "pkg"]
+}

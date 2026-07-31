@@ -1,0 +1,13 @@
+[package]
+name = "linux-broker"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "linux-broker"
+path = "src/main.rs"
+
+[dependencies]
+broker-common = { path = "../../crates/broker-common" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

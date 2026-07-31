@@ -1,0 +1,9 @@
+{
+  "id": "pkg-cache",
+  "name": "Cache pakietów Linux",
+  "description": "Reports apt's download cache size and orphaned-package/old-snap-revision candidates (unprivileged, read-only), then cleans them via the privileged broker. v1 covers apt and snap only — pacman isn't installed on the dev machine this was built on (untestable, deliberately left out rather than shipped unverified), and flatpak's unused-runtime cleanup has no safe unprivileged preview mechanism yet",
+  "version": "0.1.0",
+  "platforms": ["linux"],
+  "binary": "pkg-cache",
+  "capabilities": ["fs-system", "pkg"]
+}

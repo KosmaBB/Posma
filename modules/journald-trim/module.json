@@ -1,0 +1,9 @@
+{
+  "id": "journald-trim",
+  "name": "Przycinanie logów systemd",
+  "description": "Reports total systemd journal disk usage (unprivileged) and trims it to a target size or max age via the privileged broker (journalctl --vacuum-size/--vacuum-time, which need root)",
+  "version": "0.1.0",
+  "platforms": ["linux"],
+  "binary": "journald-trim",
+  "capabilities": ["fs-system"]
+}

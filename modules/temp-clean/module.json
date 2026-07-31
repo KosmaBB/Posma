@@ -1,0 +1,9 @@
+{
+  "id": "temp-clean",
+  "name": "Czyszczenie Temp",
+  "description": "Scans and removes temporary files and application caches after user confirmation",
+  "version": "0.1.0",
+  "platforms": ["windows", "linux", "macos"],
+  "binary": "temp-clean",
+  "capabilities": ["fs-user", "fs-system"]
+}

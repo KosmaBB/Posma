@@ -1,0 +1,9 @@
+{
+  "id": "autostart",
+  "name": "Menadżer autostartu",
+  "description": "Lists and toggles user-level autostart entries (XDG ~/.config/autostart) — no elevation, nothing system-wide",
+  "version": "0.1.0",
+  "platforms": ["linux"],
+  "binary": "autostart",
+  "capabilities": ["autostart-user"]
+}

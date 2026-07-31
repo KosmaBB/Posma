@@ -1,0 +1,9 @@
+{
+  "id": "duplicates",
+  "name": "Szukanie duplikatów",
+  "description": "Finds byte-identical files in common user folders (SHA-256) and removes extra copies after confirmation",
+  "version": "0.1.0",
+  "platforms": ["windows", "linux", "macos"],
+  "binary": "duplicates",
+  "capabilities": ["fs-user"]
+}

@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+members = [
+    "core/src-tauri",
+    "crates/*",
+    "modules/*",
+]
+
+[workspace.package]
+edition = "2021"

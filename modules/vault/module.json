@@ -1,0 +1,9 @@
+{
+  "id": "vault",
+  "name": "Menadżer haseł",
+  "description": "Local encrypted password vault (Argon2id + AES-256-GCM, HKDF-separated verification/encryption keys). Long-lived sidecar process, not spawn-per-request, so the unlocked key survives across actions. Folders, templates, entries, password generator, strength estimate, security audit (weak/reused). v1: fresh vault only (no migration from the legacy Password_menager project), no decoy/duress vault, no online breach checking yet.",
+  "version": "0.1.0",
+  "platforms": ["windows", "linux", "macos"],
+  "binary": "vault",
+  "capabilities": ["secrets"]
+}

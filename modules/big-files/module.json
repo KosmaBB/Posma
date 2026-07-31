@@ -1,0 +1,9 @@
+{
+  "id": "big-files",
+  "name": "Szukanie dużych plików",
+  "description": "Scans the user's home directory for the largest files and lets you review and delete them after confirmation",
+  "version": "0.1.0",
+  "platforms": ["windows", "linux", "macos"],
+  "binary": "big-files",
+  "capabilities": ["fs-user"]
+}

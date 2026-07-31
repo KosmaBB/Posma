@@ -1,0 +1,9 @@
+{
+  "id": "grub-editor",
+  "name": "Wizualny edytor GRUB",
+  "description": "Reads /etc/default/grub (world-readable, unprivileged) and manages named presets + dropped-in themes locally (~/.local/share/posma/grub-presets, unprivileged). Writing the real config, installing a theme into /boot/grub/themes, reading grub.cfg's boot-entry list, and restoring a backup all go through the privileged broker, which backs up + rotates + auto-rolls-back on a failed update-grub — never a raw unguarded write",
+  "version": "0.1.0",
+  "platforms": ["linux"],
+  "binary": "grub-editor",
+  "capabilities": ["boot"]
+}
