@@ -187,8 +187,8 @@ fn clean(paths: Vec<String>) -> CleanResult {
     let mut removed = 0u64;
     let mut errors = Vec::new();
 
-    // Group requested deletions by hash (with size) so we can refuse to
-    // wipe out a hash entirely, even if the request itself asks for all
+    // Group requested deletions by hash (with size) so the last copy of a
+    // hash can be refused rather than wiped, even if the request itself asks for all
     // known copies — this is re-derived from disk, not trusted from the
     // frontend's book-keeping.
     let mut by_hash: HashMap<String, (u64, Vec<PathBuf>)> = HashMap::new();

@@ -9,10 +9,9 @@ import { createPortal } from 'react-dom'
  * transform on an ancestor makes it the containing block for
  * `position: fixed` descendants. Without the portal, .modal-backdrop's
  * `position: fixed; inset: 0` centers within that ancestor's bounds
- * instead of the real viewport — confirmed live 2026-07-31: the uninstall
- * dialog rendered pinned to the middle of the app list instead of the
- * screen. The portal sidesteps the whole issue by not being a DOM
- * descendant of .view-enter at all.
+ * instead of the real viewport, so a dialog ends up pinned inside the
+ * module's content area rather than on the screen. The portal sidesteps
+ * this by not being a DOM descendant of .view-enter at all.
  */
 export function Modal({
   onClose,

@@ -3,18 +3,17 @@
 //!  - `scan`: reads /etc/default/grub (world-readable — 644 on a stock
 //!    Debian/Ubuntu install) and parses the handful of keys this module's
 //!    UI edits, while keeping the full raw text too so a save round-trips
-//!    every comment and custom line this file has that the UI doesn't
-//!    know about (this dev machine's real /etc/default/grub has
-//!    hand-written comments and a custom GRUB_DEFAULT/GRUB_THEME — losing
-//!    those on save would be a real regression, not just untidy).
+//!    every comment and custom line the file contains that the UI doesn't
+//!    know about. Real-world /etc/default/grub files carry hand-written
+//!    comments and hand-set keys; losing those on save would be a
+//!    regression, not just untidy.
 //!  - presets (`list_presets`/`load_preset`/`save_preset`/`delete_preset`):
 //!    named snapshots of a full config text, stored under
-//!    ~/.local/share/posma/grub-presets/ — pure unprivileged file I/O,
-//!    "zapisać wcześniejsze opcje i wgrać je jednym przyciskiem".
+//!    ~/.local/share/posma/grub-presets/ — pure unprivileged file I/O, so
+//!    a saved configuration can be re-applied with one action.
 //!  - `inspect_theme`: given a directory the user picked (a downloaded,
-//!    already-extracted GRUB theme), checks for theme.txt — that's the
-//!    "auto rozpoznawanie co jest czym" for themes: no manual file-type
-//!    picking, just point at the folder.
+//!    already-extracted GRUB theme), checks for theme.txt — theme
+//!    detection needs no manual file-type picking, just the folder.
 //!  - `list_backups`: reads both backup locations (created world-readable
 //!    by the broker) so the restore list doesn't need its own privileged
 //!    round-trip just to display.

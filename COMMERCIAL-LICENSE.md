@@ -8,6 +8,7 @@ POSMA is **dual-licensed**:
 | Student, teacher, academic researcher | [PolyForm Noncommercial 1.0.0](LICENSE.md) | **Free** |
 | Registered charity, public research, health, safety, environmental or government body | [PolyForm Noncommercial 1.0.0](LICENSE.md) | **Free** |
 | A company, or anyone using POSMA *for* a company | **This commercial license** | **Paid** |
+| A company or public/state institution with a prior arrangement | **This commercial license** | **Free — see below** |
 
 ## What counts as commercial use
 
@@ -23,9 +24,21 @@ Using POSMA at home, on your own machine, for your own purposes is free —
 including if you happen to be employed somewhere. What matters is who the
 use is *for*.
 
+## Free commercial licenses
+
+The author may grant a commercial license free of charge. Companies and
+public or state institutions are welcome to ask — typical cases are
+evaluation before committing, schools and similar institutions, and
+situations where charging simply doesn't make sense.
+
+This is discretionary. It is not an entitlement that follows from being a
+particular kind of organisation, and it does not apply retroactively: it
+takes effect once agreed with the author, in advance and in writing. Absent
+such an agreement, the terms in the table above apply as written.
+
 ## Getting a commercial license
 
-Contact: **kosmos.gier@gmail.com** — please include the company name and
+Contact: **kosma.brzezawski@gmail.com** — please include the company name and
 roughly how many machines POSMA would run on.
 
 Pricing, term and the exact contract text are agreed per case; there is no

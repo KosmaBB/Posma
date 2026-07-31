@@ -111,8 +111,8 @@ fn autostart_dir() -> PathBuf {
     PathBuf::from(home).join(".config/autostart")
 }
 
-/// Small tolerant parser for the handful of [Desktop Entry] keys we care
-/// about — ignores localized variants (Name[en_US]=...) and anything else.
+/// Small tolerant parser for the handful of [Desktop Entry] keys this
+/// module uses — ignores localized variants (Name[en_US]=...) and anything else.
 fn parse_desktop_entry(text: &str) -> Option<(String, String, Option<String>, Option<String>, bool, bool)> {
     let mut name = None;
     let mut exec = None;

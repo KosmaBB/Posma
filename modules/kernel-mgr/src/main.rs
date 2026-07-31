@@ -9,11 +9,10 @@
 //! "critical" risk), so it gets the most defense-in-depth, not less.
 //!
 //! Only `linux-image-*` packages with a REAL corresponding
-//! /boot/vmlinuz-<version> file are considered at all. Confirmed live
-//! 2026-07-31 this matters in practice, not just in theory: this dev
-//! machine has 14 `linux-image-*` dpkg records but only 2 real kernel
-//! files in /boot — the rest are stale bookkeeping from past updates with
-//! no actual files taking up space, plus meta-packages like
+//! /boot/vmlinuz-<version> file are considered at all. This matters in
+//! practice: a system typically carries far more `linux-image-*` dpkg
+//! records than actual kernels, the surplus being stale bookkeeping from
+//! past updates (no files, no disk space) plus meta-packages such as
 //! linux-image-generic-hwe-24.04 that don't correspond to one specific
 //! version. Both are silently excluded rather than shown as confusing,
 //! unactionable entries.

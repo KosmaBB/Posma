@@ -331,8 +331,8 @@ fn clean(paths: Vec<String>) -> CleanResult {
 
     for raw in paths {
         let path = PathBuf::from(&raw);
-        // Canonical parent check: the path itself may be a symlink we're
-        // about to delete, so canonicalize its parent instead.
+        // Canonical parent check: the path itself may be a symlink that is
+        // about to be deleted, so canonicalize its parent instead.
         let inside_allowed = is_allowed_var_log_file(&path)
             || path
                 .parent()

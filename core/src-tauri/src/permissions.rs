@@ -8,8 +8,8 @@
 //! `broker.rs`) exists for this platform; the actual `pkexec` prompt and
 //! any real failure happen at the point a module performs the privileged
 //! operation, not at grant time. On platforms without a broker yet, this
-//! stays an honest "not implemented" error rather than a pkexec shortcut,
-//! per [[feedback_elevation_sequencing]].
+//! stays an honest "not implemented" error rather than reaching for a
+//! per-module pkexec shortcut.
 //!
 //! `niepotrzebne` vs `wymagane-nienadane` (§5) is deliberately NOT tracked
 //! here: that distinction depends on which modules are currently installed,

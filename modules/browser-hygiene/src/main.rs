@@ -16,7 +16,7 @@
 //!    delete, identical to temp-clean's model — no cross-file bundling.
 //!  - Profile directories are entirely user-owned, so no elevation and no
 //!    extra path-safety whitelist is needed beyond "it's inside one of the
-//!    browser base directories we just discovered".
+//!    browser base directories discovered by the scan".
 //!  - Detected running browsers are reported (not blocked) so the frontend
 //!    can warn before the user clears a live profile's data.
 

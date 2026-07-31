@@ -13,11 +13,11 @@
 //! need root, so `smart` is expected to often fail with a permission error
 //! on an unprivileged install — that's surfaced as a normal per-disk error,
 //! not treated as a bug, and there is deliberately no pkexec/sudo shortcut
-//! here (same elevation-sequencing rule as every other module: wait for the
-//! planned permission broker). `extract_smart`'s field parsing is unit
-//! tested against hand-built synthetic smartctl JSON (see tests below) since
-//! this dev machine has no smartctl installed to verify against real
-//! hardware — that path is unverified until tested on a real disk.
+//! here (same elevation-sequencing rule as every other module: privileged
+//! reads go through the permission broker). `extract_smart`'s field parsing
+//! is unit tested against synthetic smartctl JSON covering both the ATA and
+//! NVMe shapes (see tests below); the parsing is verified, the end-to-end
+//! path against real hardware is not.
 
 use std::io::{self, BufRead, Write};
 use std::process::Command;

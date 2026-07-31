@@ -1,24 +1,23 @@
 //! Validation and safe-filesystem helpers shared by every OS broker.
 //!
-//! These live here rather than in one broker because each one exists in
-//! response to a concrete failure (several of them real, not hypothetical),
-//! and a per-OS broker written later must not have to rediscover them:
+//! These live here rather than in an individual broker so the rule has one
+//! definition instead of a copy per module that can drift:
 //!
 //!  - `is_safe_package_id` — a name starting with `-` is read as a FLAG by
 //!    apt/snap/winget/brew, so it must be rejected even though
 //!    `Command::args` is not shell-interpreted.
 //!  - `is_same_file` — `fs::copy` opens the destination for writing (which
-//!    truncates it) BEFORE reading the source. On 2026-07-31 a theme
-//!    "install" whose source and destination were the same directory
-//!    zeroed every one of ~80 real files on the user's machine. Any
+//!    truncates it) BEFORE reading the source, so copying a file onto
+//!    itself destroys its contents with nothing left to copy back. Any
 //!    copy/move helper here checks this per file pair.
 //!  - `backup_and_rotate` + `write_with_backup` — Access_plan.md's "backup
 //!    przed boot" invariant, generalized: no broker anywhere writes a
 //!    system config without a rotated backup and an automatic rollback if
 //!    post-write verification fails.
 //!  - `contained_in` — `Path::starts_with` is ALSO true for the root
-//!    itself, which let crafted requests target a whole whitelist root
-//!    instead of an entry inside it (found in four modules this session).
+//!    itself, so a check written without an inequality lets a request
+//!    naming a whitelist root take the entire tree instead of one entry
+//!    inside it.
 
 use std::fs;
 use std::io;
@@ -50,15 +49,14 @@ pub fn is_safe_name(name: &str) -> bool {
 }
 
 /// True when `candidate` sits strictly INSIDE `root` — never equal to it.
-/// The `!=` half is the part that's easy to forget and was missing in four
-/// separate modules: `Path::starts_with` returns true for an equal path, so
-/// without it a request naming the root itself passes a "must be inside the
-/// whitelist" check and deletes the entire tree.
+/// The inequality is load-bearing: `Path::starts_with` returns true for an
+/// equal path, so without it a request naming the root itself passes a
+/// "must be inside the whitelist" check and takes the entire tree.
 pub fn contained_in(candidate: &Path, root: &Path) -> bool {
     let Ok(root_canon) = root.canonicalize() else { return false };
     // Resolve the PARENT, not the path itself: the target may be a symlink
-    // we intend to unlink (resolving it would escape to its destination) or
-    // may not exist yet.
+    // to be unlinked (resolving it would escape to its destination) or may
+    // not exist yet.
     let Some(parent) = candidate.parent() else { return false };
     let Ok(parent_canon) = parent.canonicalize() else { return false };
     let full = parent_canon.join(candidate.file_name().unwrap_or_default());

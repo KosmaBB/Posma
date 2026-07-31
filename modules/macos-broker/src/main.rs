@@ -6,8 +6,8 @@
 //! tym systemie" through the trait defaults rather than guessing at
 //! command syntax that must be right the first time on a real system.
 //!
-//! Deliberately NOT implemented until testable on real hardware (per the
-//! project's rule of only shipping command construction that's been run):
+//! Deliberately NOT implemented until testable on real hardware — command
+//! construction is only shipped once it has actually been run:
 //!  - `install_directory`, `remove_kernel`, `read_boot_entries` — macOS has
 //!    no GRUB; the equivalents (bless/NVRAM/startup disk) are a different
 //!    model entirely and need their own design, not a Linux port.

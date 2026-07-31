@@ -324,10 +324,9 @@ async fn deny_permission(state: tauri::State<'_, PermissionRegistry>, capability
 }
 
 /// Deletes flat files directly inside /var/log via the privileged broker —
-/// the operation temp-clean's own unprivileged "syslog" category is
-/// honestly blocked on (see [[feedback_elevation_sequencing]]). Gated on
-/// `fs-system` already being granted; the broker re-validates every path
-/// itself regardless.
+/// the operation temp-clean's own unprivileged "syslog" category cannot
+/// perform itself. Gated on `fs-system` already being granted; the broker
+/// re-validates every path itself regardless.
 #[tauri::command]
 async fn journal_usage(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
     call_sidecar(&app, "journald-trim", serde_json::json!({ "cmd": "usage" })).await

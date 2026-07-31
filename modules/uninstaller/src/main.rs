@@ -489,11 +489,12 @@ fn list_apps() -> Vec<InstalledApp> {
         // base-system packages that ship as part of the OS's initial
         // package selection (bsdutils, ca-certificates, ...) are marked
         // "manual" by apt even though no human ever chose them, and
-        // removing them can genuinely break the system. Confirmed live
-        // 2026-07-31: this machine lists 146 "user-installed" apt packages
-        // without this filter, many of them base plumbing. dpkg's own
-        // Essential/Priority fields are the actual signal for "core system
-        // package", so use those instead of trying to guess from the name.
+        // removing them can genuinely break the system. Without this
+        // filter a typical desktop install lists well over a hundred
+        // "user-installed" apt packages, many of them base plumbing.
+        // dpkg's own Essential/Priority fields are the actual signal for
+        // "core system package", so use those rather than guessing from
+        // the name.
         if pkg.essential || matches!(pkg.priority.as_str(), "required" | "important") {
             continue;
         }
@@ -543,12 +544,11 @@ fn list_apps() -> Vec<InstalledApp> {
 /// already concatenates dot/dash-separated parts without a separator, so a
 /// folder literally named "Discord" or "mozilla" still matches as a
 /// substring of the full joined id without needing segments at all, while
-/// single generic words no longer can. Confirmed live 2026-07-31, two
-/// separate false positives from segment matching: "com" (3 chars) flagged
-/// this app's own ~/.local/share/com.posma.app as a Discord leftover, and
-/// "desktop" (7 chars — a 4-char floor alone didn't help) flagged an
-/// unrelated "GitHub Desktop" folder as a leftover of the snap
-/// "chatgpt-desktop".
+/// single generic words no longer can. Segment matching is what produces
+/// false positives here: a short reverse-DNS piece like "com" matches
+/// almost any directory, and even a longer generic word like "desktop"
+/// matches unrelated applications that happen to share it. A minimum
+/// length alone does not fix that — dropping segments does.
 fn app_identifiers(app: &AppRef, display_name: &str) -> Vec<String> {
     let mut ids = vec![normalize(&app.id), normalize(display_name)];
     ids.retain(|s| s.len() >= 4);
@@ -562,7 +562,7 @@ fn app_identifiers(app: &AppRef, display_name: &str) -> Vec<String> {
 /// confirmation ("does this look like Discord's data") rather than a guess,
 /// so ~/.local/share is safe to include here despite being excluded from
 /// the blind scan (that root holds too much irreplaceable user data to
-/// guess about, but is fine to check against a name we already trust).
+/// guess about, but is fine to check against an already-trusted name).
 fn app_leftovers(app: &AppRef, display_name: &str) -> Vec<OrphanEntry> {
     let ids = app_identifiers(app, display_name);
     let h = home();
@@ -572,12 +572,10 @@ fn app_leftovers(app: &AppRef, display_name: &str) -> Vec<OrphanEntry> {
     // Flatpak and snap both keep each app's real data in a well-defined,
     // exact-match location outside ~/.config/~/.cache/~/.local/share
     // entirely — checked directly by id rather than by the substring
-    // heuristic below, since there's nothing to guess here. Confirmed live
-    // 2026-07-31: Discord's actual 222MB (flatpak, ~/.var/app) and — far
-    // bigger — every snap's real data under ~/snap/<id> (Spotify 4GB,
-    // Brave 2.4GB, VS Code 2.1GB on this machine) were entirely invisible
-    // to the substring scan below, which only ever looks at the three
-    // XDG-style roots.
+    // heuristic below, since there's nothing to guess here. This is where
+    // the bulk of a sandboxed app's data actually lives — often gigabytes
+    // per app — and it is entirely invisible to the substring scan below,
+    // which only ever looks at the three XDG-style roots.
     let sandbox_root = match app.source.as_str() {
         "flatpak" => Some(h.join(".var/app").join(&app.id)),
         "snap" => Some(h.join("snap").join(&app.id)),
