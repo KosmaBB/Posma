@@ -3,7 +3,7 @@
 # navigation, search and styling on top.
 #
 # NOTE: the URLs below assume the repository is published as
-# github.com/kosmabb/posma. If it is named differently, update
+# github.com/KosmaBB/Posma. If it is named differently, update
 # `git-repository-url`, `edit-url-template` and `site-url` to match, or
 # search links and the "edit this page" button will break.
 
@@ -16,11 +16,11 @@ src = "docs"
 [output.html]
 default-theme = "navy"
 preferred-dark-theme = "navy"
-git-repository-url = "https://github.com/kosmabb/posma"
-edit-url-template = "https://github.com/kosmabb/posma/edit/master/{path}"
+git-repository-url = "https://github.com/KosmaBB/Posma"
+edit-url-template = "https://github.com/KosmaBB/Posma/edit/master/{path}"
 # GitHub Pages serves a project site from a subpath, so search and asset
 # links need to know it.
-site-url = "/posma/"
+site-url = "/Posma/"
 
 [output.html.fold]
 enable = true

@@ -1,5 +1,5 @@
 blank_issues_enabled: true
 contact_links:
   - name: Security vulnerability
-    url: https://github.com/kosmabb/posma/blob/master/SECURITY.md
+    url: https://github.com/KosmaBB/Posma/blob/master/SECURITY.md
     about: Please report security issues privately by email, not as a public issue.
