@@ -2,7 +2,7 @@
 
 **P**ersonal **O**perating **S**ystem **M**aintenance **A**pp
 
-*[Polska wersja tego dokumentu →](README.pl.md)* · *[Documentation →](https://kosmabb.github.io/Posma/)*
+*[Polska wersja tego dokumentu →](README.pl.md)* · *[Documentation →](https://kosmabb.github.io/Posma/)* · *[Discord →](https://discord.gg/sUanwMhk4q)*
 
 A maintenance app for Windows, macOS and Linux whose entire source is open to
 inspection — including every line that touches your system with administrator
@@ -405,9 +405,12 @@ with the author — see [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md).
 Planned home: **posma.com** / **posma.pl**
 
 Neither domain is live yet — `.com` is a significant purchase and `.pl` is
-currently registered to someone else, so acquiring them is pending. Until
-then this repository is the only official source of POSMA. Treat any other
-site distributing something called POSMA as unaffiliated.
+currently registered to someone else, so acquiring them is pending.
+
+Until then there are exactly two official channels: **this repository**, and
+the **[Discord server](https://discord.gg/sUanwMhk4q)** for questions, module ideas and release news.
+Treat any other site or server distributing something called POSMA as
+unaffiliated.
 
 The site will host downloads, the custom-module directory, documentation and
 a link back here.

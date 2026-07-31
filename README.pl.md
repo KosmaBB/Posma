@@ -2,7 +2,7 @@
 
 **P**ersonal **O**perating **S**ystem **M**aintenance **A**pp
 
-*[English version of this document →](README.md)* · *[Dokumentacja →](https://kosmabb.github.io/Posma/)*
+*[English version of this document →](README.md)* · *[Dokumentacja →](https://kosmabb.github.io/Posma/)* · *[Discord →](https://discord.gg/sUanwMhk4q)*
 
 Aplikacja do konserwacji systemu na Windows, macOS i Linux, której całe
 źródło jest jawne — łącznie z każdą linijką, która sięga do systemu z
@@ -411,9 +411,12 @@ autorem — patrz [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md).
 Planowany adres: **posma.com** / **posma.pl**
 
 Żadna z domen jeszcze nie działa — `.com` to spory wydatek, a `.pl` jest
-obecnie zarejestrowana na kogoś innego, więc ich pozyskanie jest w toku. Do
-tego czasu to repozytorium jest jedynym oficjalnym źródłem POSMA. Każdą inną
-stronę dystrybuującą coś pod nazwą POSMA należy traktować jako niepowiązaną.
+obecnie zarejestrowana na kogoś innego, więc ich pozyskanie jest w toku.
+
+Do tego czasu oficjalne kanały są dokładnie dwa: **to repozytorium** oraz
+**[serwer Discord](https://discord.gg/sUanwMhk4q)** — na pytania, pomysły na moduły i informacje o
+wydaniach. Wszystkie inne strony i serwery dystrybuujące coś pod nazwą POSMA
+należy traktować jako niepowiązane z projektem.
 
 Na stronie znajdą się pliki do pobrania, katalog modułów własnych,
 dokumentacja i odnośnik z powrotem tutaj.
