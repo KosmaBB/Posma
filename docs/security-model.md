@@ -155,8 +155,8 @@ For modules distributed through official channels (planned for 1.0):
 This is a commitment to diligence, not a guarantee. Review can miss things.
 The right to be wrong is reserved explicitly, and responsibility for your
 data, your confirmed actions and any third-party modules you install remains
-yours — see the [README](../README.md#module-security) and the warranty
-disclaimer in the [license](../LICENSE.md).
+yours — see the [README](https://github.com/kosmabb/posma/blob/master/README.md#module-security) and the warranty
+disclaimer in the [license](https://github.com/kosmabb/posma/blob/master/LICENSE.md).
 
 ## Reporting a security issue
 

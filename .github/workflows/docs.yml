@@ -1,0 +1,67 @@
+name: Documentation
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+# One deployment at a time. A newer push waits rather than racing, since
+# two concurrent deployments to Pages can land out of order.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # A prebuilt release binary rather than `cargo install mdbook`, which
+      # compiles from source and adds minutes to every run.
+      - name: Install mdBook
+        env:
+          MDBOOK_VERSION: "0.5.4"
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -sSfL "https://github.com/rust-lang/mdBook/releases/download/v${MDBOOK_VERSION}/mdbook-v${MDBOOK_VERSION}-x86_64-unknown-linux-gnu.tar.gz" \
+            | tar -xz -C "$HOME/.local/bin"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Build documentation
+        run: mdbook build
+
+      # `enablement: true` turns Pages on through the API if it has not been
+      # enabled in the repository settings yet. Without it the first run of
+      # this workflow fails on a brand-new repository, because Pages does
+      # not exist to configure.
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: book
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

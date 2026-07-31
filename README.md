@@ -2,7 +2,7 @@
 
 **P**ersonal **O**perating **S**ystem **M**aintenance **A**pp
 
-*[Polska wersja tego dokumentu →](README.pl.md)* · *[Documentation →](docs/)*
+*[Polska wersja tego dokumentu →](README.pl.md)* · *[Documentation →](https://kosmabb.github.io/posma/)*
 
 A maintenance app for Windows, macOS and Linux whose entire source is open to
 inspection — including every line that touches your system with administrator

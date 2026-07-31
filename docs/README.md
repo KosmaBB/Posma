@@ -14,19 +14,17 @@ that question.
 
 Docs are written in English so they stay usable for contributors who don't
 read Polish; the user-facing README exists in both
-[English](../README.md) and [Polish](../README.pl.md).
+[English](https://github.com/kosmabb/posma/blob/master/README.md) and [Polish](https://github.com/kosmabb/posma/blob/master/README.pl.md).
 
 ## Design documents
 
-Two longer-form documents live at the repository root and are the origin of
+One longer-form document lives at the repository root and is the origin of
 much of what's described here:
 
-- [`Access_plan.md`](../Access_plan.md) — the permission/capability system
-  design (Polish). Section §3 holds the module × capability × OS matrix, §4
-  the broker design, §6 the implementation order. Referenced by name
-  throughout the source.
-- [`Project_plan.txt`](../Project_plan.txt) — the original feature plan
-  (Polish).
+- [`Access_plan.md`](https://github.com/kosmabb/posma/blob/master/Access_plan.md) — the permission/capability
+  system design (Polish). Section §3 holds the module × capability × OS
+  matrix, §4 the broker design, §6 the implementation order. Referenced by
+  name throughout the source.
 
 ## A note on accuracy
 

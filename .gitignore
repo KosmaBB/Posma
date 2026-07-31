@@ -9,6 +9,9 @@
 /core/src-tauri/binaries/
 /core/src-tauri/gen/schemas/
 
+# Documentation site output (mdBook) — rebuilt by CI on every push.
+/book/
+
 # Frontend build output and dependencies
 node_modules/
 /core/dist/
@@ -18,6 +21,7 @@ node_modules/
 # The marketing website lives in its own track and is not published here.
 /website/
 /frontend_plan.txt
+Project_plan.txt
 
 # Design/planning artefacts kept locally (hand-drawn mind map etc.).
 # Both spellings: the file predates the POSAM->POSMA rename.
@@ -25,8 +29,8 @@ node_modules/
 /POSAMv1.jpg
 
 # ------------------------------------------------------------- security
-# Local Claude Code / editor state. settings.local.json in particular can
-# contain absolute paths to unrelated private projects on the dev machine.
+# Local assistant/editor state. These can hold absolute paths to unrelated
+# private projects on the developer's machine.
 /.claude/
 .vscode/
 .idea/

@@ -1,0 +1,30 @@
+# Documentation site built with mdBook from the markdown in docs/.
+# The same files stay readable directly on GitHub — this only adds
+# navigation, search and styling on top.
+#
+# NOTE: the URLs below assume the repository is published as
+# github.com/kosmabb/posma. If it is named differently, update
+# `git-repository-url`, `edit-url-template` and `site-url` to match, or
+# search links and the "edit this page" button will break.
+
+[book]
+title = "POSMA Documentation"
+authors = ["Kosma (KosmaBB)"]
+language = "en"
+src = "docs"
+
+[output.html]
+default-theme = "navy"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/kosmabb/posma"
+edit-url-template = "https://github.com/kosmabb/posma/edit/master/{path}"
+# GitHub Pages serves a project site from a subpath, so search and asset
+# links need to know it.
+site-url = "/posma/"
+
+[output.html.fold]
+enable = true
+level = 1
+
+[output.html.search]
+enable = true

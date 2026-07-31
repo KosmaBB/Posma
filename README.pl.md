@@ -2,7 +2,7 @@
 
 **P**ersonal **O**perating **S**ystem **M**aintenance **A**pp
 
-*[English version of this document →](README.md)* · *[Dokumentacja →](docs/)*
+*[English version of this document →](README.md)* · *[Dokumentacja →](https://kosmabb.github.io/posma/)*
 
 Aplikacja do konserwacji systemu na Windows, macOS i Linux, której całe
 źródło jest jawne — łącznie z każdą linijką, która sięga do systemu z
