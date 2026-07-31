@@ -69,7 +69,9 @@ cargo clippy --workspace --all-targets -- -D warnings
 npm --prefix core run build
 ```
 
-CI runs the same checks plus a dependency audit.
+CI runs the same checks plus a dependency audit. One test is marked
+`#[ignore]` because it needs a real OS credential store; run it on a desktop
+session with `cargo test -p vault -- --ignored`.
 
 ## Testing rules
 

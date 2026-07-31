@@ -54,6 +54,7 @@ scripts/
 cargo build --workspace          # all Rust (after the first sidecar sync)
 cargo build -p temp-clean        # one module
 cargo test --workspace           # unit tests
+cargo test -p vault -- --ignored # tests needing a real OS credential store
 
 npm --prefix core run build      # tsc + vite production build
 cd core && npx tsc --noEmit      # typecheck only
@@ -81,6 +82,24 @@ and takes `tauri dev` down with it. Correct order:
 2. `bash scripts/sync-sidecars.sh`
 3. add `"binaries/<name>"` to `externalBin` in `tauri.conf.json`
 4. restart `tauri dev`
+
+## Tests that need a desktop session
+
+The vault stores its encryption key in the OS credential store (Secret
+Service, Keychain, Credential Manager). The test that exercises that path
+end-to-end is marked `#[ignore]`, because a headless machine — CI included —
+has no credential store to talk to, and a test that cannot run should say so
+rather than fail.
+
+Run it on a normal desktop session:
+
+```bash
+cargo test -p vault -- --ignored
+```
+
+It uses a disposable service name, never the production one, and removes its
+entry afterwards. The encoding and length-validation logic around it is
+covered by ordinary tests that run everywhere.
 
 ## Testing rules
 
