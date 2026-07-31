@@ -135,6 +135,15 @@ in the 22 above:
 | **Desktop personalisation** | Themes, fonts and shell tweaks for GNOME and KDE Plasma, applied the same one-click way the GRUB editor handles boot themes | Linux |
 | **LaunchAgents and LaunchDaemons** | The macOS side of autostart, including the system-level agents Apple hides away | macOS |
 
+Four more are chosen and queued, in the order they'd be built:
+
+| Module | What it would do | For |
+|---|---|---|
+| **Developer caches** | Separate, safe cleanup for npm, cargo, pip, gradle, go and Maven caches — routinely tens of gigabytes on a machine used for development, all of it reproducible | All systems |
+| **Maintenance schedule** | Runs chosen modules on a schedule. Scan-only by default: a scheduled run reports what it found and waits, and acts unattended only where that is explicitly turned on, module by module | All systems |
+| **Font manager** | Duplicate and broken fonts, and cache rebuilds — duplicated families quietly disorder font pickers and slow application startup | All systems |
+| **Windows Update cache** | Clears `SoftwareDistribution` after failed or stale updates; the natural companion to WinSxS cleanup | Windows |
+
 Two existing modules are also planned to go cross-platform rather than stay
 Linux-only: the **autostart manager** (Windows registry Run keys, macOS login
 items) and the **uninstaller** (Windows registry leftovers, macOS

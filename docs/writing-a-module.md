@@ -97,6 +97,95 @@ the *parent* directory for containment checks, not the target path.
 the description and in the UI. A module that quietly does less than it claims
 is worse than one that says it can't.
 
+## Per-OS logic
+
+A module keeps **one crate, one binary name and one protocol** on every
+system. What changes underneath is an implementation detail the frontend and
+`module.json` never see.
+
+How to split depends on how far the systems actually diverge.
+
+### Different paths or strings — branch inline
+
+`cfg!(target_os = "…")` is an ordinary runtime boolean. Every branch is
+compiled on every platform, so it only works when all branches *can* compile
+everywhere — different directories, different command names, different
+defaults. That is how the existing cross-platform modules handle it:
+
+```rust
+let cache_root = if cfg!(target_os = "macos") {
+    home.join("Library/Caches")
+} else {
+    home.join(".cache")
+};
+```
+
+### Different mechanisms — split into files
+
+The moment an implementation needs an API, a crate or a command that does not
+exist on the other systems, `cfg!` stops working: the code still has to
+compile everywhere, and it cannot. Use the `#[cfg]` *attribute* instead, which
+removes non-matching code before compilation, and give each system its own
+file behind a shared trait:
+
+```
+modules/<name>/src/
+  main.rs         protocol, dispatch, shared types — no OS branching
+  platform/
+    mod.rs        the trait, and the cfg-selected re-export
+    linux.rs
+    macos.rs
+    windows.rs
+```
+
+```rust
+// platform/mod.rs
+pub trait Platform {
+    fn scan(&self) -> ScanResult;
+    fn clean(&self, paths: Vec<String>) -> CleanResult;
+}
+
+#[cfg(target_os = "linux")]
+mod linux;
+#[cfg(target_os = "linux")]
+pub use linux::Impl as Current;
+
+#[cfg(target_os = "macos")]
+mod macos;
+#[cfg(target_os = "macos")]
+pub use macos::Impl as Current;
+
+#[cfg(target_os = "windows")]
+mod windows;
+#[cfg(target_os = "windows")]
+pub use windows::Impl as Current;
+```
+
+`main.rs` then talks only to `Current`, and never mentions an operating
+system. This is the same shape `crates/broker-common` uses for the per-OS
+brokers, for the same reason.
+
+**Rule of thumb:** a different *location* is a branch; a different *mechanism*
+is a file. Scheduling is the clearest example — systemd timers, `launchd` and
+Task Scheduler have nothing in common but the intent.
+
+### Keep the protocol identical
+
+The response shape must not vary by system, or the frontend ends up with a
+branch per platform and the module stops being one module.
+
+Where a system genuinely cannot do something the others can, **say so in the
+response** rather than silently doing less — the same honesty rule the broker
+follows with `not_supported`. A field that is always empty on one platform is
+better than a field that means something different there.
+
+### Declare only what the current system needs
+
+`module.json` lists `platforms` and `capabilities` for the module as a whole.
+If one system's implementation needs elevation and another's does not, that
+difference belongs in the description, so nobody reading the manifest assumes
+the privileged path is used everywhere.
+
 ## Path safety
 
 For anything under the user's home, the pattern used throughout is: resolve

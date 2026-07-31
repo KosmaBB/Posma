@@ -132,6 +132,15 @@ do powyższych 22:
 | **Personalizacja pulpitu** | Motywy, czcionki i ustawienia powłoki dla GNOME i KDE Plasma, wgrywane tak samo jednym kliknięciem, jak edytor GRUB obsługuje motywy rozruchu | Linux |
 | **LaunchAgents i LaunchDaemons** | Macowa strona autostartu, łącznie z agentami systemowymi, które Apple trzyma w ukryciu | macOS |
 
+Cztery kolejne są już wybrane i stoją w kolejce, w takiej kolejności:
+
+| Moduł | Co ma robić | Dla |
+|---|---|---|
+| **Cache narzędzi programistycznych** | Osobne, bezpieczne czyszczenie cache npm, cargo, pip, gradle, go i Mavena — na maszynie używanej do programowania rutynowo kilkadziesiąt gigabajtów, w całości odtwarzalnych | Wszystkie systemy |
+| **Harmonogram konserwacji** | Uruchamia wybrane moduły cyklicznie. Domyślnie wyłącznie skanowanie: zaplanowane zadanie pokazuje, co znalazło, i czeka, a działa bezobsługowo tylko tam, gdzie zostanie to wprost włączone, moduł po module | Wszystkie systemy |
+| **Menedżer czcionek** | Duplikaty, uszkodzone czcionki i przebudowa cache — zdublowane rodziny po cichu rozstrajają listy wyboru czcionek i spowalniają start programów | Wszystkie systemy |
+| **Cache Windows Update** | Czyści `SoftwareDistribution` po nieudanych lub zaległych aktualizacjach; naturalna para dla czyszczenia WinSxS | Windows |
+
 Dwa istniejące moduły również mają docelowo działać wieloplatformowo, zamiast
 zostać wyłącznie linuksowe: **menedżer autostartu** (klucze Run w rejestrze
 Windows, elementy logowania macOS) oraz **uninstaller** (pozostałości w
