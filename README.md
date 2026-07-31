@@ -64,12 +64,85 @@ are small, separate and deliberately boring.
 
 ## Modules
 
-| Folder | Modules |
-|---|---|
-| **Data & files** | temp cleanup · large files · duplicates (content + version-aware) · shredder · metadata stripping · package caches |
-| **System** | disk map · autostart manager · health monitor (CPU/RAM/S.M.A.R.T.) · kernel version manager · visual GRUB editor |
-| **Security** | browser hygiene · encrypted password vault (Argon2id + AES-256-GCM) |
-| **Applications** | uninstaller with leftover detection (apt / snap / flatpak) |
+22 modules are planned in total. Nine work on every system; the rest exist
+because each platform has maintenance jobs the others simply don't have.
+
+Status here means what has actually been run, not what compiles:
+**✅ built and working** · **🧪 built, not yet verified on that system** ·
+**📋 planned**
+
+### Cross-platform — 9 modules
+
+These are written once and run on Windows, macOS and Linux. All are built,
+and all are verified on Linux; on macOS and Windows they are 🧪 until they
+have been exercised on real hardware.
+
+| Module | What it does | Status |
+|---|---|---|
+| **Temp cleanup** | Scans and clears system and application temp folders, showing what will go before anything is deleted | ✅ Linux · 🧪 macOS/Windows |
+| **Large files** | Walks your home directory and ranks the biggest files so space is easy to reclaim | ✅ Linux · 🧪 macOS/Windows |
+| **Duplicates** | Finds byte-identical files by SHA-256, and separately spots superseded versioned copies (`app_1.2` next to `app_1.5`) | ✅ Linux · 🧪 macOS/Windows |
+| **Shredder** | Destroys picked files irrecoverably — multi-pass overwrite, rename, delete — and is honest about SSD limits | ✅ Linux · 🧪 macOS/Windows |
+| **Metadata stripping** | Removes EXIF, GPS and XMP data from images before you share them, writing atomically so an interruption can't corrupt the original | ✅ Linux · 🧪 macOS/Windows |
+| **Disk map** | Ranked, drill-down view of what is actually filling a drive | ✅ Linux · 🧪 macOS/Windows |
+| **Health monitor** | Live CPU, RAM and process view, plus S.M.A.R.T. drive health where the system exposes it | ✅ Linux · 🧪 macOS/Windows |
+| **Browser hygiene** | Per-profile cache, cookie and history clearing across Firefox and Chromium-family browsers | ✅ Linux · 🧪 macOS/Windows |
+| **Password vault** | Local encrypted vault (Argon2id + AES-256-GCM), folders, generator, strength and reuse audit | ✅ Linux · 🧪 macOS/Windows |
+
+### Linux — 6 modules
+
+| Module | What it does | Status |
+|---|---|---|
+| **Package caches** | Clears apt's download cache, removes orphaned packages, and reclaims superseded snap revisions | ✅ |
+| **systemd journal** | Trims the journal to a target size or age, with presets instead of remembering `journalctl` flags | ✅ |
+| **Autostart manager** | Lists and toggles what starts with your session; entries you add yourself can be edited and removed, entries other apps installed are never touched | ✅ |
+| **Kernel versions** | Removes old kernels while the running and newest ones are locked — the privileged half re-derives both itself and refuses if it cannot tell | ✅ |
+| **Visual GRUB editor** | Boot menu timeout, default system, and themes installed by pointing at a folder, with a preview and automatic backup and rollback | ✅ |
+| **Uninstaller** | Lists apt, snap and flatpak applications, removes one, then finds the configuration, cache and sandbox data it left behind | ✅ |
+
+### macOS — 3 modules
+
+| Module | What it does | Status |
+|---|---|---|
+| **Xcode cache** | Clears DerivedData, which quietly grows to tens of gigabytes on any Mac used for development | 📋 |
+| **Mail and Messages slimming** | Removes cached attachments without touching the messages themselves | 📋 |
+| **Time Machine snapshots** | Deletes local snapshots that consume disk between real backups | 📋 |
+
+The privileged operations these need — Homebrew, `launchctl`, `tmutil`, log
+trimming — are already written in the macOS broker, but have never run on a
+Mac. Verifying them is the next milestone.
+
+### Windows — 4 modules
+
+| Module | What it does | Status |
+|---|---|---|
+| **WinSxS cleanup** | DISM component-store cleanup, removing superseded Windows Update files | 📋 |
+| **Service manager** | Services managed through ready-made profiles rather than a list of hundreds of entries | 📋 |
+| **Bloatware removal** | Removes preinstalled UWP applications | 📋 |
+| **Winget front end** | Installed applications and bulk updates through the system's own package manager | 📋 |
+
+Every critical Windows operation creates a System Restore point first — that
+is a design requirement, not an option.
+
+### What a module may ask for
+
+Each module declares, in its own manifest, which classes of access it can
+request — file access limited to your own data, system-wide file access,
+package management, services, boot configuration, disk health, secrets,
+network. It can request nothing else, and the declaration is part of what
+gets reviewed.
+
+Most of the catalog needs no administrator rights at all: of the nine
+cross-platform modules, seven work entirely within your own files. The ones
+that do need elevation are exactly the ones you would expect — system temp
+folders, raw drive health, package caches, journal trimming, kernel removal,
+boot configuration — and every one of them routes through the broker rather
+than holding privileges itself.
+
+Removing a module removes that declaration with it. Uninstall the GRUB
+editor and nothing in the installation can touch boot configuration any
+more, because the only thing that could is gone.
+
 
 ## How the privileged side is kept reviewable
 

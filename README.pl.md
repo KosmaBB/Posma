@@ -42,8 +42,8 @@ Cel, któremu ta architektura służy:
 - Nie potrzebujesz menedżera haseł? Nie instaluj go. Wtedy go nie ma — nie
   jest ukryty, nie jest wyłączony, po prostu *nie istnieje*.
 - Zmieniłeś zdanie? Instalujesz w kilka sekund, w dowolnym momencie.
-- Usunięcie modułu unicestwia **każdy jego bit** — programu, a jeśli chcesz,
-  także jego ustawienia i dane. Żadnych pozostałości, żadnych uśpionych
+- Usunięcie modułu unicestwia **każdy jego bit** — sam program, a jeśli
+  chcesz, także jego ustawienia i dane. Żadnych pozostałości, żadnych uśpionych
   usług, nic nie zostaje po cichu.
 
 Nikt nie powinien być zmuszany do instalowania funkcji, których nie chce. To
@@ -61,27 +61,103 @@ programami, a nie kodem wkompilowanym w jedną binarkę.
 
 ## Moduły
 
-| Folder | Moduły |
-|---|---|
-| **Dane i pliki** | czyszczenie temp · duże pliki · duplikaty (treść + wersje) · niszczarka · usuwanie metadanych · cache pakietów |
-| **System** | mapa dysku · menedżer autostartu · monitor zdrowia (CPU/RAM/S.M.A.R.T.) · zarządzanie wersjami jądra · wizualny edytor GRUB |
-| **Bezpieczeństwo** | higiena przeglądarek · szyfrowany menedżer haseł (Argon2id + AES-256-GCM) |
-| **Aplikacje** | uninstaller z wykrywaniem pozostałości (apt / snap / flatpak) |
+Docelowo modułów jest 22. Dziewięć działa na każdym systemie, reszta istnieje
+dlatego, że każda platforma ma zadania konserwacyjne, których pozostałe po
+prostu nie mają.
+
+Status oznacza to, co zostało faktycznie uruchomione, a nie to, co się
+kompiluje: **✅ zbudowany i działa** · **🧪 zbudowany, niezweryfikowany na tym
+systemie** · **📋 planowany**
+
+### Wieloplatformowe — 9 modułów
+
+Napisane raz i działające na Windowsie, macOS-ie i Linuksie. Wszystkie są
+zbudowane i zweryfikowane na Linuksie; na macOS-ie i Windowsie mają status
+🧪, dopóki nie zostaną sprawdzone na prawdziwym sprzęcie.
+
+| Moduł | Co robi | Status |
+|---|---|---|
+| **Czyszczenie temp** | Skanuje i usuwa foldery tymczasowe systemu oraz aplikacji, pokazując zawartość do usunięcia, zanim cokolwiek zniknie | ✅ Linux · 🧪 macOS/Windows |
+| **Duże pliki** | Przeszukuje katalog domowy i porządkuje pliki od największych, żeby łatwo było odzyskać miejsce | ✅ Linux · 🧪 macOS/Windows |
+| **Duplikaty** | Znajduje pliki identyczne co do bajtu (SHA-256), a osobno wykrywa starsze kopie wersjonowane (`app_1.2` obok `app_1.5`) | ✅ Linux · 🧪 macOS/Windows |
+| **Niszczarka plików** | Kasuje wskazane pliki bezpowrotnie — wielokrotne nadpisanie, zmiana nazwy, usunięcie — i uczciwie informuje o ograniczeniach na dyskach SSD | ✅ Linux · 🧪 macOS/Windows |
+| **Usuwanie metadanych** | Usuwa dane EXIF, GPS i XMP ze zdjęć przed udostępnieniem, zapisując atomowo, żeby przerwanie nie uszkodziło oryginału | ✅ Linux · 🧪 macOS/Windows |
+| **Mapa dysków** | Uporządkowany podgląd z możliwością wchodzenia w głąb, pokazujący co faktycznie zajmuje dysk | ✅ Linux · 🧪 macOS/Windows |
+| **Monitor zdrowia** | Podgląd CPU, RAM i procesów na żywo oraz odczyt S.M.A.R.T. tam, gdzie system go udostępnia | ✅ Linux · 🧪 macOS/Windows |
+| **Higiena przeglądarek** | Czyszczenie cache, ciasteczek i historii osobno dla każdego profilu, dla Firefoksa i przeglądarek opartych na Chromium | ✅ Linux · 🧪 macOS/Windows |
+| **Menedżer haseł** | Lokalny, szyfrowany sejf (Argon2id + AES-256-GCM): foldery, generator haseł, ocena siły i audyt powtórzeń | ✅ Linux · 🧪 macOS/Windows |
+
+### Linux — 6 modułów
+
+| Moduł | Co robi | Status |
+|---|---|---|
+| **Cache pakietów** | Czyści cache pobranych pakietów apt, usuwa pakiety osierocone i odzyskuje miejsce po starych rewizjach snapów | ✅ |
+| **Logi systemd** | Przycina dziennik do zadanego rozmiaru lub wieku, na gotowych ustawieniach zamiast pamiętania flag `journalctl` | ✅ |
+| **Menedżer autostartu** | Pokazuje i przełącza programy startujące z sesją; wpisy dodane samodzielnie można edytować i usuwać, wpisów założonych przez inne aplikacje moduł nigdy nie rusza | ✅ |
+| **Wersje jądra** | Usuwa stare jądra, blokując aktywne i najnowsze — część uprzywilejowana sama je ustala i odmawia, jeśli nie potrafi tego stwierdzić | ✅ |
+| **Wizualny edytor GRUB** | Czas oczekiwania, domyślny system i motywy instalowane przez wskazanie folderu, z podglądem oraz automatyczną kopią zapasową i wycofaniem zmian | ✅ |
+| **Uninstaller** | Wyświetla aplikacje apt, snap i flatpak, odinstalowuje wybraną, a potem znajduje pozostawione przez nią pliki konfiguracji, cache i dane sandboksa | ✅ |
+
+### macOS — 3 moduły
+
+| Moduł | Co robi | Status |
+|---|---|---|
+| **Cache Xcode** | Czyści DerivedData, które na każdym Macu używanym do programowania po cichu rośnie do dziesiątek gigabajtów | 📋 |
+| **Odchudzanie Mail i Messages** | Usuwa zapisane w cache załączniki, nie ruszając samych wiadomości | 📋 |
+| **Migawki Time Machine** | Kasuje lokalne migawki zajmujące dysk pomiędzy właściwymi kopiami zapasowymi | 📋 |
+
+Operacje uprzywilejowane, których te moduły potrzebują — Homebrew,
+`launchctl`, `tmutil`, przycinanie logów — są już napisane w brokerze macOS,
+ale nigdy nie zostały uruchomione na Macu. Ich weryfikacja to najbliższy etap.
+
+### Windows — 4 moduły
+
+| Moduł | Co robi | Status |
+|---|---|---|
+| **Czyszczenie WinSxS** | Czyszczenie magazynu komponentów przez DISM, usuwające zastąpione pliki Windows Update | 📋 |
+| **Menedżer usług** | Usługi zarządzane przez gotowe profile zamiast listy setek pozycji | 📋 |
+| **Usuwanie bloatware** | Odinstalowuje fabrycznie zainstalowane aplikacje UWP | 📋 |
+| **Interfejs winget** | Lista zainstalowanych programów i zbiorcze aktualizacje przez systemowy menedżer pakietów | 📋 |
+
+Każda krytyczna operacja na Windowsie najpierw tworzy punkt przywracania
+systemu — to wymóg projektowy, nie opcja.
+
+### O co moduł może poprosić
+
+Każdy moduł deklaruje we własnym manifeście, o jakie klasy dostępu może
+prosić — pliki ograniczone do Twoich własnych danych, pliki systemowe,
+menedżer pakietów, usługi, konfigurację rozruchu, zdrowie dysków, sekrety,
+sieć. O nic poza tym poprosić nie może, a sama deklaracja jest częścią tego,
+co podlega weryfikacji.
+
+Większość katalogu w ogóle nie potrzebuje uprawnień administratora: spośród
+dziewięciu modułów wieloplatformowych siedem działa wyłącznie w obrębie
+Twoich plików. Te, które faktycznie wymagają podniesienia uprawnień, to
+dokładnie te, których można się spodziewać — systemowe foldery tymczasowe,
+surowy odczyt zdrowia dysku, cache pakietów, przycinanie dziennika, usuwanie
+jąder, konfiguracja rozruchu — i każdy z nich przechodzi przez brokera,
+zamiast trzymać uprawnienia u siebie.
+
+Usunięcie modułu usuwa razem z nim tę deklarację. Odinstaluj edytor GRUB-a, a
+nic w instalacji nie będzie już w stanie dotknąć konfiguracji rozruchu,
+ponieważ jedyna rzecz, która mogła, przestała istnieć.
+
 
 ## Dlaczego uprzywilejowaną część da się zweryfikować
 
 Jawność źródła ma sens tylko wtedy, gdy kod krytyczny dla bezpieczeństwa jest
 na tyle mały i łatwy w odczycie, że realnie da się go przejrzeć. Dlatego:
 
-- **Moduły nigdy nie mają uprawnień.** Działają jako Ty. Kiedy któryś
-  potrzebuje czegoś uprzywilejowanego, prosi rdzeń, a rdzeń prosi **brokera**.
+- **Moduły nigdy nie mają uprawnień.** Działają na Twoim koncie, z Twoimi
+  uprawnieniami. Kiedy któryś potrzebuje czegoś uprzywilejowanego, zwraca
+  się do rdzenia, a rdzeń do **brokera**.
 - **Broker ma zamknięty katalog operacji** — nigdzie nie ma wywołania „wykonaj
-  to polecenie jako root". Nowe możliwości dodaje się jako przejrzane
+  to polecenie jako root”. Nowe możliwości dodaje się jako przejrzane
   operacje, nie przez rozszerzanie istniejących.
 - **Broker sam waliduje każde żądanie**, nie ufając temu, co sprawdziła już
   strona nieuprzywilejowana, i **odmawia**, gdy nie potrafi ustalić, czy coś
   jest bezpieczne. Przy usuwaniu jądra proces roota samodzielnie ustala,
-  które jądro jest uruchomione i które najnowsze, odmawia dla obu, a jeśli
+  które jądro jest uruchomione i które najnowsze, i odmawia usunięcia obu, a jeśli
   nie potrafi tego ustalić — odmawia w ogóle.
 - **Zmiany destrukcyjne są odwracalne:** modyfikacje konfiguracji systemowej
   przechodzą przez kopię zapasową → rotację → zapis atomowy → weryfikację →
@@ -91,7 +167,7 @@ na tyle mały i łatwy w odczycie, że realnie da się go przejrzeć. Dlatego:
   jest na podstawie zweryfikowanego identyfikatora użytkownika, a nie
   uprawnień pliku.
 
-Pełny projekt: [`Access_plan.md`](Access_plan.md). Wspólna implementacja:
+Pełny opis projektu: [`Access_plan.md`](Access_plan.md). Wspólna implementacja:
 [`crates/broker-common`](crates/broker-common).
 
 ## Plany
@@ -100,7 +176,7 @@ Każdy moduł i każda funkcja są testowane na żywym systemie, z którego korz
 codziennie. Nie tworzymy maszyn wirtualnych, które mogłyby różnić się budową od
 realnej instalacji — chcemy pełnej zgodności z systemami operacyjnymi w takiej
 postaci, w jakiej ludzie faktycznie z nich korzystają. Zapewniamy, że każda
-funkcja jest w pełni przetestowana przed wypuszczeniem.
+funkcja jest w pełni przetestowana przed wydaniem.
 
 To też wyznacza kolejność poniżej: każdy system jest kończony na sprzęcie, na
 którym da się go realnie testować, zanim zacznie się następny.
@@ -124,7 +200,8 @@ Drugi system, który da się testować na żywo, więc idzie jako kolejny.
   napisane, ale nigdy nie uruchomione na Macu.
 - Moduły wyłącznie dla macOS: czyszczenie DerivedData Xcode, odchudzanie
   cache Mail i Messages, lokalne migawki Time Machine.
-- Prowadzony kreator Full Disk Access — macOS celowo pozwala nadać to
+- Kreator prowadzący przez nadanie Full Disk Access — macOS celowo pozwala
+  zrobić to
   wyłącznie ręcznie w Ustawieniach systemowych, więc POSMA może otworzyć
   właściwy panel i potwierdzić wynik, ale nigdy nie nada tego po cichu.
 
@@ -132,11 +209,11 @@ Drugi system, który da się testować na żywo, więc idzie jako kolejny.
 
 Budowany przy najmniejszym dostępie do sprzętu, więc celowo najostrożniej.
 
-- Pomocnik na named pipe z prawidłowym uwierzytelnianiem dzwoniącego. Po
-  stronie Unixa używamy zweryfikowanego identyfikatora użytkownika;
+- Pomocnik na named pipe z prawidłowym uwierzytelnianiem wywołującego. Po
+  stronie Uniksa używamy zweryfikowanego identyfikatora użytkownika;
   windowsowy odpowiednik to dokładnie ten rodzaj kodu krytycznego dla
   bezpieczeństwa, którego nie powinno się pisać na ślepo — dlatego celowo
-  wciąż go nie ma, zamiast być zgadniętym.
+  wciąż go nie ma, zamiast zgadywać jego kształt.
 - Moduły wyłącznie dla Windows: czyszczenie WinSxS/DISM, profile usług,
   usuwanie bloatware, interfejs dla winget.
 - Automatyczny punkt przywracania przed każdą operacją krytyczną.
@@ -167,12 +244,12 @@ pobierane, więc jedno i drugie pojawia się razem w wydaniu 1.0:
 W każdym biurze jest ktoś, kto utrzymuje komputery przy życiu, a stan tej
 pracy jest kiepski: przygotowanie stanowiska dla nowego pracownika to zwykle
 Clonezilla i pół godziny patrzenia na pasek postępu, a cokolwiek bardziej
-złożonego to linijki basha albo nieporęczne narzędzie sprzed dekady do jednej rzeczy.
+złożonego to linijki basha albo nieporęczne, jednozadaniowe narzędzie sprzed dekady.
 Intune i Jamf istnieją, ale ceną i skalą celują w organizacje znacznie
 większe niż te, które faktycznie mają ten problem.
 
 Master Control to plan, żeby to rozwiązać: jedna konsola, działająca na
-dowolnej maszynie w sieci z uruchomionym POSMA — konserwacja całej floty,
+dowolnej maszynie w sieci z uruchomioną POSMA — konserwacja całej floty,
 przygotowywanie stanowisk, rejestr haseł do kont firmowych oraz harmonogramy
 i polityki konkretnych akcji.
 
@@ -189,7 +266,7 @@ zanim cokolwiek zostanie zaprojektowane:
    sterowalną zdalnie. Dołączenie do floty to świadoma, jawna czynność po
    obu stronach.
 2. **Zamknięty katalog operacji nadal obowiązuje** — Master Control nigdy nie
-   dostanie furtki „wykonaj to polecenie". Zdalne sterowanie, które potrafi
+   dostanie furtki „wykonaj to polecenie”. Zdalne sterowanie, które potrafi
    wywołać wyłącznie przejrzane operacje, to zupełnie inne (i dużo mniejsze)
    ryzyko niż zdalna powłoka — i to jest właśnie sedno.
 3. **Lokalna weryfikacja identyfikatora użytkownika nie rozciąga się na
@@ -213,7 +290,7 @@ to nie są rzeczy, które dokleja się do projektu jednoosobowego.
 - **Instalatory** — `.exe`, `.deb`/`.rpm`/AppImage i `.dmg`, żeby korzystanie
   z POSMA nie wymagało środowiska programistycznego.
 - **Personalizacja pulpitu** jako osobny moduł (GNOME, KDE Plasma), z tym
-  samym podejściem „jedno kliknięcie", które edytor GRUB stosuje do motywów
+  samym podejściem „jedno kliknięcie”, które edytor GRUB stosuje do motywów
   rozruchu.
 - **Egzekwowanie manifestu** — rdzeń nie sprawdza jeszcze w momencie
   wywołania, czy moduł proszący o operację uprzywilejowaną faktycznie
@@ -314,7 +391,7 @@ autorem — patrz [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md).
 
 Planowany adres: **posma.com** / **posma.pl**
 
-Żadna z domen nie działa jeszcze — `.com` to spory wydatek, a `.pl` jest
+Żadna z domen jeszcze nie działa — `.com` to spory wydatek, a `.pl` jest
 obecnie zarejestrowana na kogoś innego, więc ich pozyskanie jest w toku. Do
 tego czasu to repozytorium jest jedynym oficjalnym źródłem POSMA. Każdą inną
 stronę dystrybuującą coś pod nazwą POSMA należy traktować jako niepowiązaną.
@@ -340,7 +417,7 @@ podobnych instytucji, albo po prostu tam, gdzie to ma sens. To przyznanie
 uprawnienia, a nie roszczenie: najpierw pytanie, a obowiązuje od momentu
 uzgodnienia.
 
-Żeby być precyzyjnym: to licencja **source-available**, a nie „open source" w
+Żeby być precyzyjnym: to licencja **source-available**, a nie „open source” w
 rozumieniu [OSI](https://opensource.org/osd), ponieważ tamta definicja
 zabrania ograniczania użytku komercyjnego. Wszystko jest czytelne,
 audytowalne i modyfikowalne; od firm oczekuje się po prostu opłaty za użytek
