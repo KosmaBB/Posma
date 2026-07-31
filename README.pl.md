@@ -265,7 +265,7 @@ zostaną zsynchronizowane.
 ## Bezpieczeństwo modułów
 
 Moduły to jedyne miejsce, w którym POSMA mogłaby realnie zostać obrócona
-przeciwko osobie, która ją uruchomiła, więc wszystko dystrybuowane
+przeciwko osobie, która go uruchomiła, więc wszystko dystrybuowane
 oficjalnym kanałem (patrz [1.0 — dystrybucja modułów](#10--dystrybucja-modułów))
 podlega stałemu standardowi:
 
