@@ -17,6 +17,10 @@ Większość programów do konserwacji każe wybrać jedno albo drugie.
 > modułów; macOS i Windows mają przygotowane szkielety, ale nie są jeszcze
 > zweryfikowane na prawdziwym sprzęcie. Instalatory powstaną później — na
 > razie jest to repozytorium źródeł.
+>
+> Celowo brak zrzutów ekranu: interfejs wciąż się kształtuje, a pokazanie
+> wersji, która nie będzie odpowiadać temu, co trafi do wydania, byłoby
+> gorsze niż niepokazanie niczego. Pojawią się, gdy UI będzie reprezentatywne.
 
 ---
 

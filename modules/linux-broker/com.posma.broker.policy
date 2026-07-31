@@ -3,16 +3,17 @@
  "http://www.freedesktop.org/standards/PolicyKit/1/policyconfig.dtd">
 <policyconfig>
   <!--
-    Not installed by the app itself — packaging concern, not runtime.
-    `org.freedesktop.policykit.exec.path` below must exactly match the real
-    installed path of the linux-broker binary, or pkexec silently falls
-    back to the generic org.freedesktop.policykit.exec action instead of
-    this one. In dev, that's target/debug/linux-broker (absolute path);
-    a real .deb/.rpm postinst script needs to substitute the actual
-    install path (e.g. /opt/posma/linux-broker) before copying this file —
-    not solved yet, this is dev-only for now.
+    Not installed by the app itself — a packaging concern, not runtime.
 
-    Install (dev): sudo install -Dm644 com.posma.broker.policy
+    `org.freedesktop.policykit.exec.path` below must match the installed
+    binary EXACTLY, or pkexec silently falls back to the generic
+    org.freedesktop.policykit.exec action instead of this one. It points at
+    /opt/posma/linux-broker, which is where install-daemon.sh puts it. If
+    you run a development build from somewhere else, either install the
+    binary to that path or adjust this file locally — do not commit a local
+    path back.
+
+    Install: sudo install -Dm644 com.posma.broker.policy
       /usr/share/polkit-1/actions/com.posma.broker.policy
 
     Until installed, pkexec still works via the generic
@@ -34,6 +35,6 @@
       <allow_inactive>auth_admin</allow_inactive>
       <allow_active>auth_admin_keep</allow_active>
     </defaults>
-    <annotate key="org.freedesktop.policykit.exec.path">/media/kosma/Yes/Linuch/Projekty/Wlasne/Posma/target/debug/linux-broker</annotate>
+    <annotate key="org.freedesktop.policykit.exec.path">/opt/posma/linux-broker</annotate>
   </action>
 </policyconfig>

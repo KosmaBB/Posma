@@ -8,7 +8,7 @@
     See COMMERCIAL-LICENSE.md.
 -->
 
-Required Notice: Copyright (c) 2026 Kosma (POSMA). Commercial use requires a paid license — see COMMERCIAL-LICENSE.md
+Required Notice: Copyright (c) 2026 Kosma (KosmaBB) — POSMA. Commercial use requires a paid license — see COMMERCIAL-LICENSE.md
 
 # PolyForm Noncommercial License 1.0.0
 

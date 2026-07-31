@@ -15,6 +15,10 @@ maintenance software makes you pick one or the other.
 > **Status: work in progress.** Linux is feature-complete against the planned
 > module catalog; macOS and Windows are scaffolded but not yet verified on
 > real hardware. Installers come later — for now this is a source repository.
+>
+> No screenshots yet, on purpose: the interface is still being shaped, and
+> showing a version that won't match what ships would be worse than showing
+> nothing. They go in once the UI represents the real thing.
 
 ---
 
