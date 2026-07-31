@@ -101,7 +101,7 @@ fn scan(min_size_mb: Option<u64>, max_results: Option<usize>) -> ScanResult {
         files.push(FileEntry { path: entry.path().to_string_lossy().into_owned(), size_bytes: meta.len() });
     }
 
-    files.sort_by(|a, b| b.size_bytes.cmp(&a.size_bytes));
+    files.sort_by_key(|e| std::cmp::Reverse(e.size_bytes));
     let total_bytes = files.iter().map(|f| f.size_bytes).sum();
     let truncated = files.len() > max_results;
     files.truncate(max_results);

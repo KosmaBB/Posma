@@ -176,7 +176,7 @@ fn list_backups() -> Vec<BackupEntry> {
             out.push(BackupEntry { filename: name, created_unix });
         }
     }
-    out.sort_by(|a, b| b.created_unix.cmp(&a.created_unix));
+    out.sort_by_key(|e| std::cmp::Reverse(e.created_unix));
     out
 }
 

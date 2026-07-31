@@ -157,7 +157,7 @@ pub fn write_system_file_guarded<F>(
 where
     F: Fn() -> Result<String, String>,
 {
-    match guards::write_with_backup(path, &content, keep_backups, verify) {
+    match guards::write_with_backup(path, &guards::backup_dir_for(path), &content, keep_backups, verify) {
         Ok(output) => ExecResult::ok(output),
         Err(e) => ExecResult::failed(e),
     }

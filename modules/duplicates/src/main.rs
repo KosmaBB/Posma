@@ -342,7 +342,7 @@ fn scan_versions() -> VersionScanResult {
         if items.len() < 2 {
             continue;
         }
-        items.sort_by(|a, b| version_key(&b.version).cmp(&version_key(&a.version)));
+        items.sort_by_key(|i| std::cmp::Reverse(version_key(&i.version)));
         let base_name = items[0].base.clone();
         let version_items = items
             .into_iter()

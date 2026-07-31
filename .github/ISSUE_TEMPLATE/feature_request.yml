@@ -1,0 +1,25 @@
+name: Feature or module idea
+description: Suggest something POSMA should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve
+      description: The situation you're in, not just the feature you pictured.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What you have in mind
+  - type: dropdown
+    id: privileged
+    attributes:
+      label: Would this need administrator rights?
+      options:
+        - "No"
+        - "Yes"
+        - "Not sure"
+    validations:
+      required: true

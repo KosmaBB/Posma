@@ -211,6 +211,10 @@ to nie są rzeczy, które dokleja się do projektu jednoosobowego.
 - **Personalizacja pulpitu** jako osobny moduł (GNOME, KDE Plasma), z tym
   samym podejściem „jedno kliknięcie", które edytor GRUB stosuje do motywów
   rozruchu.
+- **Egzekwowanie manifestu** — rdzeń nie sprawdza jeszcze w momencie
+  wywołania, czy moduł proszący o operację uprzywilejowaną faktycznie
+  zadeklarował potrzebne uprawnienie; dziś weryfikowane jest tylko to, że
+  użytkownik je nadał. Patrz [docs/security-model.md](docs/security-model.md).
 - Drobniejsze: obsługa `pacman`/`dnf`, czyszczenie nieużywanych środowisk
   flatpak, trwałe zapisywanie ustawień, samouczek po pierwszym uruchomieniu.
 
@@ -340,8 +344,10 @@ komercyjny.
 
 ## Współpraca
 
-Zgłoszenia i pull requesty są mile widziane. Dwie zasady, obie
-nienegocjowalne ze względu na to, co ten program robi:
+Zgłoszenia i pull requesty są mile widziane — pełny przewodnik w
+[CONTRIBUTING.md](CONTRIBUTING.md), a zgłaszanie podatności prywatnie opisuje
+[SECURITY.md](SECURITY.md). Dwie zasady, obie nienegocjowalne ze względu na
+to, co ten program robi:
 
 1. **Żadnych nowych uprzywilejowanych zachowań poza katalogiem brokera** —
    żadnego `sudo`, `pkexec` ani wywołań jako root wewnątrz modułu, choćby

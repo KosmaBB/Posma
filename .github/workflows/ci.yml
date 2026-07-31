@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  # Dependency advisories appear after code stops changing, so audit runs on
+  # a schedule too rather than only when something is pushed.
+  schedule:
+    - cron: "0 6 * * 1"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    name: Rust — build, test, clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev \
+            librsvg2-dev build-essential curl wget file libssl-dev libxdo-dev
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+
+      # The app bundles compiled module binaries, so `core` cannot build
+      # until they exist. This is the same first-build ordering documented
+      # in docs/building.md.
+      - name: Build modules and sync sidecars
+        run: bash scripts/sync-sidecars.sh
+
+      - name: Build workspace
+        run: cargo build --workspace --locked
+
+      - name: Test workspace
+        run: cargo test --workspace --locked
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  frontend:
+    name: Frontend — typecheck and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: core/package-lock.json
+
+      - run: npm --prefix core ci
+      - run: npx --prefix core tsc --noEmit --project core
+      - run: npm --prefix core run build
+
+  audit:
+    name: Dependency advisories
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      # Fails on actual advisories. Deliberately not `--deny warnings`:
+      # an upstream crate becoming unmaintained is worth seeing, but it is
+      # not a reason to block a build on work that isn't ours.
+      - name: Audit Rust dependencies
+        run: cargo audit
+      - name: Audit npm dependencies
+        run: npm --prefix core audit --audit-level=high

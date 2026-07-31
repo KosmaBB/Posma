@@ -252,7 +252,7 @@ fn scan() -> ScanResult {
     let mut entries = Vec::new();
     scan_root(&h.join(".config"), "config", &known, &safe, &mut entries);
     scan_root(&h.join(".cache"), "cache", &known, &safe, &mut entries);
-    entries.sort_by(|a, b| b.size_bytes.cmp(&a.size_bytes));
+    entries.sort_by_key(|e| std::cmp::Reverse(e.size_bytes));
 
     let total_bytes = entries.iter().map(|e| e.size_bytes).sum();
     ScanResult { entries, total_bytes }
@@ -531,7 +531,7 @@ fn list_apps() -> Vec<InstalledApp> {
         });
     }
 
-    out.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    out.sort_by_key(|a| a.name.to_lowercase());
     out
 }
 
@@ -617,7 +617,7 @@ fn app_leftovers(app: &AppRef, display_name: &str) -> Vec<OrphanEntry> {
             out.push(OrphanEntry { name, path: path.to_string_lossy().into_owned(), source: source.into(), size_bytes: size, files, age_days });
         }
     }
-    out.sort_by(|a, b| b.size_bytes.cmp(&a.size_bytes));
+    out.sort_by_key(|e| std::cmp::Reverse(e.size_bytes));
     out
 }
 

@@ -265,7 +265,7 @@ fn is_running(process_names: &[&str]) -> bool {
     for entry in read.flatten() {
         let Ok(comm) = fs::read_to_string(entry.path().join("comm")) else { continue };
         let comm = comm.trim();
-        if process_names.iter().any(|n| *n == comm) {
+        if process_names.contains(&comm) {
             return true;
         }
     }
@@ -335,7 +335,7 @@ fn scan() -> ScanResult {
     }
 
     for entries in [&mut cache_entries, &mut cookie_entries, &mut history_entries] {
-        entries.sort_by(|a: &Entry, b: &Entry| b.size_bytes.cmp(&a.size_bytes));
+        entries.sort_by_key(|e: &Entry| std::cmp::Reverse(e.size_bytes));
     }
 
     let categories = vec![

@@ -208,7 +208,7 @@ fn scan_shared_tmp(dir: &Path) -> Vec<Entry> {
         }
         out.push(Entry { path: path.to_string_lossy().into_owned(), size_bytes: size, files });
     }
-    out.sort_by(|a, b| b.size_bytes.cmp(&a.size_bytes));
+    out.sort_by_key(|e| std::cmp::Reverse(e.size_bytes));
     out
 }
 
@@ -229,7 +229,7 @@ fn scan_user_cache(dir: &Path, skip: &[&str]) -> Vec<Entry> {
         }
         out.push(Entry { path: path.to_string_lossy().into_owned(), size_bytes: size, files });
     }
-    out.sort_by(|a, b| b.size_bytes.cmp(&a.size_bytes));
+    out.sort_by_key(|e| std::cmp::Reverse(e.size_bytes));
     out
 }
 
@@ -247,7 +247,7 @@ fn scan_var_log_files() -> Vec<Entry> {
         }
         out.push(Entry { path: path.to_string_lossy().into_owned(), size_bytes: meta.len(), files: 1 });
     }
-    out.sort_by(|a, b| b.size_bytes.cmp(&a.size_bytes));
+    out.sort_by_key(|e| std::cmp::Reverse(e.size_bytes));
     out
 }
 

@@ -1,0 +1,37 @@
+name: Bug report
+description: Something behaved incorrectly
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For anything exploitable, please use the private route in
+        [SECURITY.md](../blob/master/SECURITY.md) instead of this form.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what happened, and what you expected instead.
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: e.g. Ubuntu 24.04, Windows 11, macOS 15
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: POSMA version or commit
+    validations:
+      required: true
+  - type: textarea
+    id: module_output
+    attributes:
+      label: Module output (optional, very helpful)
+      description: |
+        Modules can be run directly, which usually says more than a screenshot:
+        `echo '{"cmd":"scan"}' | ./target/debug/<module>`
+      render: shell

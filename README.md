@@ -206,6 +206,10 @@ are not something to bolt onto a single-user design.
   doesn't require a build toolchain.
 - **Desktop personalisation** as its own module (GNOME, KDE Plasma), applying
   the same one-click approach the GRUB editor uses for boot themes.
+- **Manifest enforcement** — the core does not yet verify at call time that
+  the module making a privileged request actually declared the capability it
+  needs; today the check is only that the user granted it. See
+  [docs/security-model.md](docs/security-model.md).
 - Smaller items: `pacman`/`dnf` support, flatpak unused-runtime cleanup,
   settings persistence beyond the browser store, post-onboarding tutorial.
 
@@ -329,8 +333,10 @@ companies are simply expected to pay for commercial use.
 
 ## Contributing
 
-Issues and pull requests are welcome. Two ground rules, both non-negotiable
-because of what this software does:
+Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md)
+for the full guide, and [SECURITY.md](SECURITY.md) for reporting anything
+exploitable privately. Two ground rules, both non-negotiable because of what
+this software does:
 
 1. **No new privileged behaviour outside the broker catalog** — no `sudo`,
    `pkexec` or shell-out-as-root inside a module, however tightly scoped it

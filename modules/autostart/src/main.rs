@@ -111,9 +111,12 @@ fn autostart_dir() -> PathBuf {
     PathBuf::from(home).join(".config/autostart")
 }
 
+/// Parsed [Desktop Entry] fields: name, exec, icon, comment, enabled, custom.
+type ParsedEntry = (String, String, Option<String>, Option<String>, bool, bool);
+
 /// Small tolerant parser for the handful of [Desktop Entry] keys this
 /// module uses — ignores localized variants (Name[en_US]=...) and anything else.
-fn parse_desktop_entry(text: &str) -> Option<(String, String, Option<String>, Option<String>, bool, bool)> {
+fn parse_desktop_entry(text: &str) -> Option<ParsedEntry> {
     let mut name = None;
     let mut exec = None;
     let mut icon = None;
@@ -173,7 +176,7 @@ fn scan() -> ScanResult {
         entries.push(Entry { id, name, exec, icon, comment, enabled, custom });
     }
 
-    entries.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    entries.sort_by_key(|a| a.name.to_lowercase());
     ScanResult { entries }
 }
 

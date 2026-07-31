@@ -111,7 +111,7 @@ fn scan(path: Option<String>) -> ScanData {
         Err(e) => errors.push(format!("{}: {e}", root.display())),
     }
 
-    entries.sort_by(|a, b| b.size_bytes.cmp(&a.size_bytes));
+    entries.sort_by_key(|e| std::cmp::Reverse(e.size_bytes));
     let total_bytes: u64 = entries.iter().map(|e| e.size_bytes).sum();
 
     if entries.len() > MAX_ENTRIES {

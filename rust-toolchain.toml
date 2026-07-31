@@ -1,0 +1,5 @@
+# Pinned so a build here matches a build in CI and on a contributor's
+# machine. Bump deliberately, not incidentally.
+[toolchain]
+channel = "stable"
+components = ["clippy", "rustfmt"]

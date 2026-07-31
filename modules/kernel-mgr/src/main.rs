@@ -145,7 +145,7 @@ fn scan() -> ScanResult {
             is_latest: version == latest,
         });
     }
-    kernels.sort_by(|a, b| b.size_bytes.cmp(&a.size_bytes));
+    kernels.sort_by_key(|e| std::cmp::Reverse(e.size_bytes));
 
     ScanResult { running, latest, kernels }
 }
