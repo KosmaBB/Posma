@@ -22,7 +22,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # A prebuilt release binary rather than `cargo install mdbook`, which
       # compiles from source and adds minutes to every run.
