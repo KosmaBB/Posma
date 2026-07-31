@@ -1,10 +1,63 @@
-__pycache__/
-*.pyc
-*.pyo
-.venv/
-venv/
-build/
-dist/
-*.egg-info/
-system_report_*.txt
-.pytest_cache/
+# ---------------------------------------------------------------- builds
+# Rust workspace build output (~10 GB locally). Fully reproducible from
+# source with `cargo build`.
+/target/
+**/target/
+
+# Compiled sidecar binaries copied here by scripts/sync-sidecars.sh.
+# Regenerate with that script — never commit binaries to the repo.
+/core/src-tauri/binaries/
+/core/src-tauri/gen/schemas/
+
+# Frontend build output and dependencies
+node_modules/
+/core/dist/
+*.tsbuildinfo
+
+# ------------------------------------------------------- not part of the app
+# The marketing website lives in its own track and is not published here.
+/website/
+/frontend_plan.txt
+
+# Design/planning artefacts kept locally (hand-drawn mind map etc.)
+/POSAMv1.jpg
+
+# ------------------------------------------------------------- security
+# Local Claude Code / editor state. settings.local.json in particular can
+# contain absolute paths to unrelated private projects on the dev machine.
+/.claude/
+.vscode/
+.idea/
+
+# Anything holding real credentials or machine-specific config
+.env
+.env.*
+*.local
+secrets.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.keystore
+
+# Signing / release material for Tauri updater — publishing the private
+# key would let anyone ship a signed "update" to POSAM users.
+*.jks
+tauri-private.key
+*.tauri-key
+
+# ------------------------------------------------ user data produced at runtime
+# POSAM's own state, written into the OS app-data dir in normal use, but
+# easy to end up in the tree while testing. The vault is an encrypted
+# password database — it must never be committed.
+vault.db
+vault.db-*
+permissions.json
+posam-*.log
+
+# --------------------------------------------------------------- OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+*~
+*.swp
