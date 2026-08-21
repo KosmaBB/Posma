@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Preparing } from '../../components/Preparing'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { Icon } from '../../components/Icons'
@@ -150,7 +151,7 @@ export function DiskMapView() {
         <div className="glass empty-state" style={{ color: 'var(--critical)', marginTop: 12 }}>Błąd: {error}</div>
       )}
 
-      {loading && !data && <div className="glass empty-state">Skanowanie...</div>}
+      {loading && !data && <Preparing title="Przygotowuję mapę dysku" note="Przechodzę przez każdy folder i sumuję rozmiary — inaczej nie da się pokazać, co naprawdę zajmuje miejsce." />}
 
       {data && (
         <>

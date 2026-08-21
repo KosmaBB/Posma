@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Preparing } from '../../components/Preparing'
 import { Icon } from '../../components/Icons'
 import { Modal } from '../../components/Modal'
 import { vaultCall, vaultStart } from './vaultApi'
@@ -98,7 +99,7 @@ export function VaultView() {
     refreshStatus()
   }, [refreshStatus])
 
-  if (phase === 'loading') return <div className="glass empty-state"><span className="scan-spinner" aria-hidden />Uruchamianie sejfu...</div>
+  if (phase === 'loading') return <Preparing title="Uruchamiam sejf" note="Otwieram zaszyfrowaną bazę i przygotowuję ją do odblokowania." />
   if (phase === 'error') return <div className="glass empty-state" style={{ color: 'var(--critical)' }}>Błąd: {error}</div>
   if (phase === 'create') return <UnlockOrCreate mode="create" onReady={() => setPhase('unlocked')} />
   if (phase === 'locked') return <UnlockOrCreate mode="unlock" onReady={() => setPhase('unlocked')} />

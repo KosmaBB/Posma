@@ -1,5 +1,6 @@
 import type { AppState } from '../../state/appState'
-import { modules } from '../../data/modules'
+import { FolderView } from '../../views/FolderView'
+import { folders, modules } from '../../data/modules'
 import { Sidebar } from './Sidebar'
 import { Dashboard } from '../../views/Dashboard'
 import { ModuleManager } from '../../views/ModuleManager'
@@ -21,6 +22,10 @@ function viewTitle(app: AppState): { title: string; crumb: string } {
     case 'module': {
       const mod = modules.find((m) => m.id === view.moduleId)
       return { title: mod?.name ?? 'Moduł', crumb: `posma://module/${view.moduleId}` }
+    }
+    case 'folder': {
+      const folder = folders.find((f) => f.id === view.folderId)
+      return { title: folder?.name ?? 'Folder', crumb: `posma://folder/${view.folderId}` }
     }
   }
 }
@@ -47,6 +52,7 @@ export function Shell({ app }: { app: AppState }) {
           {view.kind === 'settings' && <Settings app={app} />}
           {view.kind === 'links' && <Links />}
           {view.kind === 'module' && <ModuleView app={app} moduleId={view.moduleId} />}
+          {view.kind === 'folder' && <FolderView app={app} folderId={view.folderId} />}
         </div>
       </div>
     </div>

@@ -534,3 +534,243 @@ button { font-family: inherit; }
 .missing-dep-text { font-size: 11.5px; color: var(--muted); }
 .missing-dep .btn:disabled { opacity: 0.55; cursor: not-allowed; }
 .missing-dep .btn:disabled:hover { border-color: var(--border-strong); }
+
+/* ---------- preparing (long-running work) ---------- */
+.preparing {
+  padding: 40px 32px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Three dots on one orbit, staggered. Reads as "work in progress" without
+   the hard mechanical loop of a rotating ring. */
+.preparing__orbit {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 6px;
+}
+
+.preparing__orbit span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  border-top-color: var(--accent);
+  animation: orbit 1.4s cubic-bezier(0.6, 0.1, 0.4, 0.9) infinite;
+}
+
+.preparing__orbit span:nth-child(2) {
+  inset: 7px;
+  border-top-color: var(--g-teal-1);
+  animation-duration: 1.9s;
+  animation-direction: reverse;
+}
+
+.preparing__orbit span:nth-child(3) {
+  inset: 14px;
+  border-top-color: var(--g-violet-1);
+  animation-duration: 2.4s;
+}
+
+@keyframes orbit { to { transform: rotate(360deg); } }
+
+.preparing__title {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--ink);
+}
+
+.preparing__note {
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 46ch;
+  line-height: 1.55;
+}
+
+.preparing__steps {
+  list-style: none;
+  padding: 0;
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.preparing__steps li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  transition: color 0.3s ease;
+}
+
+.preparing__steps li[data-done='true'] { color: var(--ink); }
+
+.preparing__tick {
+  width: 1em;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.preparing__steps li[data-done='true'] .preparing__tick { color: var(--good); }
+
+/* Height is reserved from the start so the block does not jump when the
+   timer appears a few seconds in. */
+.preparing__timer {
+  min-height: 1.2em;
+  font-size: 12px;
+  color: var(--muted);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.preparing__timer[data-visible='true'] { opacity: 0.75; }
+
+@media (prefers-reduced-motion: reduce) {
+  .preparing__orbit span { animation: none; border-top-color: var(--accent); opacity: 0.5; }
+}
+
+/* ==========================================================================
+   Rozdzielczości
+   --------------------------------------------------------------------------
+   Cztery cele: 1600x900 jako okno domyślne i zarazem najmniejsze, potem
+   1080p, 2K i 4K. Wszystko poniżej pierwszego progu to układ bazowy powyżej —
+   okno nie schodzi niżej, więc nie ma czego projektować pod spód.
+
+   Dwie rzeczy zmieniają się razem z szerokością: ile miejsca zajmuje treść
+   (bo wiersz tekstu ciągnący się przez 4K jest nieczytelny) i jak duże są
+   elementy (bo ten sam piksel na panelu 4K jest fizycznie mniejszy).
+   ========================================================================== */
+
+/* Treść dostaje sufit szerokości i centruje się w nadmiarze zamiast
+   rozciągać. Na 1600 sufit jest wyższy niż okno, więc nic nie robi. */
+.content > *:not(.content-wash) {
+  max-width: var(--content-max, 100%);
+  margin-inline: auto;
+  width: 100%;
+}
+
+/* ---------- 1080p ---------- */
+@media (min-width: 1900px) {
+  :root { --content-max: 1500px; }
+  .content { padding: 30px; }
+  .vitals-row { gap: 16px; }
+}
+
+/* ---------- 2K ---------- */
+@media (min-width: 2500px) {
+  :root {
+    --content-max: 1800px;
+    font-size: 17px;
+  }
+  .shell { grid-template-columns: 290px 1fr; }
+  .content { padding: 36px; }
+  /* Więcej kolumn zamiast szerszych kafelków — karta 400 px szerokości
+     przestaje wyglądać jak karta. */
+  .quick-grid { grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); }
+  .module-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+}
+
+/* ---------- 4K ---------- */
+@media (min-width: 3400px) {
+  :root {
+    --content-max: 2400px;
+    font-size: 20px;
+  }
+  .shell { grid-template-columns: 360px 1fr; }
+  .content { padding: 48px; }
+  .quick-grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  .module-grid { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
+  /* Poświata jest ułamkiem szerokości okna; na 4K rozlewa się na pół
+     ekranu i zostaje mgłą zamiast akcentem. */
+  .content-wash { width: 30vw; height: 30vw; }
+}
+
+/* Niskie okno przy dużej szerokości — pasek życia zjada wtedy większość
+   pionu, więc oddaje trochę wysokości reszcie widoku. */
+@media (max-height: 940px) {
+  .vitals-row { margin-bottom: 16px; }
+  .vital-card { padding: 13px; }
+}
+
+/* ---------- advisory (kontekstowe ostrzeżenie na pulpicie) ---------- */
+.advisory {
+  width: 100%; display: grid; grid-template-columns: auto 1fr auto;
+  align-items: center; gap: 12px; text-align: left; cursor: pointer;
+  padding: 13px 15px; margin-bottom: 18px;
+  border-color: color-mix(in srgb, var(--warn) 40%, transparent);
+  background: color-mix(in srgb, var(--warn) 8%, var(--bg-2));
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+.advisory:hover { border-color: var(--warn); transform: translateY(-1px); }
+.advisory__ico {
+  width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--g-amber-1), var(--g-amber-2)); color: #201203;
+}
+.advisory__ico svg { width: 16px; height: 16px; }
+.advisory__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.advisory__text b { font-size: 13px; }
+.advisory__text span { font-size: 11.5px; color: var(--muted); }
+.advisory__go { color: var(--warn); font-size: 15px; }
+
+/* ---------- lista nośników ---------- */
+.disk-list { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 22px; }
+.disk-row { display: grid; grid-template-columns: minmax(80px, 150px) 1fr auto auto; gap: 12px; align-items: center; font-size: 12px; }
+.disk-row__mount { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.disk-row__track { height: 6px; border-radius: 3px; background: rgba(242, 245, 244, 0.09); overflow: hidden; }
+.disk-row__fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.disk-row__free { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+.disk-row__pct { min-width: 34px; text-align: right; font-variant-numeric: tabular-nums; }
+
+/* ---------- kafle folderów ---------- */
+.folder-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 22px; }
+.folder-tile {
+  position: relative; overflow: hidden; cursor: pointer; text-align: left;
+  padding: 14px; display: flex; flex-direction: column; gap: 7px; min-height: 104px;
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+.folder-tile::before {
+  content: ''; position: absolute; inset: 0; opacity: 0.14; transition: opacity 0.25s ease;
+  background: linear-gradient(150deg, var(--g1), var(--g2));
+}
+.folder-tile:hover { transform: translateY(-2px); border-color: var(--border-strong); }
+.folder-tile:hover::before { opacity: 0.24; }
+.folder-tile > * { position: relative; z-index: 1; }
+.folder-tile__ico {
+  width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center;
+  background: linear-gradient(135deg, var(--g1), var(--g2)); color: #06120f;
+}
+.folder-tile__ico svg { width: 15px; height: 15px; }
+.folder-tile__name { font-size: 13.5px; font-weight: 700; margin-top: auto; }
+.folder-tile__meta { font-size: 11px; color: var(--muted); display: flex; align-items: baseline; gap: 8px; }
+.folder-tile__off {
+  font-style: normal; font-size: 10px; padding: 1px 6px; border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 20%, transparent); color: var(--accent);
+}
+
+/* ---------- widok folderu ---------- */
+.folder-head { display: flex; align-items: center; gap: 14px; padding: 18px 20px; margin-bottom: 20px; position: relative; overflow: hidden; }
+.folder-head::before { content: ''; position: absolute; inset: 0; opacity: 0.12; background: linear-gradient(120deg, var(--g1), var(--g2)); }
+.folder-head > * { position: relative; z-index: 1; }
+.folder-head__ico { width: 42px; height: 42px; border-radius: 13px; display: grid; place-items: center; background: linear-gradient(135deg, var(--g1), var(--g2)); color: #06120f; flex-shrink: 0; }
+.folder-head__ico svg { width: 21px; height: 21px; }
+.folder-head__name { font-family: 'Bricolage Grotesque', sans-serif; font-size: 21px; font-weight: 800; letter-spacing: -0.02em; }
+.folder-head__count { font-size: 12px; color: var(--muted); }
+
+.folder-card { padding: 15px; display: flex; flex-direction: column; gap: 9px; }
+.folder-card[data-on='false'] { opacity: 0.72; }
+.folder-card[data-on='false']:hover { opacity: 1; }
+.folder-card__top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.folder-card__name { font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em; }
+.folder-card__desc { font-size: 12px; color: var(--muted); line-height: 1.55; flex: 1; }
+.folder-card__foot { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+
+/* ---------- sparkline ---------- */
+.spark { display: flex; align-items: flex-end; gap: 1px; height: 26px; margin-top: auto; }
+.spark i { flex: 1; min-width: 1px; border-radius: 1px 1px 0 0; transition: height 0.3s ease; }

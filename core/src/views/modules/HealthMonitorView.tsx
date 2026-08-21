@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Preparing } from '../../components/Preparing'
 import { invoke } from '@tauri-apps/api/core'
 import { formatBytes } from './TempCleanView'
 import { MissingDependency } from '../../components/MissingDependency'
@@ -146,7 +147,7 @@ export function HealthMonitorView() {
     return <div className="glass empty-state" style={{ color: 'var(--critical)' }}>Błąd: {error}</div>
   }
   if (!snap) {
-    return <div className="glass empty-state"><span className="scan-spinner" aria-hidden />Wczytywanie...</div>
+    return <Preparing title="Odpytuję podzespoły" note="Zbieram temperatury, obciążenie i stan dysków. Pierwszy odczyt trwa dłużej niż kolejne." />
   }
 
   const ramUsedFrac = snap.ram_used_bytes / snap.ram_total_bytes

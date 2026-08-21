@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Preparing } from '../../components/Preparing'
 import { invoke } from '@tauri-apps/api/core'
 import { formatBytes } from './TempCleanView'
 
@@ -78,7 +79,7 @@ export function KernelMgrView() {
     )
   }
   if (!scan) {
-    return <div className="glass empty-state"><span className="scan-spinner" aria-hidden />Skanowanie jąder...</div>
+    return <Preparing title="Sprawdzam zainstalowane jądra" note="Ustalam, które jądro jest uruchomione i które jest najnowsze — oba zostaną zablokowane przed usunięciem." />
   }
 
   const removable = scan.kernels.filter((k) => !k.is_running && !k.is_latest)

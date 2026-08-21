@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Preparing } from '../../components/Preparing'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 
@@ -465,7 +466,7 @@ export function GrubEditorView() {
     )
   }
   if (!scan) {
-    return <div className="glass empty-state"><span className="scan-spinner" aria-hidden />Wczytywanie konfiguracji GRUB...</div>
+    return <Preparing title="Wczytuję konfigurację GRUB" note="Odczytuję ustawienia rozruchu i listę zapisanych kopii zapasowych." />
   }
 
   return (

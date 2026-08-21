@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Preparing } from '../../components/Preparing'
 import { invoke } from '@tauri-apps/api/core'
 import { formatBytes } from './TempCleanView'
 
@@ -158,7 +159,7 @@ export function PkgCacheView() {
     )
   }
   if (!scan) {
-    return <div className="glass empty-state"><span className="scan-spinner" aria-hidden />Skanowanie...</div>
+    return <Preparing title="Liczę, ile da się odzyskać" note="Sprawdzam cache pobranych pakietów, pakiety osierocone i stare rewizje snapów." />
   }
 
   return (

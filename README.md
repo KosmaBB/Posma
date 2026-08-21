@@ -311,6 +311,12 @@ are not something to bolt onto a single-user design.
   consent screen showing exactly which privileged capabilities it declares.
 - **Installers** — `.exe`, `.deb`/`.rpm`/AppImage and `.dmg`, so using POSMA
   doesn't require a build toolchain.
+- **Password vault — deliberately last.** The module works and is already
+  cross-platform, because the encryption and the database do not depend on
+  the operating system. Further work on it waits until the end of production
+  regardless: it is the one module almost certain to grow (importing from
+  other managers, browser integration, hardware keys), and growing it
+  alongside the macOS and Windows ports would mean doing the same work twice.
 - **Manifest enforcement** — the core does not yet verify at call time that
   the module making a privileged request actually declared the capability it
   needs; today the check is only that the user granted it. See

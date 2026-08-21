@@ -42,8 +42,14 @@ export function Sidebar({ app }: { app: AppState }) {
         return (
           <div key={folder.id}>
             <button
-              className="nav-item"
-              onClick={() => toggleFolder(folder.id)}
+              className={`nav-item${view.kind === 'folder' && view.folderId === folder.id ? ' active' : ''}`}
+              onClick={() => {
+                // Opens the folder and shows it. Expanding alone left the
+                // click doing nothing when the folder was already open, and
+                // the inline list only ever holds the installed modules.
+                toggleFolder(folder.id)
+                setView({ kind: 'folder', folderId: folder.id })
+              }}
               aria-expanded={open}
             >
               <span className="nav-ico" style={{ '--g1': folder.gradient.g1, '--g2': folder.gradient.g2 } as React.CSSProperties}>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Preparing } from '../../components/Preparing'
 import { invoke } from '@tauri-apps/api/core'
 import { revealItemInDir } from '@tauri-apps/plugin-opener'
 import { Icon } from '../../components/Icons'
@@ -322,7 +323,7 @@ function AppsPanel() {
     )
   }
   if (!apps) {
-    return <div className="glass empty-state"><span className="scan-spinner" aria-hidden />Wczytywanie listy aplikacji...</div>
+    return <Preparing title="Zbieram listę aplikacji" note="Pytam apt, snap i flatpak po kolei. Każdy odpowiada we własnym tempie." />
   }
 
   return (
@@ -451,7 +452,7 @@ function BlindScanPanel() {
         </div>
       )}
       {phase.kind === 'scanning' && (
-        <div className="glass empty-state"><span className="scan-spinner" aria-hidden />Szukanie porzuconych folderów...</div>
+        <Preparing title="Szukam pozostałości" note="Przeglądam katalogi konfiguracji, cache i danych w poszukiwaniu śladów po odinstalowanych programach." />
       )}
       {phase.kind === 'error' && (
         <div className="glass empty-state" style={{ color: 'var(--critical)' }}>

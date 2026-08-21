@@ -19,6 +19,7 @@ export interface OnboardingResult {
 export type View =
   | { kind: 'dashboard' }
   | { kind: 'module'; moduleId: string }
+  | { kind: 'folder'; folderId: string }
   | { kind: 'settings' }
   | { kind: 'manager' }
   | { kind: 'links' }

@@ -312,6 +312,12 @@ to nie są rzeczy, które dokleja się do projektu jednoosobowego.
   możliwości prosi.
 - **Instalatory** — `.exe`, `.deb`/`.rpm`/AppImage i `.dmg`, żeby korzystanie
   z POSMA nie wymagało środowiska programistycznego.
+- **Sejf haseł — świadomie na koniec.** Moduł działa i jest wieloplatformowy
+  już dziś, bo szyfrowanie i baza nie zależą od systemu. Dalsza praca nad nim
+  czeka jednak na sam koniec produkcji: to jedyny moduł, który prawie na
+  pewno urośnie (import z innych menedżerów, integracja z przeglądarką,
+  klucze sprzętowe), a rozbudowywanie go równolegle do portowania na macOS i
+  Windows oznaczałoby przerabianie tego samego dwa razy.
 - **Egzekwowanie manifestu** — rdzeń nie sprawdza jeszcze w momencie
   wywołania, czy moduł proszący o operację uprzywilejowaną faktycznie
   zadeklarował potrzebne uprawnienie; dziś weryfikowane jest tylko to, że
