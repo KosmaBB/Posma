@@ -54,6 +54,11 @@ rather than code compiled into one binary.
 > installation and removal arrives with **1.0**, because it needs
 > distribution servers to fetch module files from — see
 > [Roadmap](#roadmap).
+>
+> This has one consequence that reads as a fault: a module added in a newer
+> version will not appear by itself. The app remembers the choice made at
+> first run, so a new module sits switched off in the manager until you turn
+> it on there.
 
 **Open about what it does with your system.** POSMA needs administrator
 rights for some jobs — that's unavoidable for a maintenance tool. What isn't
@@ -64,7 +69,7 @@ are small, separate and deliberately boring.
 
 ## Modules
 
-22 modules are planned in total. Nine work on every system; the rest exist
+23 modules are planned in total. Nine work on every system; the rest exist
 because each platform has maintenance jobs the others simply don't have.
 
 Status here means what has actually been run, not what compiles:
@@ -89,7 +94,7 @@ have been exercised on real hardware.
 | **Browser hygiene** | Per-profile cache, cookie and history clearing across Firefox and Chromium-family browsers | ✅ Linux · 🧪 macOS/Windows |
 | **Password vault** | Local encrypted vault (Argon2id + AES-256-GCM), folders, generator, strength and reuse audit | ✅ Linux · 🧪 macOS/Windows |
 
-### Linux — 6 modules
+### Linux — 7 modules
 
 | Module | What it does | Status |
 |---|---|---|
@@ -97,6 +102,7 @@ have been exercised on real hardware.
 | **systemd journal** | Trims the journal to a target size or age, with presets instead of remembering `journalctl` flags | ✅ |
 | **Autostart manager** | Lists and toggles what starts with your session; entries you add yourself can be edited and removed, entries other apps installed are never touched | ✅ |
 | **Kernel versions** | Removes old kernels while the running and newest ones are locked — the privileged half re-derives both itself and refuses if it cannot tell | ✅ |
+| **Desktop personalisation** | GTK themes, icons, cursors and interface fonts; installs a theme or a font from a folder, working out for itself which it is | ✅ GNOME · 🧪 KDE Plasma |
 | **Visual GRUB editor** | Boot menu timeout, default system, and themes installed by pointing at a folder, with a preview and automatic backup and rollback | ✅ |
 | **Uninstaller** | Lists apt, snap and flatpak applications, removes one, then finds the configuration, cache and sandbox data it left behind | ✅ |
 
@@ -127,12 +133,11 @@ is a design requirement, not an option.
 ### Planned, not yet in the catalog
 
 These are committed to but have no catalog entry yet, so they are not counted
-in the 22 above:
+in the 23 above:
 
 | Module | What it would do | For |
 |---|---|---|
 | **Smart reminders** | Quiet background notice when a disk passes ~85% or memory is chronically short — a nudge when it's useful, never a nag | All systems |
-| **Desktop personalisation** | Themes, fonts and shell tweaks for GNOME and KDE Plasma, applied the same one-click way the GRUB editor handles boot themes | Linux |
 | **LaunchAgents and LaunchDaemons** | The macOS side of autostart, including the system-level agents Apple hides away | macOS |
 
 Four more are chosen and queued, in the order they'd be built:
@@ -306,8 +311,6 @@ are not something to bolt onto a single-user design.
   consent screen showing exactly which privileged capabilities it declares.
 - **Installers** — `.exe`, `.deb`/`.rpm`/AppImage and `.dmg`, so using POSMA
   doesn't require a build toolchain.
-- **Desktop personalisation** as its own module (GNOME, KDE Plasma), applying
-  the same one-click approach the GRUB editor uses for boot themes.
 - **Manifest enforcement** — the core does not yet verify at call time that
   the module making a privileged request actually declared the capability it
   needs; today the check is only that the user granted it. See

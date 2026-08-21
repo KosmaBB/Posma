@@ -185,6 +185,44 @@ async fn clean_big_files(app: tauri::AppHandle, paths: Vec<String>) -> Result<se
     call_sidecar(&app, "big-files", serde_json::json!({ "cmd": "clean", "paths": paths })).await
 }
 
+/// desktop-theme runs entirely in the user's own home, so none of these
+/// commands take a capability: there is nothing here to consent to that the
+/// user could not do with a file manager and the settings app.
+#[tauri::command]
+async fn scan_desktop_theme(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    call_sidecar(&app, "desktop-theme", serde_json::json!({ "cmd": "scan" })).await
+}
+
+#[tauri::command]
+async fn apply_desktop_theme(app: tauri::AppHandle, changes: serde_json::Value) -> Result<serde_json::Value, String> {
+    call_sidecar(&app, "desktop-theme", serde_json::json!({ "cmd": "apply", "changes": changes })).await
+}
+
+#[tauri::command]
+async fn install_desktop_theme(app: tauri::AppHandle, source_dir: String, name: Option<String>) -> Result<serde_json::Value, String> {
+    call_sidecar(&app, "desktop-theme", serde_json::json!({ "cmd": "install_theme", "source_dir": source_dir, "name": name })).await
+}
+
+#[tauri::command]
+async fn install_desktop_font(app: tauri::AppHandle, path: String) -> Result<serde_json::Value, String> {
+    call_sidecar(&app, "desktop-theme", serde_json::json!({ "cmd": "install_font", "path": path })).await
+}
+
+#[tauri::command]
+async fn save_desktop_preset(app: tauri::AppHandle, name: String) -> Result<serde_json::Value, String> {
+    call_sidecar(&app, "desktop-theme", serde_json::json!({ "cmd": "save_preset", "name": name })).await
+}
+
+#[tauri::command]
+async fn load_desktop_preset(app: tauri::AppHandle, name: String) -> Result<serde_json::Value, String> {
+    call_sidecar(&app, "desktop-theme", serde_json::json!({ "cmd": "load_preset", "name": name })).await
+}
+
+#[tauri::command]
+async fn delete_desktop_preset(app: tauri::AppHandle, name: String) -> Result<serde_json::Value, String> {
+    call_sidecar(&app, "desktop-theme", serde_json::json!({ "cmd": "delete_preset", "name": name })).await
+}
+
 #[tauri::command]
 async fn scan_autostart(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
     call_sidecar(&app, "autostart", serde_json::json!({ "cmd": "scan" })).await
@@ -523,6 +561,13 @@ pub fn run() {
             clean_duplicate_versions,
             scan_big_files,
             clean_big_files,
+            scan_desktop_theme,
+            apply_desktop_theme,
+            install_desktop_theme,
+            install_desktop_font,
+            save_desktop_preset,
+            load_desktop_preset,
+            delete_desktop_preset,
             scan_autostart,
             toggle_autostart,
             check_autostart_path,

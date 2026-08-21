@@ -77,6 +77,7 @@ export const modules: ModuleDef[] = [
   { id: 'bloatware', name: 'Usuwanie Bloatware', desc: 'Odinstalowywanie fabrycznych aplikacji UWP przez PowerShell.', folder: 'system', os: ['windows'], risk: 'critical', icon: 'trash', capabilities: ['fs-system', 'restore-point'] },
   { id: 'time-machine', name: 'Time Machine', desc: 'Usuwanie lokalnych migawek Time Machine przez tmutil.', folder: 'system', os: ['macos'], risk: 'medium', icon: 'clock', capabilities: ['fs-system', 'fda'] },
   { id: 'kernel-mgr', name: 'Zarządzanie wersjami jądra', desc: 'Przegląd i usuwanie starych jąder z /boot, z blokadą aktywnego.', folder: 'system', os: ['linux'], risk: 'critical', icon: 'kernel', capabilities: ['boot', 'pkg'] },
+  { id: 'desktop-theme', name: 'Personalizacja pulpitu', desc: 'Motywy GTK, ikony, kursory i czcionki interfejsu dla GNOME i KDE Plasma; instalacja motywu lub czcionki z folderu.', folder: 'system', os: ['linux'], risk: 'low', icon: 'palette', quickAction: 'Zmień wygląd', capabilities: ['fs-user'] },
   { id: 'grub-editor', name: 'Wizualny edytor GRUB', desc: 'Modyfikacja /etc/default/grub — czas wyboru, domyślny system, tło.', folder: 'system', os: ['linux'], risk: 'critical', icon: 'boot', capabilities: ['boot'] },
 
   // ---- Folder 3: Bezpieczeństwo ----

@@ -16,6 +16,7 @@ import { JournaldTrimView } from './modules/JournaldTrimView'
 import { PkgCacheView } from './modules/PkgCacheView'
 import { KernelMgrView } from './modules/KernelMgrView'
 import { GrubEditorView } from './modules/GrubEditorView'
+import { DesktopThemeView } from './modules/DesktopThemeView'
 
 /** Modules with a real UI — everything else falls back to the placeholder. */
 const MODULE_VIEWS: Record<string, () => React.ReactElement> = {
@@ -34,6 +35,7 @@ const MODULE_VIEWS: Record<string, () => React.ReactElement> = {
   'pkg-cache': PkgCacheView,
   'kernel-mgr': KernelMgrView,
   'grub-editor': GrubEditorView,
+  'desktop-theme': DesktopThemeView,
 }
 
 /** Generic placeholder page for an installed module — real module UIs replace this per-module. */

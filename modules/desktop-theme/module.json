@@ -1,0 +1,9 @@
+{
+  "id": "desktop-theme",
+  "name": "Personalizacja pulpitu",
+  "description": "Reads and applies GTK/icon/cursor themes and interface fonts for GNOME and KDE Plasma, and installs themes and fonts from a folder. Writes only inside the user's home — no elevation.",
+  "version": "0.1.0",
+  "platforms": ["linux"],
+  "binary": "desktop-theme",
+  "capabilities": ["fs-user"]
+}

@@ -74,6 +74,9 @@ export const icons: Record<string, (props: IconProps) => ReactElement> = {
   boot: (p) => (
     <svg {...base} {...p}><path d="M5 4h14v10H5z" /><path d="M8 18h8M12 14v4M8 8h4" /></svg>
   ),
+  palette: (p) => (
+    <svg {...base} {...p}><path d="M12 3.5a8.5 8.5 0 1 0 0 17c1.2 0 1.9-.8 1.9-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.8-1.7 1.7-1.7h1.5a4.4 4.4 0 0 0 4.4-4.4c0-3.7-3.8-6.8-8.5-6.8Z" /><circle cx="8" cy="11" r="1.1" /><circle cx="11.5" cy="7.5" r="1.1" /><circle cx="15.5" cy="9" r="1.1" /></svg>
+  ),
   globe: (p) => (
     <svg {...base} {...p}><circle cx="12" cy="12" r="8.5" /><path d="M3.5 12h17M12 3.5c2.6 2.4 3.8 5.3 3.8 8.5s-1.2 6.1-3.8 8.5c-2.6-2.4-3.8-5.3-3.8-8.5s1.2-6.1 3.8-8.5z" /></svg>
   ),

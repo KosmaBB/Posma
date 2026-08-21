@@ -58,10 +58,14 @@ programami, a nie kodem wkompilowanym w jedną binarkę.
 > dysku. Prawdziwa instalacja i usuwanie z dysku pojawią się w wersji
 > **1.0**, ponieważ wymagają serwerów, z których pliki modułów będą
 > pobierane — patrz [Plany](#plany).
+>
+> Ma to skutek, który łatwo wziąć za usterkę: moduł dodany w nowszej wersji
+> nie pokaże się sam. Aplikacja pamięta wybór z pierwszego uruchomienia, więc
+> nowy moduł czeka wyłączony w menedżerze, dopóki go tam nie włączysz.
 
 ## Moduły
 
-Docelowo modułów jest 22. Dziewięć działa na każdym systemie, reszta istnieje
+Docelowo modułów jest 23. Dziewięć działa na każdym systemie, reszta istnieje
 dlatego, że każda platforma ma zadania konserwacyjne, których pozostałe po
 prostu nie mają.
 
@@ -86,7 +90,7 @@ zbudowane i zweryfikowane na Linuksie; na macOS-ie i Windowsie mają status
 | **Higiena przeglądarek** | Czyszczenie cache, ciasteczek i historii osobno dla każdego profilu, dla Firefoksa i przeglądarek opartych na Chromium | ✅ Linux · 🧪 macOS/Windows |
 | **Menedżer haseł** | Lokalny, szyfrowany sejf (Argon2id + AES-256-GCM): foldery, generator haseł, ocena siły i audyt powtórzeń | ✅ Linux · 🧪 macOS/Windows |
 
-### Linux — 6 modułów
+### Linux — 7 modułów
 
 | Moduł | Co robi | Status |
 |---|---|---|
@@ -94,6 +98,7 @@ zbudowane i zweryfikowane na Linuksie; na macOS-ie i Windowsie mają status
 | **Logi systemd** | Przycina dziennik do zadanego rozmiaru lub wieku, na gotowych ustawieniach zamiast pamiętania flag `journalctl` | ✅ |
 | **Menedżer autostartu** | Pokazuje i przełącza programy startujące z sesją; wpisy dodane samodzielnie można edytować i usuwać, wpisów założonych przez inne aplikacje moduł nigdy nie rusza | ✅ |
 | **Wersje jądra** | Usuwa stare jądra, blokując aktywne i najnowsze — część uprzywilejowana sama je ustala i odmawia, jeśli nie potrafi tego stwierdzić | ✅ |
+| **Personalizacja pulpitu** | Motywy GTK, ikony, kursory i czcionki interfejsu; instalacja motywu lub czcionki przez wskazanie folderu, z automatycznym rozpoznaniem, co to jest | ✅ GNOME · 🧪 KDE Plasma |
 | **Wizualny edytor GRUB** | Czas oczekiwania, domyślny system i motywy instalowane przez wskazanie folderu, z podglądem oraz automatyczną kopią zapasową i wycofaniem zmian | ✅ |
 | **Uninstaller** | Wyświetla aplikacje apt, snap i flatpak, odinstalowuje wybraną, a potem znajduje pozostawione przez nią pliki konfiguracji, cache i dane sandboksa | ✅ |
 
@@ -124,12 +129,11 @@ systemu — to wymóg projektowy, nie opcja.
 ### Planowane, jeszcze poza katalogiem
 
 Te są przesądzone, ale nie mają jeszcze wpisu w katalogu, więc nie liczą się
-do powyższych 22:
+do powyższych 23:
 
 | Moduł | Co ma robić | Dla |
 |---|---|---|
 | **Inteligentne przypomnienia** | Dyskretne powiadomienie, gdy dysk przekroczy ~85% zajętości albo pamięci chronicznie brakuje — podpowiedź wtedy, kiedy jest przydatna, nigdy uprzykrzanie się | Wszystkie systemy |
-| **Personalizacja pulpitu** | Motywy, czcionki i ustawienia powłoki dla GNOME i KDE Plasma, wgrywane tak samo jednym kliknięciem, jak edytor GRUB obsługuje motywy rozruchu | Linux |
 | **LaunchAgents i LaunchDaemons** | Macowa strona autostartu, łącznie z agentami systemowymi, które Apple trzyma w ukryciu | macOS |
 | **Cache narzędzi programistycznych** | Osobne, bezpieczne czyszczenie cache npm, cargo, pip, gradle, go i Mavena — na maszynie używanej do programowania rutynowo kilkadziesiąt gigabajtów, w całości odtwarzalnych | Wszystkie systemy |
 | **Harmonogram konserwacji** | Uruchamia wybrane moduły cyklicznie. Domyślnie wyłącznie skanowanie: zaplanowane zadanie pokazuje, co znalazło, i czeka, a działa bezobsługowo tylko tam, gdzie zostanie to wprost włączone, moduł po module | Wszystkie systemy |
@@ -308,9 +312,6 @@ to nie są rzeczy, które dokleja się do projektu jednoosobowego.
   możliwości prosi.
 - **Instalatory** — `.exe`, `.deb`/`.rpm`/AppImage i `.dmg`, żeby korzystanie
   z POSMA nie wymagało środowiska programistycznego.
-- **Personalizacja pulpitu** jako osobny moduł (GNOME, KDE Plasma), z tym
-  samym podejściem „jedno kliknięcie”, które edytor GRUB stosuje do motywów
-  rozruchu.
 - **Egzekwowanie manifestu** — rdzeń nie sprawdza jeszcze w momencie
   wywołania, czy moduł proszący o operację uprzywilejowaną faktycznie
   zadeklarował potrzebne uprawnienie; dziś weryfikowane jest tylko to, że
