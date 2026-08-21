@@ -318,10 +318,6 @@ to nie są rzeczy, które dokleja się do projektu jednoosobowego.
   pewno urośnie (import z innych menedżerów, integracja z przeglądarką,
   klucze sprzętowe), a rozbudowywanie go równolegle do portowania na macOS i
   Windows oznaczałoby przerabianie tego samego dwa razy.
-- **Egzekwowanie manifestu** — rdzeń nie sprawdza jeszcze w momencie
-  wywołania, czy moduł proszący o operację uprzywilejowaną faktycznie
-  zadeklarował potrzebne uprawnienie; dziś weryfikowane jest tylko to, że
-  użytkownik je nadał. Patrz [docs/security-model.md](docs/security-model.md).
 - Drobniejsze: obsługa `pacman`/`dnf`, czyszczenie nieużywanych środowisk
   flatpak, trwałe zapisywanie ustawień, samouczek po pierwszym uruchomieniu.
 

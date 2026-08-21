@@ -107,18 +107,38 @@ around 80 real files on a live machine.
 
 Capabilities are a closed list (`fs-user`, `fs-system`, `fs-scan`, `pkg`,
 `svc`, `autostart-user`, `autostart-system`, `boot`, `disk-smart`,
-`restore-point`, `fda`, `secrets`, `net`), mirrored in
-`core/src/data/capabilities.ts` and `core/src-tauri/src/capabilities.rs`.
+`restore-point`, `fda`, `secrets`, `net`), defined once in
+[`access/catalog.json`](../access/catalog.json). The Rust core embeds that
+file at compile time and the interface imports the same one, so the thing
+enforcing permissions and the thing describing them to you cannot disagree.
+They used to be separate hand-maintained copies, and they had drifted.
 
-Each module declares the ones it may request in its `module.json`. Every
-privileged core command calls `PermissionRegistry::require(...)` before
-reaching the broker, and fails closed if the capability hasn't been granted.
+The catalog also records which capabilities each module may request and
+which module owns each privileged operation. Every privileged command calls
+`PermissionRegistry::require_operation(...)`, which refuses unless **both**
+hold:
 
-**Known gap, stated plainly:** the core does not yet read `module.json` at
-runtime to verify that the module *making* a request actually declared the
-capability it needs. `require()` checks that the user granted the capability,
-not that the requesting module is entitled to it. Closing that gap is
-outstanding work.
+1. the catalog says the operation's module declares the capability it needs;
+2. the user has granted that capability.
+
+The first check is what stops a granted capability from being a skeleton
+key. Granting `boot` lets the GRUB editor write the boot configuration; it
+does not let a module that never declared `boot` do the same. An operation
+the catalog does not describe is refused outright rather than waved through.
+
+Each module also carries its own `module.json`, because a module has to
+stand on its own — a third-party one ships with a manifest and the catalog
+knows nothing about it. `cargo test -p core` checks every manifest on disk
+against the catalog, so the two accounts cannot drift.
+
+**Access levels** decide how long a grant lasts. Under full access, consent
+was given in bulk at onboarding with the whole list visible, so grants are
+recorded and survive a restart. Under selective access, anything needing
+elevation is granted for the current run only and is asked for again next
+time. Tightening from full to selective drops session grants immediately.
+The level lives in the core's own state file rather than only in the
+interface, because how long a privileged grant lasts is not a decision to
+leave somewhere the user can edit with a browser console.
 
 ## What is *not* protected
 

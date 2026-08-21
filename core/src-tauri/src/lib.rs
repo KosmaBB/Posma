@@ -18,7 +18,7 @@ use capabilities::CapabilityId;
 /// broker protocol is now cross-OS and generic — the broker re-validates it
 /// against its own closed list of managed files regardless.
 const GRUB_CONFIG_PATH: &str = "/etc/default/grub";
-use permissions::{PermissionEntry, PermissionRegistry, PermissionStatus};
+use permissions::{AccessLevel, PermissionEntry, PermissionRegistry, PermissionStatus};
 
 /// Spawns a sidecar module, sends one JSON request line over stdin and
 /// returns the single JSON response line it prints to stdout.
@@ -188,6 +188,24 @@ async fn clean_big_files(app: tauri::AppHandle, paths: Vec<String>) -> Result<se
 /// desktop-theme runs entirely in the user's own home, so none of these
 /// commands take a capability: there is nothing here to consent to that the
 /// user could not do with a file manager and the settings app.
+/// Records the bargain struck at onboarding. Kept in the core rather than
+/// only in the interface's local storage: it decides whether a privileged
+/// grant survives a restart, which is not a decision to leave somewhere the
+/// user can edit with a browser console.
+#[tauri::command]
+async fn set_access_level(
+    state: tauri::State<'_, PermissionRegistry>,
+    level: AccessLevel,
+) -> Result<(), String> {
+    state.set_access_level(level).await;
+    Ok(())
+}
+
+#[tauri::command]
+async fn get_access_level(state: tauri::State<'_, PermissionRegistry>) -> Result<AccessLevel, String> {
+    Ok(state.access_level().await)
+}
+
 #[tauri::command]
 async fn scan_desktop_theme(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
     call_sidecar(&app, "desktop-theme", serde_json::json!({ "cmd": "scan" })).await
@@ -375,7 +393,7 @@ async fn clean_system_paths(
     state: tauri::State<'_, PermissionRegistry>,
     paths: Vec<String>,
 ) -> Result<serde_json::Value, String> {
-    state.require(CapabilityId::FsSystem).await?;
+    state.require_operation("clean_system_paths").await?;
     broker::call_broker(serde_json::json!({ "op": "clean_system_paths", "paths": paths })).await
 }
 
@@ -394,7 +412,7 @@ async fn vacuum_journal(
     mode: String,
     value: u64,
 ) -> Result<serde_json::Value, String> {
-    state.require(CapabilityId::FsSystem).await?;
+    state.require_operation("vacuum_journal").await?;
     broker::call_broker(serde_json::json!({ "op": "trim_system_logs", "mode": mode, "value": value })).await
 }
 
@@ -405,13 +423,13 @@ async fn scan_pkg_cache(app: tauri::AppHandle) -> Result<serde_json::Value, Stri
 
 #[tauri::command]
 async fn apt_clean(state: tauri::State<'_, PermissionRegistry>) -> Result<serde_json::Value, String> {
-    state.require(CapabilityId::FsSystem).await?;
+    state.require_operation("apt_clean").await?;
     broker::call_broker(serde_json::json!({ "op": "pkg_cache_clean", "source": "apt" })).await
 }
 
 #[tauri::command]
 async fn apt_autoremove(state: tauri::State<'_, PermissionRegistry>) -> Result<serde_json::Value, String> {
-    state.require(CapabilityId::Pkg).await?;
+    state.require_operation("apt_autoremove").await?;
     broker::call_broker(serde_json::json!({ "op": "pkg_autoremove", "source": "apt" })).await
 }
 
@@ -421,7 +439,7 @@ async fn snap_remove_revision(
     name: String,
     revision: u64,
 ) -> Result<serde_json::Value, String> {
-    state.require(CapabilityId::Pkg).await?;
+    state.require_operation("snap_remove_revision").await?;
     broker::call_broker(serde_json::json!({ "op": "pkg_remove_revision", "source": "snap", "id": name, "revision": revision })).await
 }
 
@@ -438,8 +456,8 @@ async fn remove_kernel(
     state: tauri::State<'_, PermissionRegistry>,
     package: String,
 ) -> Result<serde_json::Value, String> {
-    state.require(CapabilityId::Boot).await?;
-    state.require(CapabilityId::Pkg).await?;
+    state.require_operation("remove_kernel").await?;
+    state.require_operation("remove_kernel").await?;
     broker::call_broker(serde_json::json!({ "op": "remove_kernel", "package": package })).await
 }
 
@@ -484,7 +502,7 @@ async fn write_grub_config(
     content: String,
     keep_backups: u64,
 ) -> Result<serde_json::Value, String> {
-    state.require(CapabilityId::Boot).await?;
+    state.require_operation("write_grub_config").await?;
     broker::call_broker(serde_json::json!({ "op": "write_system_file", "path": GRUB_CONFIG_PATH, "content": content, "keep_backups": keep_backups })).await
 }
 
@@ -496,7 +514,7 @@ async fn install_grub_theme(
     content: String,
     keep_backups: u64,
 ) -> Result<serde_json::Value, String> {
-    state.require(CapabilityId::Boot).await?;
+    state.require_operation("install_grub_theme").await?;
     broker::call_broker(
         serde_json::json!({ "op": "install_directory", "source_dir": source_dir, "dest_name": name, "activate_content": content, "activate_path": GRUB_CONFIG_PATH, "keep_backups": keep_backups }),
     )
@@ -509,13 +527,13 @@ async fn restore_grub_backup(
     filename: String,
     keep_backups: u64,
 ) -> Result<serde_json::Value, String> {
-    state.require(CapabilityId::Boot).await?;
+    state.require_operation("restore_grub_backup").await?;
     broker::call_broker(serde_json::json!({ "op": "restore_system_file_backup", "path": GRUB_CONFIG_PATH, "filename": filename, "keep_backups": keep_backups })).await
 }
 
 #[tauri::command]
 async fn read_boot_entries(state: tauri::State<'_, PermissionRegistry>) -> Result<serde_json::Value, String> {
-    state.require(CapabilityId::Boot).await?;
+    state.require_operation("read_boot_entries").await?;
     broker::call_broker(serde_json::json!({ "op": "read_boot_entries" })).await
 }
 
@@ -535,7 +553,7 @@ async fn uninstall_pkg_privileged(
     source: String,
     id: String,
 ) -> Result<serde_json::Value, String> {
-    state.require(CapabilityId::Pkg).await?;
+    state.require_operation("uninstall_pkg_privileged").await?;
     broker::call_broker(serde_json::json!({ "op": "pkg_remove", "source": source, "id": id })).await
 }
 
@@ -561,6 +579,8 @@ pub fn run() {
             clean_duplicate_versions,
             scan_big_files,
             clean_big_files,
+            set_access_level,
+            get_access_level,
             scan_desktop_theme,
             apply_desktop_theme,
             install_desktop_theme,

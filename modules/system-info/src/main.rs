@@ -31,7 +31,10 @@ struct Request {
 enum MetricKind {
     /// Fluctuates constantly; worth plotting over time.
     Load,
-    /// A fill level.
+    /// A fill level. Not emitted here since swap was dropped, but part of
+    /// the protocol: the interface builds the main-volume tile with it from
+    /// the disk list, and a future metric with a ceiling belongs in it too.
+    #[allow(dead_code)]
     Capacity,
     /// Degrees Celsius.
     Temperature,

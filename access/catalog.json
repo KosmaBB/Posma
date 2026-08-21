@@ -1,0 +1,198 @@
+{
+  "$comment": "Single source of truth for the permission system. See access/README.md. Read by Rust (include_str!) and by the interface (direct import); checked against every module.json by cargo test.",
+  "capabilities": [
+    {
+      "id": "fs-user",
+      "name": "Pliki użytkownika",
+      "desc": "Odczyt i zapis w Twoich plikach — temp, cache, kosz, dokumenty które sam wskażesz.",
+      "elevation": "none"
+    },
+    {
+      "id": "fs-system",
+      "name": "Pliki systemowe",
+      "desc": "Odczyt i zapis poza katalogiem użytkownika — logi systemowe, systemowy temp, systemowy cache.",
+      "elevation": "required"
+    },
+    {
+      "id": "fs-scan",
+      "name": "Skan całego dysku",
+      "desc": "Przeszukiwanie całego dysku w poszukiwaniu dużych plików/duplikatów. Bez podniesienia pomija pliki innych użytkowników zamiast się wywalać.",
+      "elevation": "optional"
+    },
+    {
+      "id": "pkg",
+      "name": "Menedżer pakietów",
+      "desc": "apt/pacman/flatpak/snap (Linux), winget (Windows), brew (macOS).",
+      "elevation": "optional"
+    },
+    {
+      "id": "svc",
+      "name": "Usługi i daemony",
+      "desc": "Włączanie/wyłączanie usług systemowych (systemd, usługi Windows, launchd).",
+      "elevation": "required"
+    },
+    {
+      "id": "autostart-user",
+      "name": "Autostart użytkownika",
+      "desc": "Wpisy autostartu należące do Twojego konta.",
+      "elevation": "none"
+    },
+    {
+      "id": "autostart-system",
+      "name": "Autostart systemowy",
+      "desc": "Wpisy autostartu widoczne dla wszystkich użytkowników systemu.",
+      "elevation": "required"
+    },
+    {
+      "id": "boot",
+      "name": "Bootloader / jądro",
+      "desc": "GRUB, partycja /boot, zarządzanie wersjami jądra. Zawsze z automatycznym backupem przed zmianą.",
+      "elevation": "required"
+    },
+    {
+      "id": "disk-smart",
+      "name": "Zdrowie dysku (S.M.A.R.T.)",
+      "desc": "Odczyt surowych parametrów dysku.",
+      "elevation": "required"
+    },
+    {
+      "id": "restore-point",
+      "name": "Punkt przywracania",
+      "desc": "Tworzenie punktu przywracania systemu Windows przed ryzykowną operacją.",
+      "elevation": "required"
+    },
+    {
+      "id": "fda",
+      "name": "Pełny dostęp do dysku (macOS)",
+      "desc": "Wymagany m.in. dla Mail/Messages/Time Machine. Nie da się nadać programowo — poprowadzimy Cię do odpowiedniego ustawienia systemowego.",
+      "elevation": "required",
+      "manualOnly": true
+    },
+    {
+      "id": "secrets",
+      "name": "Magazyn sekretów",
+      "desc": "Szyfrowana baza Vault — klucz główny niedostępny dla innych modułów.",
+      "elevation": "none"
+    },
+    {
+      "id": "net",
+      "name": "Sieć",
+      "desc": "Połączenia wychodzące, np. audyt wycieków haseł. Zawsze deklarowane jawnie.",
+      "elevation": "none"
+    }
+  ],
+  "modules": {
+    "autostart": [
+      "autostart-user"
+    ],
+    "big-files": [
+      "fs-user"
+    ],
+    "browser-hygiene": [
+      "fs-user",
+      "fda"
+    ],
+    "desktop-theme": [
+      "fs-user"
+    ],
+    "disk-map": [
+      "fs-user",
+      "fs-scan"
+    ],
+    "duplicates": [
+      "fs-user"
+    ],
+    "grub-editor": [
+      "boot"
+    ],
+    "health-monitor": [
+      "disk-smart"
+    ],
+    "journald-trim": [
+      "fs-system"
+    ],
+    "kernel-mgr": [
+      "boot",
+      "pkg"
+    ],
+    "metadata": [
+      "fs-user"
+    ],
+    "pkg-cache": [
+      "fs-system",
+      "pkg"
+    ],
+    "shredder": [
+      "fs-user"
+    ],
+    "system-info": [],
+    "temp-clean": [
+      "fs-user",
+      "fs-system"
+    ],
+    "uninstaller": [
+      "fs-user",
+      "pkg"
+    ],
+    "vault": [
+      "secrets"
+    ]
+  },
+  "operations": {
+    "clean_system_paths": {
+      "module": "temp-clean",
+      "capability": "fs-system",
+      "broker_op": "clean_system_paths"
+    },
+    "vacuum_journal": {
+      "module": "journald-trim",
+      "capability": "fs-system",
+      "broker_op": "trim_system_logs"
+    },
+    "apt_clean": {
+      "module": "pkg-cache",
+      "capability": "fs-system",
+      "broker_op": "pkg_cache_clean"
+    },
+    "apt_autoremove": {
+      "module": "pkg-cache",
+      "capability": "pkg",
+      "broker_op": "pkg_autoremove"
+    },
+    "snap_remove_revision": {
+      "module": "pkg-cache",
+      "capability": "pkg",
+      "broker_op": "pkg_remove_revision"
+    },
+    "remove_kernel": {
+      "module": "kernel-mgr",
+      "capability": "boot",
+      "broker_op": "remove_kernel"
+    },
+    "write_grub_config": {
+      "module": "grub-editor",
+      "capability": "boot",
+      "broker_op": "write_system_file"
+    },
+    "install_grub_theme": {
+      "module": "grub-editor",
+      "capability": "boot",
+      "broker_op": "install_directory"
+    },
+    "restore_grub_backup": {
+      "module": "grub-editor",
+      "capability": "boot",
+      "broker_op": "restore_system_file_backup"
+    },
+    "read_boot_entries": {
+      "module": "grub-editor",
+      "capability": "boot",
+      "broker_op": "read_boot_entries"
+    },
+    "uninstall_pkg_privileged": {
+      "module": "uninstaller",
+      "capability": "pkg",
+      "broker_op": "pkg_remove"
+    }
+  }
+}

@@ -26,3 +26,6 @@ tauri-plugin-shell = "2.3.5"
 tauri-plugin-dialog = "2"
 tokio = { version = "1", features = ["sync", "process", "io-util", "net"] }
 
+[dev-dependencies]
+# "rt" i "macros" tylko do testów — rejestr jest asynchroniczny.
+tokio = { version = "1", features = ["rt", "macros"] }

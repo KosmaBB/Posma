@@ -28,5 +28,10 @@ export default defineConfig(async () => ({
       // 3. tell Vite to ignore watching `src-tauri`
       ignored: ["**/src-tauri/**"],
     },
+    fs: {
+      // access/catalog.json lives above this root and is the one place the
+      // permission system is described; Rust embeds the same file.
+      allow: [".."],
+    },
   },
 }));

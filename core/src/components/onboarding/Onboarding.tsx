@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { invoke } from '@tauri-apps/api/core'
+import { capabilitiesForAll } from '../../data/capabilities'
 import type { AccessLevel, OnboardingResult } from '../../state/appState'
 import { detectOs } from '../../state/appState'
 import type { Os } from '../../data/modules'
@@ -82,11 +84,37 @@ export function Onboarding({ onDone }: { onDone: (result: OnboardingResult) => v
     })
   }
 
-  function finish(tutorialDone: boolean) {
+  async function finish(tutorialDone: boolean) {
+    const level = accessLevel ?? 'selective'
+
+    // The core decides whether a privileged grant survives a restart, so it
+    // has to know which bargain was struck — keeping this only in local
+    // storage would put a security decision somewhere freely editable.
+    try {
+      await invoke('set_access_level', { level })
+
+      // Full access means consent was given here, in bulk, with the list on
+      // screen. Asking for it now is what makes installing a module later
+      // never prompt again. Selective deliberately asks nothing yet.
+      if (level === 'full') {
+        for (const cap of capabilitiesForAll(picked)) {
+          // One failure must not abandon the rest: a capability with no
+          // broker on this platform is expected to refuse.
+          try {
+            await invoke('request_permission', { capability: cap.id })
+          } catch {
+            /* recorded as not granted; Settings shows it and offers a fix */
+          }
+        }
+      }
+    } catch {
+      /* the interface still opens; permissions are re-requested on first use */
+    }
+
     onDone({
       consentAccepted: true,
       os,
-      accessLevel: accessLevel ?? 'selective',
+      accessLevel: level,
       installedModules: [...picked],
       tutorialDone,
     })

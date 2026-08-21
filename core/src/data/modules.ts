@@ -5,13 +5,14 @@
  * 4 Aplikacje, 5 Custom.
  */
 
-import type { CapabilityId } from './capabilities'
 
 export type Os = 'windows' | 'linux' | 'macos'
 
 export type FolderId = 'data' | 'system' | 'security' | 'apps' | 'custom'
 
 export type Gradient = { g1: string; g2: string }
+
+export { capabilitiesFor } from './capabilities'
 
 export const gradients = {
   teal: { g1: 'var(--g-teal-1)', g2: 'var(--g-teal-2)' },
@@ -50,43 +51,46 @@ export interface ModuleDef {
   icon: string
   /** suggested quick action shown on the dashboard when installed */
   quickAction?: string
-  /** capabilities this module may request — see Access_plan.md §3 for the full matrix this mirrors */
-  capabilities: CapabilityId[]
+  /* Capabilities are deliberately absent here. They live in
+     access/catalog.json, which the Rust core embeds and enforces against.
+     A second copy in this file drifted from the manifests — five modules
+     were listed as requesting capabilities their own code refuses to use —
+     so the copy is gone and `capabilitiesFor(id)` reads the one source. */
 }
 
 const ALL: Os[] = ['windows', 'linux', 'macos']
 
 export const modules: ModuleDef[] = [
   // ---- Folder 1: Dane | Pliki ----
-  { id: 'temp-clean', name: 'Czyszczenie Temp', desc: 'Skanowanie i kasowanie folderów tymczasowych systemu i aplikacji.', folder: 'data', os: ALL, risk: 'low', icon: 'sweep', quickAction: 'Przeskanuj pliki tymczasowe', capabilities: ['fs-user', 'fs-system', 'fda'] },
-  { id: 'big-files', name: 'Szukanie dużych plików', desc: 'Przeszukiwanie dysku i segregacja plików od największych do najmniejszych.', folder: 'data', os: ALL, risk: 'low', icon: 'search', quickAction: 'Znajdź największe pliki', capabilities: ['fs-user', 'fs-scan', 'fda'] },
-  { id: 'duplicates', name: 'Szukanie duplikatów', desc: 'Wykrywanie identycznych plików na podstawie sum MD5/SHA-256.', folder: 'data', os: ALL, risk: 'low', icon: 'duplicate', quickAction: 'Wykryj duplikaty', capabilities: ['fs-user', 'fs-scan', 'fda'] },
-  { id: 'shredder', name: 'Niszczarka plików', desc: 'Bezpowrotne kasowanie danych przez wielokrotne nadpisywanie.', folder: 'data', os: ALL, risk: 'critical', icon: 'shredder', capabilities: ['fs-user'] },
-  { id: 'metadata', name: 'Usuwanie metadanych', desc: 'Czyszczenie ukrytych informacji (GPS, autor) ze zdjęć i dokumentów.', folder: 'data', os: ALL, risk: 'low', icon: 'tag', capabilities: ['fs-user'] },
-  { id: 'xcode-cache', name: 'Czyszczenie Xcode', desc: 'Usuwanie plików tymczasowych DerivedData środowiska Xcode.', folder: 'data', os: ['macos'], risk: 'low', icon: 'hammer', capabilities: ['fs-user'] },
-  { id: 'macos-slim', name: 'Odchudzanie macOS', desc: 'Usuwanie załączników cache Mail i Messages bez utraty treści.', folder: 'data', os: ['macos'], risk: 'medium', icon: 'scissors', capabilities: ['fs-user', 'fda'] },
-  { id: 'pkg-cache', name: 'Cache pakietów Linux', desc: 'Czyszczenie cache i osieroconych pakietów apt, pacman, flatpak i snap.', folder: 'data', os: ['linux'], risk: 'low', icon: 'package', quickAction: 'Wyczyść cache pakietów', capabilities: ['fs-system', 'pkg'] },
-  { id: 'journald-trim', name: 'Przycinanie logów systemd', desc: 'Czyszczenie logów journalctl do zadanego rozmiaru lub wieku.', folder: 'data', os: ['linux'], risk: 'low', icon: 'logs', capabilities: ['fs-system'] },
+  { id: 'temp-clean', name: 'Czyszczenie Temp', desc: 'Skanowanie i kasowanie folderów tymczasowych systemu i aplikacji.', folder: 'data', os: ALL, risk: 'low', icon: 'sweep', quickAction: 'Przeskanuj pliki tymczasowe' },
+  { id: 'big-files', name: 'Szukanie dużych plików', desc: 'Przeszukiwanie dysku i segregacja plików od największych do najmniejszych.', folder: 'data', os: ALL, risk: 'low', icon: 'search', quickAction: 'Znajdź największe pliki' },
+  { id: 'duplicates', name: 'Szukanie duplikatów', desc: 'Wykrywanie identycznych plików na podstawie sum MD5/SHA-256.', folder: 'data', os: ALL, risk: 'low', icon: 'duplicate', quickAction: 'Wykryj duplikaty' },
+  { id: 'shredder', name: 'Niszczarka plików', desc: 'Bezpowrotne kasowanie danych przez wielokrotne nadpisywanie.', folder: 'data', os: ALL, risk: 'critical', icon: 'shredder' },
+  { id: 'metadata', name: 'Usuwanie metadanych', desc: 'Czyszczenie ukrytych informacji (GPS, autor) ze zdjęć i dokumentów.', folder: 'data', os: ALL, risk: 'low', icon: 'tag' },
+  { id: 'xcode-cache', name: 'Czyszczenie Xcode', desc: 'Usuwanie plików tymczasowych DerivedData środowiska Xcode.', folder: 'data', os: ['macos'], risk: 'low', icon: 'hammer' },
+  { id: 'macos-slim', name: 'Odchudzanie macOS', desc: 'Usuwanie załączników cache Mail i Messages bez utraty treści.', folder: 'data', os: ['macos'], risk: 'medium', icon: 'scissors' },
+  { id: 'pkg-cache', name: 'Cache pakietów Linux', desc: 'Czyszczenie cache i osieroconych pakietów apt, pacman, flatpak i snap.', folder: 'data', os: ['linux'], risk: 'low', icon: 'package', quickAction: 'Wyczyść cache pakietów' },
+  { id: 'journald-trim', name: 'Przycinanie logów systemd', desc: 'Czyszczenie logów journalctl do zadanego rozmiaru lub wieku.', folder: 'data', os: ['linux'], risk: 'low', icon: 'logs' },
 
   // ---- Folder 2: System ----
-  { id: 'disk-map', name: 'Mapa dysków', desc: 'Graficzny podgląd zajętości dysku w postaci proporcjonalnych kafelków.', folder: 'system', os: ALL, risk: 'low', icon: 'diskmap', quickAction: 'Pokaż mapę dysku', capabilities: ['fs-user', 'fs-scan'] },
-  { id: 'autostart', name: 'Menadżer autostartu', desc: 'Podgląd i wyłączanie programów startujących z systemem.', folder: 'system', os: ['linux'], risk: 'medium', icon: 'autostart', quickAction: 'Przejrzyj autostart', capabilities: ['autostart-user', 'autostart-system'] },
-  { id: 'health-monitor', name: 'Monitor zdrowia', desc: 'CPU/RAM na żywo, czyszczenie cache i odczyt S.M.A.R.T. dysków.', folder: 'system', os: ALL, risk: 'low', icon: 'pulse', capabilities: ['disk-smart'] },
-  { id: 'winsxs', name: 'Czyszczenie WinSxS', desc: 'Integracja z DISM — usuwanie starych wersji plików Windows Update.', folder: 'system', os: ['windows'], risk: 'critical', icon: 'layers', capabilities: ['fs-system', 'restore-point'] },
-  { id: 'services', name: 'Menedżer usług', desc: 'Zarządzanie usługami przez gotowe profile (telemetria, gry).', folder: 'system', os: ['windows'], risk: 'critical', icon: 'gears', capabilities: ['svc', 'restore-point'] },
-  { id: 'bloatware', name: 'Usuwanie Bloatware', desc: 'Odinstalowywanie fabrycznych aplikacji UWP przez PowerShell.', folder: 'system', os: ['windows'], risk: 'critical', icon: 'trash', capabilities: ['fs-system', 'restore-point'] },
-  { id: 'time-machine', name: 'Time Machine', desc: 'Usuwanie lokalnych migawek Time Machine przez tmutil.', folder: 'system', os: ['macos'], risk: 'medium', icon: 'clock', capabilities: ['fs-system', 'fda'] },
-  { id: 'kernel-mgr', name: 'Zarządzanie wersjami jądra', desc: 'Przegląd i usuwanie starych jąder z /boot, z blokadą aktywnego.', folder: 'system', os: ['linux'], risk: 'critical', icon: 'kernel', capabilities: ['boot', 'pkg'] },
-  { id: 'desktop-theme', name: 'Personalizacja pulpitu', desc: 'Motywy GTK, ikony, kursory i czcionki interfejsu dla GNOME i KDE Plasma; instalacja motywu lub czcionki z folderu.', folder: 'system', os: ['linux'], risk: 'low', icon: 'palette', quickAction: 'Zmień wygląd', capabilities: ['fs-user'] },
-  { id: 'grub-editor', name: 'Wizualny edytor GRUB', desc: 'Modyfikacja /etc/default/grub — czas wyboru, domyślny system, tło.', folder: 'system', os: ['linux'], risk: 'critical', icon: 'boot', capabilities: ['boot'] },
+  { id: 'disk-map', name: 'Mapa dysków', desc: 'Graficzny podgląd zajętości dysku w postaci proporcjonalnych kafelków.', folder: 'system', os: ALL, risk: 'low', icon: 'diskmap', quickAction: 'Pokaż mapę dysku' },
+  { id: 'autostart', name: 'Menadżer autostartu', desc: 'Podgląd i wyłączanie programów startujących z systemem.', folder: 'system', os: ['linux'], risk: 'medium', icon: 'autostart', quickAction: 'Przejrzyj autostart' },
+  { id: 'health-monitor', name: 'Monitor zdrowia', desc: 'CPU/RAM na żywo, czyszczenie cache i odczyt S.M.A.R.T. dysków.', folder: 'system', os: ALL, risk: 'low', icon: 'pulse' },
+  { id: 'winsxs', name: 'Czyszczenie WinSxS', desc: 'Integracja z DISM — usuwanie starych wersji plików Windows Update.', folder: 'system', os: ['windows'], risk: 'critical', icon: 'layers' },
+  { id: 'services', name: 'Menedżer usług', desc: 'Zarządzanie usługami przez gotowe profile (telemetria, gry).', folder: 'system', os: ['windows'], risk: 'critical', icon: 'gears' },
+  { id: 'bloatware', name: 'Usuwanie Bloatware', desc: 'Odinstalowywanie fabrycznych aplikacji UWP przez PowerShell.', folder: 'system', os: ['windows'], risk: 'critical', icon: 'trash' },
+  { id: 'time-machine', name: 'Time Machine', desc: 'Usuwanie lokalnych migawek Time Machine przez tmutil.', folder: 'system', os: ['macos'], risk: 'medium', icon: 'clock' },
+  { id: 'kernel-mgr', name: 'Zarządzanie wersjami jądra', desc: 'Przegląd i usuwanie starych jąder z /boot, z blokadą aktywnego.', folder: 'system', os: ['linux'], risk: 'critical', icon: 'kernel' },
+  { id: 'desktop-theme', name: 'Personalizacja pulpitu', desc: 'Motywy GTK, ikony, kursory i czcionki interfejsu dla GNOME i KDE Plasma; instalacja motywu lub czcionki z folderu.', folder: 'system', os: ['linux'], risk: 'low', icon: 'palette', quickAction: 'Zmień wygląd' },
+  { id: 'grub-editor', name: 'Wizualny edytor GRUB', desc: 'Modyfikacja /etc/default/grub — czas wyboru, domyślny system, tło.', folder: 'system', os: ['linux'], risk: 'critical', icon: 'boot' },
 
   // ---- Folder 3: Bezpieczeństwo ----
-  { id: 'browser-hygiene', name: 'Higiena przeglądarek', desc: 'Czyszczenie cache, ciasteczek i historii; optymalizacja baz SQLite.', folder: 'security', os: ALL, risk: 'medium', icon: 'globe', quickAction: 'Wyczyść dane przeglądarek', capabilities: ['fs-user', 'fda'] },
-  { id: 'vault', name: 'Menadżer haseł (Vault)', desc: 'Lokalna, szyfrowana baza loginów i haseł z audytem bezpieczeństwa.', folder: 'security', os: ALL, risk: 'low', icon: 'vault', quickAction: 'Otwórz Vault', capabilities: ['secrets', 'net'] },
+  { id: 'browser-hygiene', name: 'Higiena przeglądarek', desc: 'Czyszczenie cache, ciasteczek i historii; optymalizacja baz SQLite.', folder: 'security', os: ALL, risk: 'medium', icon: 'globe', quickAction: 'Wyczyść dane przeglądarek' },
+  { id: 'vault', name: 'Menadżer haseł (Vault)', desc: 'Lokalna, szyfrowana baza loginów i haseł z audytem bezpieczeństwa.', folder: 'security', os: ALL, risk: 'low', icon: 'vault', quickAction: 'Otwórz Vault' },
 
   // ---- Folder 4: Aplikacje ----
-  { id: 'winget-ui', name: 'Winget', desc: 'Lista programów i zbiorcza aktualizacja przez systemowy winget.', folder: 'apps', os: ['windows'], risk: 'low', icon: 'download', quickAction: 'Sprawdź aktualizacje', capabilities: ['pkg'] },
-  { id: 'uninstaller', name: 'Uninstaller', desc: 'Lista zainstalowanych aplikacji (apt/flatpak/snap), odinstalowanie i wyszukanie pozostałości config/cache/data po wybranym programie.', folder: 'apps', os: ['linux'], risk: 'medium', icon: 'apps', capabilities: ['fs-user', 'pkg'] },
+  { id: 'winget-ui', name: 'Winget', desc: 'Lista programów i zbiorcza aktualizacja przez systemowy winget.', folder: 'apps', os: ['windows'], risk: 'low', icon: 'download', quickAction: 'Sprawdź aktualizacje' },
+  { id: 'uninstaller', name: 'Uninstaller', desc: 'Lista zainstalowanych aplikacji (apt/flatpak/snap), odinstalowanie i wyszukanie pozostałości config/cache/data po wybranym programie.', folder: 'apps', os: ['linux'], risk: 'medium', icon: 'apps' },
 ]
 
 export const riskLabel: Record<ModuleRisk, string> = {

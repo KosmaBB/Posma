@@ -1,14 +1,12 @@
 /**
- * Canonical capability catalog — see Access_plan.md §2 for the full design.
- * This is the single source of truth for what a module is allowed to ask
- * for. Every module declares a subset of these IDs (in `module.json` and
- * mirrored in `modules.ts`); the core will later validate requests against
- * this declaration before forwarding anything to the privileged broker.
+ * Capability catalog — a typed view of `access/catalog.json`.
  *
- * Kept as plain data (no per-OS branching here) — OS-specific nuance for a
- * given module is expressed via that module's own `os` field in
- * `modules.ts`, not by branching the catalog itself.
+ * Nothing is restated here. The same file is embedded into the Rust core at
+ * compile time, so the interface and the thing enforcing permissions cannot
+ * describe them differently. This module exists to give that data types and
+ * a couple of lookups, not to hold a second copy of it.
  */
+import catalog from '../../../access/catalog.json'
 
 export type Elevation = 'none' | 'optional' | 'required'
 
@@ -17,98 +15,38 @@ export interface CapabilityDef {
   name: string
   desc: string
   elevation: Elevation
-  /** true if granting this can only happen via manual user action (e.g. macOS FDA) — never fully automatable */
+  /** True where the OS only ever lets a person grant this by hand. */
   manualOnly?: boolean
 }
 
-export const capabilities = [
-  {
-    id: 'fs-user',
-    name: 'Pliki użytkownika',
-    desc: 'Odczyt i zapis w Twoich plikach — temp, cache, kosz, dokumenty które sam wskażesz.',
-    elevation: 'none',
-  },
-  {
-    id: 'fs-system',
-    name: 'Pliki systemowe',
-    desc: 'Odczyt i zapis poza katalogiem użytkownika — logi systemowe, systemowy temp, systemowy cache.',
-    elevation: 'required',
-  },
-  {
-    id: 'fs-scan',
-    name: 'Skan całego dysku',
-    desc: 'Przeszukiwanie całego dysku w poszukiwaniu dużych plików/duplikatów. Bez podniesienia pomija pliki innych użytkowników zamiast się wywalać.',
-    elevation: 'optional',
-  },
-  {
-    id: 'pkg',
-    name: 'Menedżer pakietów',
-    desc: 'apt/pacman/flatpak/snap (Linux), winget (Windows), brew (macOS).',
-    elevation: 'optional',
-  },
-  {
-    id: 'svc',
-    name: 'Usługi i daemony',
-    desc: 'Włączanie/wyłączanie usług systemowych (systemd, usługi Windows, launchd).',
-    elevation: 'required',
-  },
-  {
-    id: 'autostart-user',
-    name: 'Autostart użytkownika',
-    desc: 'Wpisy autostartu należące do Twojego konta.',
-    elevation: 'none',
-  },
-  {
-    id: 'autostart-system',
-    name: 'Autostart systemowy',
-    desc: 'Wpisy autostartu widoczne dla wszystkich użytkowników systemu.',
-    elevation: 'required',
-  },
-  {
-    id: 'boot',
-    name: 'Bootloader / jądro',
-    desc: 'GRUB, partycja /boot, zarządzanie wersjami jądra. Zawsze z automatycznym backupem przed zmianą.',
-    elevation: 'required',
-  },
-  {
-    id: 'disk-smart',
-    name: 'Zdrowie dysku (S.M.A.R.T.)',
-    desc: 'Odczyt surowych parametrów dysku.',
-    elevation: 'required',
-  },
-  {
-    id: 'restore-point',
-    name: 'Punkt przywracania',
-    desc: 'Tworzenie punktu przywracania systemu Windows przed ryzykowną operacją.',
-    elevation: 'required',
-  },
-  {
-    id: 'fda',
-    name: 'Pełny dostęp do dysku (macOS)',
-    desc: 'Wymagany m.in. dla Mail/Messages/Time Machine. Nie da się nadać programowo — poprowadzimy Cię do odpowiedniego ustawienia systemowego.',
-    elevation: 'required',
-    manualOnly: true,
-  },
-  {
-    id: 'secrets',
-    name: 'Magazyn sekretów',
-    desc: 'Szyfrowana baza Vault — klucz główny niedostępny dla innych modułów.',
-    elevation: 'none',
-  },
-  {
-    id: 'net',
-    name: 'Sieć',
-    desc: 'Połączenia wychodzące, np. audyt wycieków haseł. Zawsze deklarowane jawnie.',
-    elevation: 'none',
-  },
-] as const satisfies readonly CapabilityDef[]
+export type CapabilityId = string
 
-export type CapabilityId = (typeof capabilities)[number]['id']
+export const capabilities: CapabilityDef[] = catalog.capabilities as CapabilityDef[]
 
 const byId = new Map(capabilities.map((c) => [c.id, c]))
 
-export function getCapability(id: CapabilityId): CapabilityDef {
-  const cap = byId.get(id)
-  if (!cap) throw new Error(`Unknown capability id: ${id}`)
-  return cap
+export function capability(id: CapabilityId): CapabilityDef | undefined {
+  return byId.get(id)
+}
+
+/**
+ * What a module is allowed to request.
+ *
+ * A module the catalog does not know declares nothing, which is what the
+ * core assumes too: every privileged request from it is refused.
+ */
+export function capabilitiesFor(moduleId: string): CapabilityId[] {
+  return (catalog.modules as Record<string, string[]>)[moduleId] ?? []
+}
+
+/** Capabilities a set of modules needs between them, each listed once. */
+export function capabilitiesForAll(moduleIds: Iterable<string>): CapabilityDef[] {
+  const seen = new Set<string>()
+  for (const id of moduleIds) for (const c of capabilitiesFor(id)) seen.add(c)
+  return capabilities.filter((c) => seen.has(c.id))
+}
+
+/** Only the ones that will actually prompt for elevation. */
+export function needsElevation(defs: CapabilityDef[]): CapabilityDef[] {
+  return defs.filter((d) => d.elevation !== 'none')
 }

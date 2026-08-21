@@ -317,10 +317,6 @@ are not something to bolt onto a single-user design.
   regardless: it is the one module almost certain to grow (importing from
   other managers, browser integration, hardware keys), and growing it
   alongside the macOS and Windows ports would mean doing the same work twice.
-- **Manifest enforcement** — the core does not yet verify at call time that
-  the module making a privileged request actually declared the capability it
-  needs; today the check is only that the user granted it. See
-  [docs/security-model.md](docs/security-model.md).
 - Smaller items: `pacman`/`dnf` support, flatpak unused-runtime cleanup,
   settings persistence beyond the browser store, post-onboarding tutorial.
 
