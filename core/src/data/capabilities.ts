@@ -1,10 +1,7 @@
 /**
- * Capability catalog — a typed view of `access/catalog.json`.
- *
- * Nothing is restated here. The same file is embedded into the Rust core at
- * compile time, so the interface and the thing enforcing permissions cannot
- * describe them differently. This module exists to give that data types and
- * a couple of lookups, not to hold a second copy of it.
+ * Capability catalog — a typed view of `access/catalog.json`, the same file
+ * the Rust core embeds and enforces against. Types and lookups only, never
+ * a second copy.
  */
 import catalog from '../../../access/catalog.json'
 

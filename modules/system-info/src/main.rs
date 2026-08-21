@@ -1,17 +1,10 @@
-//! system-info sidecar: whatever this machine is willing to tell us about
-//! itself, without asking for a single privilege.
+//! system-info sidecar: what this machine will report about itself without
+//! any privilege. Protocol: {"cmd":"get_info"}.
 //!
-//! Protocol (one JSON line on stdin -> one JSON line on stdout):
-//!   {"cmd":"get_info"}
-//!
-//! Everything is collected as an *optional* metric. A sensor that does not
-//! exist, a file the user may not read, a machine with no swap — none of
-//! those are errors and none of them produce a placeholder. They simply do
-//! not appear in the list, and the interface lays out whatever did.
-//!
-//! That is why the payload is a list rather than a struct with fields: a
-//! struct forces the caller to decide what an absent value looks like, and
-//! the honest answer is that it looks like nothing at all.
+//! Every metric is optional. A missing sensor or an unreadable file is not
+//! an error and produces no placeholder — it is absent from the list and
+//! the interface lays out whatever arrived. Hence a list rather than a
+//! struct: a struct would force a decision about what absent looks like.
 
 use std::fs;
 use std::io::{self, BufRead, Write};

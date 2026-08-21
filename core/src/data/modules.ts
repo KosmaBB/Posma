@@ -51,11 +51,8 @@ export interface ModuleDef {
   icon: string
   /** suggested quick action shown on the dashboard when installed */
   quickAction?: string
-  /* Capabilities are deliberately absent here. They live in
-     access/catalog.json, which the Rust core embeds and enforces against.
-     A second copy in this file drifted from the manifests — five modules
-     were listed as requesting capabilities their own code refuses to use —
-     so the copy is gone and `capabilitiesFor(id)` reads the one source. */
+  /* Capabilities live in access/catalog.json, which the core enforces
+     against. A copy here drifted from the manifests; use capabilitiesFor(). */
 }
 
 const ALL: Os[] = ['windows', 'linux', 'macos']
@@ -126,13 +123,9 @@ export function applyOrder<T extends { id: string }>(items: T[], order: string[]
 }
 
 /**
- * Every module for this system, in the order the user arranged it.
- *
- * Folders keep their catalog order; inside each one the arrangement comes
- * from whatever was dragged in the folder view. This is the single ordering
- * used by both surfaces — the folder view is one window onto it, the
- * suggested-actions strip is another — so dragging a card in a folder moves
- * it on the dashboard too, instead of the two drifting apart.
+ * Every module for this system, in the order the user arranged it. Folders
+ * keep catalog order; inside each, the order comes from the folder view.
+ * Every surface reads this one list.
  */
 export function orderedModules(os: Os | undefined, order: Record<string, string[]>): ModuleDef[] {
   return folders.flatMap((f) => applyOrder(modulesInFolder(f.id, os), order[f.id]))

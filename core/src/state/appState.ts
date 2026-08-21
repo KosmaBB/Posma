@@ -27,11 +27,8 @@ export type View =
 const STORAGE_KEY = 'posma.onboarding.v1'
 
 /**
- * Module order inside each folder, keyed by folder id.
- *
- * Kept apart from the onboarding record because it is a preference the user
- * changes constantly, while that record is a one-off result — mixing them
- * would mean rewriting the onboarding blob on every drag.
+ * Module order per folder. Kept apart from the onboarding record so a drag
+ * does not rewrite that one-off result.
  */
 const ORDER_KEY = 'posma.moduleOrder.v1'
 

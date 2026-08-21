@@ -4,16 +4,9 @@ import { applyOrder, folders, modulesInFolder, riskLabel } from '../data/modules
 import { Icon } from '../components/Icons'
 
 /**
- * Everything in one folder, installed or not.
- *
- * This is deliberately not what the sidebar does. The sidebar is a jump
- * list: installed modules only, names only. This is the browsing surface —
- * it shows what the folder *could* hold, what each module does and what it
- * would be allowed to touch, and lets a module be switched on without a
- * detour through the manager.
- *
- * That also fixes a real gap: a module shipped in an update was invisible
- * until the user happened to open the module manager.
+ * Everything in one folder, installed or not — the browsing surface, where
+ * the sidebar is a jump list of installed modules only. Also how a module
+ * shipped in an update becomes visible without opening the manager.
  */
 export function FolderView({ app, folderId }: { app: AppState; folderId: string }) {
   const { installedSet, setModuleInstalled, setView, onboarding, moduleOrder, setFolderOrder } = app

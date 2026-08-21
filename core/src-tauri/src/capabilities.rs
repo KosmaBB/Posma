@@ -1,14 +1,8 @@
-//! Capability catalog, read from `access/catalog.json`.
+//! Capability catalog, read from `access/catalog.json` and embedded at
+//! compile time, so a malformed file breaks the build rather than the app.
 //!
-//! The catalog is embedded at compile time, so a malformed or missing file
-//! breaks the build rather than the running application. It used to be
-//! written out by hand here and again in TypeScript, with a comment asking
-//! whoever came next to keep the two in step; they did not stay in step.
-//!
-//! `CapabilityId` stays an enum because every call site benefits from the
-//! compiler rejecting a capability that does not exist. The test at the
-//! bottom of this file asserts the enum and the catalog describe exactly
-//! the same set, so the safety costs nothing in drift.
+//! `CapabilityId` stays an enum so call sites get compile-time checking;
+//! a test asserts the enum and the catalog describe the same set.
 
 use std::collections::HashMap;
 use std::sync::LazyLock;

@@ -188,10 +188,8 @@ async fn clean_big_files(app: tauri::AppHandle, paths: Vec<String>) -> Result<se
 /// desktop-theme runs entirely in the user's own home, so none of these
 /// commands take a capability: there is nothing here to consent to that the
 /// user could not do with a file manager and the settings app.
-/// Records the bargain struck at onboarding. Kept in the core rather than
-/// only in the interface's local storage: it decides whether a privileged
-/// grant survives a restart, which is not a decision to leave somewhere the
-/// user can edit with a browser console.
+/// Records the level chosen at onboarding. Kept in the core, not only in
+/// local storage: it decides whether a privileged grant survives a restart.
 #[tauri::command]
 async fn set_access_level(
     state: tauri::State<'_, PermissionRegistry>,

@@ -1,13 +1,9 @@
 import { useEffect, useState } from 'react'
 
 /**
- * The waiting state for work that genuinely takes a while — walking a whole
- * disk, hashing files, asking the package manager what it has.
- *
- * A bare spinner leaves the user guessing whether anything is happening and
- * whether the wait is normal. This says what is being done, why it is slow,
- * and — once it has been running long enough to feel stuck — how long it has
- * actually been going.
+ * Waiting state for work that genuinely takes a while. Names the job, says
+ * why it is slow, and once the wait is long enough to feel stuck, how long
+ * it has been running.
  */
 
 /** Elapsed seconds, shown only after the wait stops feeling instant. */

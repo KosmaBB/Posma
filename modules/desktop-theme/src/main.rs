@@ -1,22 +1,12 @@
-//! desktop-theme sidecar: reads and applies the desktop's visual settings —
-//! GTK theme, icon theme, cursor theme and interface fonts — and installs
-//! themes and fonts dropped in from a folder.
+//! desktop-theme sidecar: reads and applies GTK/icon/cursor themes and
+//! interface fonts, and installs a theme or font from a folder.
 //!
-//! Protocol (one JSON line on stdin -> one JSON line on stdout):
-//!   {"cmd":"scan"}
-//!   {"cmd":"apply","changes":{"gtk_theme":"Yaru-dark", ...}}
-//!   {"cmd":"install_theme","source_dir":"/abs/path","name":null}
-//!   {"cmd":"install_font","path":"/abs/path/font.ttf"}
-//!   {"cmd":"list_presets"} | {"cmd":"save_preset","name":"..."}
-//!   {"cmd":"load_preset","name":"..."} | {"cmd":"delete_preset","name":"..."}
+//! Protocol: scan | apply | install_theme | install_font |
+//! list_presets | save_preset | load_preset | delete_preset
 //!
-//! Nothing here needs elevation. Every write lands under $HOME —
-//! ~/.themes, ~/.icons, ~/.local/share/fonts and the desktop's own settings
-//! store — which is also why the module declares only `fs-user`.
-//!
-//! GNOME and Plasma are not two operating systems, so they are a runtime
-//! branch behind a trait rather than a compile-time one: a single binary has
-//! to serve whichever session it is started in.
+//! No elevation: every write lands under $HOME, hence `fs-user` only.
+//! GNOME and Plasma are a runtime branch behind a trait, not a compile-time
+//! one — one binary serves whichever session it starts in.
 
 use std::collections::BTreeMap;
 use std::env;

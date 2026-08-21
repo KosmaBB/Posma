@@ -1,21 +1,14 @@
-//! Permission registry (Access_plan.md §6 step 2). Tracks the grant state
-//! of each capability across app restarts, persisted to `permissions.json`
-//! in the app's data dir.
+//! Permission registry (Access_plan.md §6 step 2). Grant state per
+//! capability, persisted to `permissions.json` in the app's data dir.
 //!
-//! Capabilities with `Elevation::None` are auto-granted on first request —
-//! there's nothing to ask for. Capabilities that need elevation are granted
-//! here too (recording consent) once the Linux broker (§6 step 3, see
-//! `broker.rs`) exists for this platform; the actual `pkexec` prompt and
-//! any real failure happen at the point a module performs the privileged
-//! operation, not at grant time. On platforms without a broker yet, this
-//! stays an honest "not implemented" error rather than reaching for a
-//! per-module pkexec shortcut.
+//! `Elevation::None` is granted on request — there is nothing to ask. The
+//! pkexec prompt and any real failure happen when the operation runs, not
+//! at grant time. Platforms without a broker return "not implemented"
+//! rather than reaching for a per-module shortcut.
 //!
-//! `niepotrzebne` vs `wymagane-nienadane` (§5) is deliberately NOT tracked
-//! here: that distinction depends on which modules are currently installed,
-//! and installed-module state lives in the frontend's localStorage, not in
-//! Rust. The frontend derives it by combining `get_permissions` with its own
-//! installed-module capability list.
+//! Whether a capability is *needed* is not tracked here: that depends on
+//! which modules are installed, which the interface knows and Rust does
+//! not.
 
 use std::collections::HashMap;
 use std::fs;
