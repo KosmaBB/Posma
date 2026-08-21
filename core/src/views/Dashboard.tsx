@@ -9,12 +9,28 @@ interface DiskInfo {
   mount_point: string
   total_bytes: number
   available_bytes: number
+  model?: string
+  solid_state?: boolean
+}
+
+/**
+ * One reading the machine was willing to give up. Everything past `value`
+ * is optional because the sidecar omits what it cannot obtain — a metric
+ * that is missing simply is not in the array, so nothing here has to model
+ * "absent" as a special value.
+ */
+interface Metric {
+  id: string
+  label: string
+  value: number
+  unit: string
+  percent?: number
+  detail?: string
+  kind: 'load' | 'capacity' | 'temperature'
 }
 
 interface SystemInfo {
-  cpu_percent: number
-  ram_used_bytes: number
-  ram_total_bytes: number
+  metrics: Metric[]
   disks: DiskInfo[]
 }
 
@@ -25,6 +41,13 @@ const REFRESH_MS = 2000
 const HISTORY = 60
 /** Above this, a disk is worth pointing at rather than just listing. */
 const DISK_WARN_PCT = 90
+
+/** Distinct colour per plotted metric, falling back for unknown ids. */
+function sparkColour(id: string): string {
+  if (id === 'cpu') return 'var(--g-teal-1)'
+  if (id === 'ram') return 'var(--g-blue-2)'
+  return 'var(--g-violet-1)'
+}
 
 function gb(bytes: number): string {
   return `${(bytes / 1024 ** 3).toFixed(1)} GB`
@@ -69,9 +92,10 @@ export function Dashboard({ app }: { app: AppState }) {
   const [info, setInfo] = useState<SystemInfo | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  // Kept in a ref as well so the poll can append without re-subscribing.
-  const cpuHistory = useRef<number[]>([])
-  const ramHistory = useRef<number[]>([])
+  // Keyed by metric id rather than by a fixed set of fields, so a metric
+  // that starts or stops being reported gains or loses its history without
+  // anything here needing to know it exists.
+  const history = useRef<Record<string, number[]>>({})
   const [, forceTick] = useState(0)
 
   useEffect(() => {
@@ -83,9 +107,10 @@ export function Dashboard({ app }: { app: AppState }) {
         if (res.ok) {
           setInfo(res.data)
           setError(null)
-          const ram = (res.data.ram_used_bytes / res.data.ram_total_bytes) * 100
-          cpuHistory.current = [...cpuHistory.current, res.data.cpu_percent].slice(-HISTORY)
-          ramHistory.current = [...ramHistory.current, ram].slice(-HISTORY)
+          for (const m of res.data.metrics) {
+            if (m.kind !== 'load') continue
+            history.current[m.id] = [...(history.current[m.id] ?? []), m.value].slice(-HISTORY)
+          }
           forceTick((n) => n + 1)
         } else {
           setError(res.error)
@@ -104,54 +129,64 @@ export function Dashboard({ app }: { app: AppState }) {
 
   const quickActions = modules.filter((m) => installedSet.has(m.id) && m.quickAction)
   const disks = info?.disks ?? []
+  const metrics = info?.metrics ?? []
   const mainDisk = disks.find((d) => d.mount_point === '/' || d.mount_point.startsWith('C:')) ?? disks[0]
-  const ramPct = info ? (info.ram_used_bytes / info.ram_total_bytes) * 100 : 0
   const crowded = disks.filter((d) => usedPct(d) >= DISK_WARN_PCT)
+
+  // The main volume is a metric like any other, but it comes from the disk
+  // list rather than the sensor sweep, so it is appended here.
+  const cards: Metric[] = [...metrics]
+  if (mainDisk) {
+    const pct = usedPct(mainDisk)
+    cards.push({
+      id: 'disk-main',
+      label: `Dysk ${mainDisk.mount_point}`,
+      value: pct,
+      unit: '%',
+      percent: pct,
+      detail: `${gb(mainDisk.available_bytes)} wolnego z ${gb(mainDisk.total_bytes)}`,
+      kind: 'capacity',
+    })
+  }
 
   return (
     <div className="view-enter">
       {/* ------------------------------------------------------- vitals */}
-      <div className="vitals-row">
-        <div className="glass vital-card">
-          <div className="vital-label">CPU</div>
-          <div className="vital-value mono">
-            {info ? info.cpu_percent.toFixed(0) : '—'}
-            <span>%</span>
-          </div>
-          <div className="vital-sub">{error ? 'moduł system-info niedostępny' : 'obciążenie procesora'}</div>
-          <Spark values={cpuHistory.current} from="var(--g-teal-1)" to="transparent" />
+      {error && (
+        <div className="glass empty-state" style={{ marginBottom: 18 }}>
+          Nie udało się odczytać stanu maszyny — moduł system-info nie odpowiada.
         </div>
+      )}
 
-        <div className="glass vital-card">
-          <div className="vital-label">RAM</div>
-          <div className="vital-value mono">
-            {info ? ramPct.toFixed(0) : '—'}
-            <span>%</span>
-          </div>
-          <div className="vital-sub">{info ? `${gb(info.ram_used_bytes)} / ${gb(info.ram_total_bytes)}` : ' '}</div>
-          <Spark values={ramHistory.current} from="var(--g-blue-2)" to="transparent" />
-        </div>
+      {cards.length > 0 && (
+        <div className="vitals-row">
+          {cards.map((m) => (
+            <div className="glass vital-card" key={m.id}>
+              <div className="vital-label">{m.label}</div>
+              <div className="vital-value mono">
+                {m.value.toFixed(0)}
+                <span>{m.unit}</span>
+              </div>
+              {m.detail && <div className="vital-sub">{m.detail}</div>}
 
-        <div className="glass vital-card">
-          <div className="vital-label">Dysk {mainDisk ? `(${mainDisk.mount_point})` : ''}</div>
-          <div className="vital-value mono">
-            {mainDisk ? usedPct(mainDisk).toFixed(0) : '—'}
-            <span>%</span>
-          </div>
-          <div className="vital-sub">
-            {mainDisk ? `${gb(mainDisk.available_bytes)} wolnego z ${gb(mainDisk.total_bytes)}` : ' '}
-          </div>
-          <div className="vital-track">
-            <div
-              className="vital-fill"
-              style={{
-                width: `${mainDisk ? usedPct(mainDisk) : 0}%`,
-                background: diskGradient(mainDisk ? usedPct(mainDisk) : 0),
-              }}
-            />
-          </div>
+              {/* Treatment follows the kind, so a metric the sidecar starts
+                  reporting tomorrow renders correctly without a change here. */}
+              {m.kind === 'load' && (
+                <Spark values={history.current[m.id] ?? []} from={sparkColour(m.id)} to="transparent" />
+              )}
+              {m.kind !== 'load' && m.percent !== undefined && (
+                <div className="vital-track">
+                  <div
+                    className="vital-fill"
+                    style={{ width: `${m.percent}%`, background: diskGradient(m.percent) }}
+                  />
+                </div>
+              )}
+              {m.kind === 'temperature' && <div className="vital-spacer" />}
+            </div>
+          ))}
         </div>
-      </div>
+      )}
 
       {/* Only appears when there is something to warn about. */}
       {crowded.map((d) => (
@@ -185,7 +220,19 @@ export function Dashboard({ app }: { app: AppState }) {
               const pct = usedPct(d)
               return (
                 <div className="disk-row" key={d.mount_point}>
-                  <span className="disk-row__mount mono">{d.mount_point}</span>
+                  <span className="disk-row__mount">
+                    <span className="mono">{d.mount_point}</span>
+                    {/* Model and type are omitted by the sidecar when the
+                        kernel does not describe the device, so this line
+                        disappears rather than showing an empty label. */}
+                    {(d.model || d.solid_state !== undefined) && (
+                      <span className="disk-row__model">
+                        {[d.solid_state === undefined ? null : d.solid_state ? 'SSD' : 'HDD', d.model]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    )}
+                  </span>
                   <div className="disk-row__track">
                     <div className="disk-row__fill" style={{ width: `${pct}%`, background: diskGradient(pct) }} />
                   </div>
