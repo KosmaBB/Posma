@@ -78,8 +78,25 @@ function setGrubLine(raw: string, key: string, value: string): string {
   return next.join('\n')
 }
 
+/// Drops every assignment of `key`, leaving comments and unrelated lines
+/// untouched. Used to switch a theme off, which GRUB expresses as the
+/// absence of GRUB_THEME rather than an empty value.
+function removeGrubLine(raw: string, key: string): string {
+  const prefix = `${key}=`
+  return raw
+    .split('\n')
+    .filter((line) => !line.trim().startsWith(prefix))
+    .join('\n')
+}
+
 function quote(value: string): string {
   return `"${value.replace(/"/g, '\\"')}"`
+}
+
+/// Where a theme installed under `name` ends up, in the form GRUB expects
+/// in GRUB_THEME. Must agree with the broker's GRUB_THEMES_DIR.
+function themeConfigPath(name: string): string {
+  return `/boot/grub/themes/${name}/theme.txt`
 }
 
 function formatDate(unixSeconds: number): string {
@@ -235,13 +252,27 @@ export function GrubEditorView() {
     localStorage.setItem(KEEP_BACKUPS_KEY, String(keepBackups))
   }, [keepBackups])
 
-  function buildContent(): string {
+  /**
+   * Renders the settings on screen back into /etc/default/grub, editing the
+   * file in place so keys this module doesn't model are preserved.
+   *
+   * `theme` is deliberately three-valued. Left out, GRUB_THEME is carried
+   * over untouched — a plain settings save must not disturb the theme.
+   * Given a path, that theme becomes active. Given null, the line is
+   * removed, which is how GRUB is told to go back to its default look.
+   */
+  function buildContent(theme?: string | null): string {
     if (!scan) return ''
     let next = scan.raw_content
     next = setGrubLine(next, 'GRUB_DEFAULT', quote(grubDefault))
     next = setGrubLine(next, 'GRUB_TIMEOUT', String(grubTimeout))
     next = setGrubLine(next, 'GRUB_TIMEOUT_STYLE', grubTimeoutStyle)
     next = setGrubLine(next, 'GRUB_DISABLE_OS_PROBER', disableOsProber ? 'true' : 'false')
+    if (theme === null) {
+      next = removeGrubLine(next, 'GRUB_THEME')
+    } else if (theme !== undefined) {
+      next = setGrubLine(next, 'GRUB_THEME', theme)
+    }
     return next
   }
 
@@ -304,10 +335,13 @@ export function GrubEditorView() {
     setThemeResult(null)
     try {
       await invoke('request_permission', { capability: 'boot' })
+      // The config written alongside the copy has to name the theme being
+      // installed, otherwise the files land in /boot/grub/themes and GRUB
+      // is never told to use them.
       const res = await invoke<ApiResponse<ExecResult>>('install_grub_theme', {
         sourceDir: themePath,
         name: themeName.trim(),
-        content: buildContent(),
+        content: buildContent(themeConfigPath(themeName.trim())),
         keepBackups,
       })
       const result = res.ok ? res.data : { success: false, output: '', error: res.error }
@@ -316,6 +350,34 @@ export function GrubEditorView() {
         loadScan()
         setThemePath(null)
         setThemeInspection(null)
+      }
+    } catch (e) {
+      setThemeResult({ success: false, output: '', error: String(e) })
+    } finally {
+      setInstallingTheme(false)
+    }
+  }
+
+  /**
+   * Switches the theme off without touching the installed files, so the
+   * same theme can be re-enabled later without copying it again.
+   */
+  async function disableTheme() {
+    if (!scan?.fields.grub_theme) return
+    if (!window.confirm('Wyłączyć motyw i wrócić do domyślnego wyglądu GRUB? Pliki motywu zostaną na dysku.')) return
+    setInstallingTheme(true)
+    setThemeResult(null)
+    try {
+      await invoke('request_permission', { capability: 'boot' })
+      const res = await invoke<ApiResponse<ExecResult>>('write_grub_config', {
+        content: buildContent(null),
+        keepBackups,
+      })
+      const result = res.ok ? res.data : { success: false, output: '', error: res.error }
+      setThemeResult(result)
+      if (result.success) {
+        setActivePreview(null)
+        loadScan()
       }
     } catch (e) {
       setThemeResult({ success: false, output: '', error: String(e) })
@@ -494,6 +556,11 @@ export function GrubEditorView() {
         )}
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <button className="btn btn-ghost" onClick={pickThemeFolder}>Wybierz folder z motywem</button>
+          {scan.fields.grub_theme && (
+            <button className="btn btn-ghost" onClick={disableTheme} disabled={installingTheme}>
+              Wyłącz motyw
+            </button>
+          )}
           {themePath && (
             <span className="mono" style={{ fontSize: 11, color: 'var(--muted)' }}>{themePath}</span>
           )}
