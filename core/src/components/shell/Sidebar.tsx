@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import type { AppState } from '../../state/appState'
-import { folders, modulesInFolder } from '../../data/modules'
+import { applyOrder, folders, modulesInFolder } from '../../data/modules'
 import { Icon } from '../Icons'
 
 export function Sidebar({ app }: { app: AppState }) {
-  const { view, setView, installedSet, onboarding } = app
+  const { view, setView, installedSet, onboarding, moduleOrder } = app
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set(['data']))
 
   function toggleFolder(id: string) {
@@ -37,7 +37,12 @@ export function Sidebar({ app }: { app: AppState }) {
 
       <div className="sidebar-section">Moduły</div>
       {folders.map((folder) => {
-        const items = modulesInFolder(folder.id, os).filter((m) => installedSet.has(m.id))
+        // Same arrangement the folder view holds, so a card dragged there
+        // moves here too — this list is a third window onto it, not a
+        // separate one that happened to match.
+        const items = applyOrder(modulesInFolder(folder.id, os), moduleOrder[folder.id]).filter((m) =>
+          installedSet.has(m.id),
+        )
         const open = openFolders.has(folder.id)
         return (
           <div key={folder.id}>

@@ -272,21 +272,11 @@ fn collect() -> SystemInfo {
         });
     }
 
-    // A machine with no swap configured is normal, not a machine with 0% swap.
-    let swap_total = sys.total_swap();
-    if swap_total > 0 {
-        let used = sys.used_swap();
-        let pct = used as f64 / swap_total as f64 * 100.0;
-        metrics.push(Metric {
-            id: "swap".into(),
-            label: "Swap".into(),
-            value: pct,
-            unit: "%".into(),
-            percent: Some(pct),
-            detail: Some(format!("{:.1} / {:.1} GB", gb(used), gb(swap_total))),
-            kind: MetricKind::Capacity,
-        });
-    }
+    // Swap is deliberately not reported. On a machine with enough memory it
+    // sits at zero permanently, which is a tile that never says anything —
+    // and dropping it keeps the count of tiles even, which lays out cleanly
+    // at every window size. It stays collected nowhere rather than
+    // collected and hidden, so there is no dead value to explain.
 
     let readings = read_hwmon();
     if let Some(cpu_temp) = cpu_temperature(&readings) {

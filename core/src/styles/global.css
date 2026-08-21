@@ -238,7 +238,13 @@ button { font-family: inherit; }
 .content-wash { position: absolute; pointer-events: none; filter: blur(80px); opacity: 0.14; border-radius: 50%; width: 46vw; height: 46vw; top: -18%; right: -10%; background: radial-gradient(circle, var(--g-violet-1), transparent 70%); z-index: 0; }
 
 /* ---------- dashboard ---------- */
-.vitals-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 22px; }
+.vitals-row {
+  display: grid;
+  /* Wypełnia szerokość zamiast trzymać się trzech kolumn: przy sześciu
+     metrykach daje 3x2 w oknie 1600 i jeden rząd na 2K. */
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px; margin-bottom: 22px;
+}
 .vital-card { padding: 16px; position: relative; overflow: hidden; }
 .vital-card .vital-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-family: 'Martian Mono', monospace; }
 .vital-card .vital-value { font-size: 28px; font-weight: 700; font-family: 'Bricolage Grotesque', sans-serif; margin-top: 4px; }
@@ -251,7 +257,30 @@ button { font-family: inherit; }
 .section-head h2 { font-size: 16px; font-weight: 700; }
 .section-head .count { font-size: 11px; color: var(--muted); font-family: 'Martian Mono', monospace; }
 
-.quick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+/* Jeden rząd, nigdy więcej. Liczba widocznych kafelków jest ustalona per
+   szerokość okna (--qa), a kolumny są liczone tak, żeby dokładnie tyle
+   zmieściło się w dostępnym miejscu. Nadmiar nie zawija się do drugiego
+   rzędu — pasek przewija się w poziomie, więc żadna akcja nie znika. */
+.quick-grid {
+  --qa: 5;
+  --qa-gap: 12px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - (var(--qa) - 1) * var(--qa-gap)) / var(--qa));
+  gap: var(--qa-gap);
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Miejsce na pasek przewijania i na uniesienie kafelka przy najechaniu. */
+  padding-bottom: 6px;
+  scrollbar-width: thin;
+  scroll-snap-type: x proximity;
+}
+
+.quick-grid > * { scroll-snap-align: start; }
+
+.quick-grid::-webkit-scrollbar { height: 6px; }
+.quick-grid::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+.quick-grid::-webkit-scrollbar-track { background: transparent; }
 .quick-card {
   display: flex; align-items: center; gap: 12px; padding: 14px; text-align: left;
   cursor: pointer; color: var(--ink);
@@ -648,44 +677,40 @@ button { font-family: inherit; }
    elementy (bo ten sam piksel na panelu 4K jest fizycznie mniejszy).
    ========================================================================== */
 
-/* Treść dostaje sufit szerokości i centruje się w nadmiarze zamiast
-   rozciągać. Na 1600 sufit jest wyższy niż okno, więc nic nie robi. */
-.content > *:not(.content-wash) {
-  max-width: var(--content-max, 100%);
-  margin-inline: auto;
-  width: 100%;
-}
+/* Treść zajmuje całą dostępną szerokość. Sufit z centrowaniem zostawiał
+   puste pasy przy krawędziach okna na szerokich ekranach — na układzie
+   kafelkowym to strata miejsca, nie ochrona czytelności. Wiersze tekstu
+   ogranicza się tam, gdzie faktycznie występują, a nie globalnie. */
+.content > *:not(.content-wash) { width: 100%; }
 
 /* ---------- 1080p ---------- */
 @media (min-width: 1900px) {
-  :root { --content-max: 1500px; }
+  .quick-grid { --qa: 6; }
   .content { padding: 30px; }
   .vitals-row { gap: 16px; }
 }
 
 /* ---------- 2K ---------- */
 @media (min-width: 2500px) {
+  .quick-grid { --qa: 8; }
   :root {
-    --content-max: 1800px;
     font-size: 17px;
   }
   .shell { grid-template-columns: 290px 1fr; }
   .content { padding: 36px; }
   /* Więcej kolumn zamiast szerszych kafelków — karta 400 px szerokości
      przestaje wyglądać jak karta. */
-  .quick-grid { grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); }
   .module-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
 }
 
 /* ---------- 4K ---------- */
 @media (min-width: 3400px) {
+  .quick-grid { --qa: 10; }
   :root {
-    --content-max: 2400px;
     font-size: 20px;
   }
   .shell { grid-template-columns: 360px 1fr; }
   .content { padding: 48px; }
-  .quick-grid { grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
   .module-grid { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
   /* Poświata jest ułamkiem szerokości okna; na 4K rozlewa się na pół
      ekranu i zostaje mgłą zamiast akcentem. */
@@ -765,9 +790,137 @@ button { font-family: inherit; }
 .folder-head__name { font-family: 'Bricolage Grotesque', sans-serif; font-size: 21px; font-weight: 800; letter-spacing: -0.02em; }
 .folder-head__count { font-size: 12px; color: var(--muted); }
 
-.folder-card { padding: 15px; display: flex; flex-direction: column; gap: 9px; }
+/* ---------- karta folderu: podnoszenie znad powierzchni ----------
+   Zamiast płaskiego przesunięcia w górę karta zachowuje się jak przedmiot
+   odrywany od blatu. Pracują trzy rzeczy naraz:
+
+   1. Cień kontaktowy — wąski i ciemny tuż pod krawędzią — zanika, bo karta
+      przestaje dotykać powierzchni.
+   2. Cień rzucony rośnie i się rozmywa, bo im dalej od blatu, tym większa
+      i bardziej miękka plama.
+   3. Ruch ma sprężyste wyhamowanie z lekkim przestrzeleniem, więc karta
+      „siada" w powietrzu zamiast zatrzymać się w miejscu jak winda.
+
+   Bez tych trzech razem wychodzi element, który się przesuwa. Z nimi —
+   przedmiot, który się podnosi. */
+
+.folder-card {
+  position: relative;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  cursor: grab;
+  /* Przeciąganie karty zaznaczałoby tekst pod kursorem, co zostawia
+     niebieskie pasy na opisie i wygląda jak usterka. */
+  user-select: none;
+  -webkit-user-select: none;
+  will-change: transform, box-shadow;
+  transform: translateY(0) scale(1);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 1px 2px rgba(0, 0, 0, 0.55),
+    0 6px 14px -8px rgba(0, 0, 0, 0.5);
+  transition:
+    transform 0.42s cubic-bezier(0.34, 1.4, 0.5, 1),
+    box-shadow 0.42s cubic-bezier(0.33, 1, 0.68, 1),
+    border-color 0.25s ease,
+    opacity 0.25s ease;
+}
+
+.folder-card:hover {
+  transform: translateY(-10px) scale(1.018);
+  border-color: var(--border-strong);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.09) inset,
+    0 0 0 rgba(0, 0, 0, 0),
+    0 26px 44px -14px rgba(0, 0, 0, 0.7);
+  z-index: 2;
+}
+
+.folder-card:active { cursor: grabbing; }
+.folder-card[data-on='true']:hover { cursor: pointer; }
+.folder-card[data-on='true']:active { cursor: grabbing; }
+
 .folder-card[data-on='false'] { opacity: 0.72; }
 .folder-card[data-on='false']:hover { opacity: 1; }
+
+/* Trzymana karta: lekki obrót, jakby była chwycona za róg, i cień na
+   maksymalnym rozproszeniu. Bez przejścia — ma nadążać za kursorem. */
+.folder-card[data-dragging='true'] {
+  transform: translateY(-14px) scale(1.03) rotate(-1.6deg);
+  box-shadow: 0 34px 56px -18px rgba(0, 0, 0, 0.8);
+  opacity: 0.92;
+  z-index: 3;
+  transition: none;
+}
+
+/* Miejsce, z którego karta została podniesiona — pusty obrys, żeby było
+   widać, skąd wróci, jeśli upuścisz ją poza listą. */
+.folder-card[data-dragging='true']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px dashed var(--border-strong);
+  opacity: 0.5;
+}
+
+/* Slot docelowy odsuwa się, robiąc miejsce, zamiast tylko podświetlać
+   krawędź — widać, że karta gdzieś wejdzie, a nie że coś się zaznaczyło. */
+.folder-card[data-over='true'] {
+  transform: translateX(12px);
+  border-color: var(--accent);
+  transition: transform 0.28s cubic-bezier(0.34, 1.3, 0.5, 1), border-color 0.2s ease;
+}
+
+.folder-card[data-over='true']::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 8%;
+  bottom: 8%;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+  animation: insert-in 0.28s cubic-bezier(0.34, 1.3, 0.5, 1);
+}
+
+@keyframes insert-in {
+  from { transform: scaleY(0.2); opacity: 0; }
+  to { transform: scaleY(1); opacity: 1; }
+}
+
+/* Wyładowanie po upuszczeniu: karta osiada tłumionym odbiciem, więc ruch
+   ma koniec zamiast po prostu ustać. */
+.folder-card[data-settling='true'] {
+  animation: settle 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes settle {
+  0% { transform: translateY(-14px) scale(1.03); }
+  55% { transform: translateY(2px) scale(0.995); }
+  100% { transform: translateY(0) scale(1); }
+}
+
+.folder-card__grip {
+  position: absolute; top: 10px; right: 12px;
+  font-size: 13px; line-height: 1; color: var(--muted);
+  opacity: 0; transform: translateY(-3px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+  cursor: grab;
+}
+
+.folder-card:hover .folder-card__grip { opacity: 0.6; transform: translateY(0); }
+
+@media (prefers-reduced-motion: reduce) {
+  .folder-card,
+  .folder-card:hover,
+  .folder-card[data-dragging='true'],
+  .folder-card[data-over='true'] { transform: none; animation: none; }
+  .folder-card:hover { border-color: var(--accent); }
+}
 .folder-card__top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .folder-card__name { font-size: 14.5px; font-weight: 700; letter-spacing: -0.01em; }
 .folder-card__desc { font-size: 12px; color: var(--muted); line-height: 1.55; flex: 1; }
@@ -777,3 +930,72 @@ button { font-family: inherit; }
 .spark { display: flex; align-items: flex-end; gap: 1px; height: 26px; margin-top: auto; }
 .spark i { flex: 1; min-width: 1px; border-radius: 1px 1px 0 0; transition: height 0.3s ease; }
 .vital-spacer { height: 26px; margin-top: auto; }
+
+/* ---------- kafelki w trakcie ładowania ---------- */
+.vital-card--ghost { pointer-events: none; }
+
+.ghost-line {
+  border-radius: 4px;
+  background: linear-gradient(90deg,
+    rgba(242, 245, 244, 0.05) 0%,
+    rgba(242, 245, 244, 0.11) 50%,
+    rgba(242, 245, 244, 0.05) 100%);
+  background-size: 200% 100%;
+  animation: ghost-sweep 1.5s ease-in-out infinite;
+}
+
+/* Wymiary odpowiadają docelowym elementom, żeby podmiana zaślepki na
+   prawdziwy odczyt nie przesuwała niczego w układzie. */
+.ghost-line--label { width: 38%; height: 9px; }
+.ghost-line--value { width: 54%; height: 26px; margin-top: 8px; }
+.ghost-line--sub { width: 68%; height: 9px; margin-top: 10px; }
+
+@keyframes ghost-sweep {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ghost-line { animation: none; }
+}
+
+/* Tekst wyłącznie dla czytników ekranu — zaślepki są dekoracją, ale fakt
+   trwającego odczytu musi być ogłoszony. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* ---------- powrót do widoku nadrzędnego ----------
+   Wcześniej ten przycisk używał klasy .crumb, ostylowanej wyłącznie jako
+   .topbar .crumb — poza paskiem nagłówka nie łapał niczego i renderował
+   się jako domyślny przycisk przeglądarki. */
+.back-link {
+  display: inline-flex; align-items: center; gap: 7px;
+  margin-bottom: 14px; padding: 7px 14px 7px 10px;
+  border-radius: 30px; cursor: pointer;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--muted);
+  font-family: 'Martian Mono', monospace;
+  font-size: 11px; letter-spacing: 0.04em;
+  transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.back-link:hover { color: var(--ink); border-color: var(--border-strong); background: var(--bg-2); }
+.back-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Strzałka to ten sam chevron, co w pasku bocznym, obrócony — zamiast
+   znaku "←" z fontu, który nie pasuje wagą do reszty. */
+.back-link__arrow {
+  display: grid; place-items: center;
+  width: 16px; height: 16px;
+  transform: rotate(90deg);
+  transition: transform 0.25s cubic-bezier(0.34, 1.4, 0.5, 1);
+}
+
+.back-link__arrow svg { width: 13px; height: 13px; }
+.back-link:hover .back-link__arrow { transform: rotate(90deg) translateY(3px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .back-link:hover .back-link__arrow { transform: rotate(90deg); }
+}

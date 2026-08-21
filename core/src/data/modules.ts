@@ -102,3 +102,34 @@ export function modulesForOs(os: Os): ModuleDef[] {
 export function modulesInFolder(folder: FolderId, os?: Os): ModuleDef[] {
   return modules.filter((m) => m.folder === folder && (!os || m.os.includes(os)))
 }
+
+/**
+ * Applies a stored order to a catalog list.
+ *
+ * Ids the stored order does not mention keep their catalog position at the
+ * end, so a module added in an update appears rather than vanishing because
+ * nobody had dragged it yet. Ids that no longer exist are ignored.
+ */
+export function applyOrder<T extends { id: string }>(items: T[], order: string[] | undefined): T[] {
+  if (!order || order.length === 0) return items
+  const rank = new Map(order.map((id, i) => [id, i]))
+  return [...items].sort((a, b) => {
+    const ra = rank.get(a.id) ?? Number.MAX_SAFE_INTEGER
+    const rb = rank.get(b.id) ?? Number.MAX_SAFE_INTEGER
+    if (ra !== rb) return ra - rb
+    return items.indexOf(a) - items.indexOf(b)
+  })
+}
+
+/**
+ * Every module for this system, in the order the user arranged it.
+ *
+ * Folders keep their catalog order; inside each one the arrangement comes
+ * from whatever was dragged in the folder view. This is the single ordering
+ * used by both surfaces — the folder view is one window onto it, the
+ * suggested-actions strip is another — so dragging a card in a folder moves
+ * it on the dashboard too, instead of the two drifting apart.
+ */
+export function orderedModules(os: Os | undefined, order: Record<string, string[]>): ModuleDef[] {
+  return folders.flatMap((f) => applyOrder(modulesInFolder(f.id, os), order[f.id]))
+}

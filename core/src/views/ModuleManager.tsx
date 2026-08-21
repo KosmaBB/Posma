@@ -1,5 +1,5 @@
 import type { AppState } from '../state/appState'
-import { folders, modulesForOs, riskLabel } from '../data/modules'
+import { applyOrder, folders, modulesForOs, riskLabel } from '../data/modules'
 import { Icon } from '../components/Icons'
 
 /**
@@ -8,7 +8,7 @@ import { Icon } from '../components/Icons'
  * odinstalowanie. Custom modules ("Tworzenie modułu") come later.
  */
 export function ModuleManager({ app }: { app: AppState }) {
-  const { onboarding, installedSet, setModuleInstalled } = app
+  const { onboarding, installedSet, setModuleInstalled, moduleOrder } = app
   const os = onboarding?.os ?? 'linux'
   const available = modulesForOs(os)
 
@@ -21,7 +21,7 @@ export function ModuleManager({ app }: { app: AppState }) {
   return (
     <div className="view-enter">
       {folders.map((folder) => {
-        const items = available.filter((m) => m.folder === folder.id)
+        const items = applyOrder(available.filter((m) => m.folder === folder.id), moduleOrder[folder.id])
         if (items.length === 0) return null
         return (
           <div key={folder.id}>

@@ -26,6 +26,25 @@ export type View =
 
 const STORAGE_KEY = 'posma.onboarding.v1'
 
+/**
+ * Module order inside each folder, keyed by folder id.
+ *
+ * Kept apart from the onboarding record because it is a preference the user
+ * changes constantly, while that record is a one-off result — mixing them
+ * would mean rewriting the onboarding blob on every drag.
+ */
+const ORDER_KEY = 'posma.moduleOrder.v1'
+
+function loadOrder(): Record<string, string[]> {
+  try {
+    const raw = localStorage.getItem(ORDER_KEY)
+    return raw ? (JSON.parse(raw) as Record<string, string[]>) : {}
+  } catch {
+    return {}
+  }
+}
+
+
 export function detectOs(): Os {
   const ua = navigator.userAgent.toLowerCase()
   if (ua.includes('mac')) return 'macos'
@@ -46,6 +65,11 @@ function loadOnboarding(): OnboardingResult | null {
 export function useAppState() {
   const [onboarding, setOnboarding] = useState<OnboardingResult | null>(loadOnboarding)
   const [view, setView] = useState<View>({ kind: 'dashboard' })
+  const [moduleOrder, setModuleOrder] = useState<Record<string, string[]>>(loadOrder)
+
+  useEffect(() => {
+    localStorage.setItem(ORDER_KEY, JSON.stringify(moduleOrder))
+  }, [moduleOrder])
 
   useEffect(() => {
     if (onboarding) localStorage.setItem(STORAGE_KEY, JSON.stringify(onboarding))
@@ -75,6 +99,10 @@ export function useAppState() {
     })
   }, [])
 
+  const setFolderOrder = useCallback((folderId: string, ids: string[]) => {
+    setModuleOrder((prev) => ({ ...prev, [folderId]: ids }))
+  }, [])
+
   const installedSet = useMemo(() => new Set(onboarding?.installedModules ?? []), [onboarding])
 
   return {
@@ -85,6 +113,8 @@ export function useAppState() {
     resetOnboarding,
     setModuleInstalled,
     installedSet,
+    moduleOrder,
+    setFolderOrder,
   }
 }
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import type { AppState } from '../state/appState'
-import { folders, modules, modulesInFolder } from '../data/modules'
+import { folders, modulesInFolder, orderedModules } from '../data/modules'
 import { Icon } from '../components/Icons'
 
 interface DiskInfo {
@@ -88,7 +88,7 @@ function Spark({ values, from, to }: { values: number[]; from: string; to: strin
 }
 
 export function Dashboard({ app }: { app: AppState }) {
-  const { installedSet, setView, onboarding } = app
+  const { installedSet, setView, onboarding, moduleOrder } = app
   const [info, setInfo] = useState<SystemInfo | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -127,7 +127,11 @@ export function Dashboard({ app }: { app: AppState }) {
     }
   }, [])
 
-  const quickActions = modules.filter((m) => installedSet.has(m.id) && m.quickAction)
+  // Same ordering the folder view arranges, so dragging a card in a folder
+  // moves it here too rather than the two lists drifting apart.
+  const quickActions = orderedModules(onboarding?.os, moduleOrder).filter(
+    (m) => installedSet.has(m.id) && m.quickAction,
+  )
   const disks = info?.disks ?? []
   const metrics = info?.metrics ?? []
   const mainDisk = disks.find((d) => d.mount_point === '/' || d.mount_point.startsWith('C:')) ?? disks[0]
@@ -155,6 +159,22 @@ export function Dashboard({ app }: { app: AppState }) {
       {error && (
         <div className="glass empty-state" style={{ marginBottom: 18 }}>
           Nie udało się odczytać stanu maszyny — moduł system-info nie odpowiada.
+        </div>
+      )}
+
+      {/* Until the first reading lands there is nothing to lay out, and an
+          empty region reads as a broken page. Placeholders hold the shape
+          the real tiles will take, so nothing jumps when they arrive. */}
+      {!info && !error && (
+        <div className="vitals-row">
+          {Array.from({ length: 6 }, (_, i) => (
+            <div className="glass vital-card vital-card--ghost" key={i} aria-hidden="true">
+              <div className="ghost-line ghost-line--label" />
+              <div className="ghost-line ghost-line--value" />
+              <div className="ghost-line ghost-line--sub" />
+            </div>
+          ))}
+          <span className="sr-only" role="status">Odczytuję stan maszyny…</span>
         </div>
       )}
 
