@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { version } from '../../../package.json'
 import type { AppState } from '../../state/appState'
 import { applyOrder, folders, modulesInFolder } from '../../data/modules'
 import { Icon } from '../Icons'
@@ -22,7 +23,7 @@ export function Sidebar({ app }: { app: AppState }) {
     <aside className="sidebar">
       <div className="sidebar-brand">
         <b>POSMA</b>
-        <span>v0.1.0</span>
+        <span>v{version}</span>
       </div>
 
       <button

@@ -40,8 +40,8 @@ bot-config.json
 /POSAMv1.jpg
 
 # ------------------------------------------------------------- security
-# Local assistant/editor state. These can hold absolute paths to unrelated
-# private projects on the developer's machine.
+# Local editor and tooling state. Can hold absolute paths to unrelated
+# private projects on this machine.
 /.claude/
 .vscode/
 .idea/
