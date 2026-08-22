@@ -123,6 +123,24 @@ one carries no Time Machine module. Which sidecars the bundle expects comes
 from `tauri.<platform>.conf.json`, which replaces the base list rather than
 adding to it.
 
+### Both Mac architectures
+
+A plain sync builds for the host architecture only, which is what `tauri
+dev` resolves and is far quicker. One bundle that runs on both Intel and
+Apple silicon needs each sidecar built twice and joined:
+
+```bash
+rustup target add x86_64-apple-darwin aarch64-apple-darwin
+bash scripts/sync-sidecars.sh release --universal
+npm --prefix core run tauri build -- --target universal-apple-darwin
+```
+
+`--universal` builds every module for both targets, keeps the
+per-architecture copies so `tauri dev` still works on either machine, and
+joins them with `lipo` into `<module>-universal-apple-darwin`. A missing
+Rust target is reported before the first build rather than as a linker
+error several minutes in.
+
 ### Checking other systems without leaving this one
 
 Rust for a foreign target can be type-checked locally, which catches the
