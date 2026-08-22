@@ -101,6 +101,49 @@ It uses a disposable service name, never the production one, and removes its
 entry afterwards. The encoding and length-validation logic around it is
 covered by ordinary tests that run everywhere.
 
+## Building for another system
+
+POSMA is developed on Linux and tested on the machine that runs the system
+being targeted. A Tauri bundle cannot be cross-compiled — the macOS bundler
+and Apple's linker only run on macOS — so a build for another system is made
+*on* that system, from the same source.
+
+**Moving a version to the Mac** is therefore a pull, not a file transfer:
+
+```bash
+git pull
+npm install --prefix core
+./scripts/sync-sidecars.sh
+npm run tauri dev --prefix core
+```
+
+`sync-sidecars.sh` builds only the modules whose `module.json` lists the
+system it is running on, so a macOS build carries no GRUB editor and a Linux
+one carries no Time Machine module. Which sidecars the bundle expects comes
+from `tauri.<platform>.conf.json`, which replaces the base list rather than
+adding to it.
+
+### Checking other systems without leaving this one
+
+Rust for a foreign target can be type-checked locally, which catches the
+portability mistakes that otherwise wait until the code reaches the other
+machine:
+
+```bash
+rustup target add aarch64-apple-darwin
+cargo check --target aarch64-apple-darwin -p macos-broker
+```
+
+This found a real one: `broker-common` guarded its peer-credential lookup
+with `#[cfg(unix)]`, which is true on macOS, while the body used Linux-only
+`SO_PEERCRED`. Every broker depends on that crate, so the macOS broker could
+not have compiled on a Mac at all.
+
+Its limit is worth knowing: it verifies our Rust, not crates that compile C.
+`vault` fails this check because `libsqlite3-sys` builds bundled SQLite and
+needs a macOS C toolchain. That is a cross-compilation limit, not a
+portability defect — it builds on a real Mac.
+
 ## Testing rules
 
 Test rejection paths against real binaries: malformed requests, paths outside

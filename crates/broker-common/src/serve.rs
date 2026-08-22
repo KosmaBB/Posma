@@ -41,6 +41,12 @@ mod unix_daemon {
     /// The real access control on the daemon socket. Only the uid recorded
     /// at install time may talk to a root broker — file permission bits are
     /// deliberately not relied on for this.
+    ///
+    /// Every Unix answers this question, but not with the same call, and
+    /// `#[cfg(unix)]` is not fine-grained enough to tell them apart: it is
+    /// true on macOS too, so a Linux-only struct behind it fails to compile
+    /// there rather than being skipped.
+    #[cfg(target_os = "linux")]
     fn peer_uid(stream: &UnixStream) -> io::Result<u32> {
         let fd = stream.as_raw_fd();
         let mut cred: libc::ucred = unsafe { std::mem::zeroed() };
@@ -60,6 +66,20 @@ mod unix_daemon {
         Ok(cred.uid)
     }
 
+    /// macOS and the BSDs have no `SO_PEERCRED`; `getpeereid` is the
+    /// documented equivalent and answers the only question asked here.
+    #[cfg(not(target_os = "linux"))]
+    fn peer_uid(stream: &UnixStream) -> io::Result<u32> {
+        let fd = stream.as_raw_fd();
+        let mut uid: libc::uid_t = 0;
+        let mut gid: libc::gid_t = 0;
+        let ret = unsafe { libc::getpeereid(fd, &mut uid, &mut gid) };
+        if ret != 0 {
+            return Err(io::Error::last_os_error());
+        }
+        Ok(uid)
+    }
+
     fn handle_client<B: Broker + ?Sized>(broker: &B, stream: UnixStream, owner_uid: u32) {
         match peer_uid(&stream) {
             Ok(uid) if uid == owner_uid => {}
@@ -68,7 +88,7 @@ mod unix_daemon {
                 return;
             }
             Err(e) => {
-                eprintln!("nie udało się odczytać SO_PEERCRED: {e}");
+                eprintln!("nie udało się ustalić uid rozmówcy: {e}");
                 return;
             }
         }

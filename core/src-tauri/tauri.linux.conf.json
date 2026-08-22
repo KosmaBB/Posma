@@ -1,0 +1,24 @@
+{
+  "bundle": {
+    "externalBin": [
+      "binaries/big-files",
+      "binaries/browser-hygiene",
+      "binaries/disk-map",
+      "binaries/duplicates",
+      "binaries/health-monitor",
+      "binaries/metadata",
+      "binaries/shredder",
+      "binaries/system-info",
+      "binaries/temp-clean",
+      "binaries/vault",
+      "binaries/autostart",
+      "binaries/desktop-theme",
+      "binaries/grub-editor",
+      "binaries/journald-trim",
+      "binaries/kernel-mgr",
+      "binaries/pkg-cache",
+      "binaries/uninstaller",
+      "binaries/linux-broker"
+    ]
+  }
+}

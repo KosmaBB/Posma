@@ -1,0 +1,17 @@
+{
+  "bundle": {
+    "externalBin": [
+      "binaries/big-files",
+      "binaries/browser-hygiene",
+      "binaries/disk-map",
+      "binaries/duplicates",
+      "binaries/health-monitor",
+      "binaries/metadata",
+      "binaries/shredder",
+      "binaries/system-info",
+      "binaries/temp-clean",
+      "binaries/vault",
+      "binaries/macos-broker"
+    ]
+  }
+}
