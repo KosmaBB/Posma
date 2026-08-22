@@ -112,9 +112,9 @@ and Apple's linker only run on macOS — so a build for another system is made
 
 ```bash
 git pull
-npm install --prefix core
-./scripts/sync-sidecars.sh
-npm run tauri dev --prefix core
+npm --prefix core ci
+bash scripts/sync-sidecars.sh
+npm --prefix core run tauri dev
 ```
 
 `sync-sidecars.sh` builds only the modules whose `module.json` lists the
