@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import type { AppState } from '../state/appState'
+import type { SettingsState } from '../state/settings'
 import { folders, modulesInFolder, orderedModules } from '../data/modules'
 import { Icon } from '../components/Icons'
 
@@ -36,8 +37,9 @@ interface SystemInfo {
 
 type SystemInfoResponse = { ok: true; data: SystemInfo } | { ok: false; error: string }
 
-const REFRESH_MS = 2000
-/** Two minutes of history at the poll rate — enough to see a spike pass. */
+/** Samples kept per plotted metric. How long that covers depends on the
+ * chosen refresh rate, which is the point: the graph holds the same number
+ * of readings either way. */
 const HISTORY = 60
 /** Above this, a disk is worth pointing at rather than just listing. */
 const DISK_WARN_PCT = 90
@@ -87,8 +89,9 @@ function Spark({ values, from, to }: { values: number[]; from: string; to: strin
   )
 }
 
-export function Dashboard({ app }: { app: AppState }) {
+export function Dashboard({ app, settings }: { app: AppState; settings: SettingsState }) {
   const { installedSet, setView, onboarding, moduleOrder } = app
+  const refreshMs = settings.settings.refreshMs
   const [info, setInfo] = useState<SystemInfo | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -120,12 +123,12 @@ export function Dashboard({ app }: { app: AppState }) {
       }
     }
     refresh()
-    const timer = setInterval(refresh, REFRESH_MS)
+    const timer = setInterval(refresh, refreshMs)
     return () => {
       cancelled = true
       clearInterval(timer)
     }
-  }, [])
+  }, [refreshMs])
 
   // Same ordering the folder view arranges, so dragging a card in a folder
   // moves it here too rather than the two lists drifting apart.

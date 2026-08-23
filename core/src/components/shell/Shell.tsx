@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar'
 import { Dashboard } from '../../views/Dashboard'
 import { ModuleManager } from '../../views/ModuleManager'
 import { Settings } from '../../views/Settings'
+import type { SettingsState } from '../../state/settings'
 import { Links } from '../../views/Links'
 import { ModuleView } from '../../views/ModuleView'
 
@@ -30,7 +31,7 @@ function viewTitle(app: AppState): { title: string; crumb: string } {
   }
 }
 
-export function Shell({ app }: { app: AppState }) {
+export function Shell({ app, settings }: { app: AppState; settings: SettingsState }) {
   const { view } = app
   const { title, crumb } = viewTitle(app)
 
@@ -47,9 +48,9 @@ export function Shell({ app }: { app: AppState }) {
         </div>
         <div className="content">
           <div className="content-wash" aria-hidden />
-          {view.kind === 'dashboard' && <Dashboard app={app} />}
+          {view.kind === 'dashboard' && <Dashboard app={app} settings={settings} />}
           {view.kind === 'manager' && <ModuleManager app={app} />}
-          {view.kind === 'settings' && <Settings app={app} />}
+          {view.kind === 'settings' && <Settings app={app} settings={settings} />}
           {view.kind === 'links' && <Links />}
           {view.kind === 'module' && <ModuleView app={app} moduleId={view.moduleId} />}
           {view.kind === 'folder' && <FolderView app={app} folderId={view.folderId} />}
