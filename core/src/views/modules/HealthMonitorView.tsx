@@ -19,7 +19,24 @@ interface DiskInfo {
   available_bytes: number
 }
 
+/**
+ * A reading from the shared sensor crate. Optional by construction: a
+ * machine without a card contributes nothing rather than zeroes, so this
+ * list is whatever the hardware actually reported.
+ */
+interface Metric {
+  id: string
+  label: string
+  value: number
+  unit: string
+  percent?: number
+  detail?: string
+  kind: 'load' | 'capacity' | 'temperature' | 'power'
+  group?: string
+}
+
 interface Snapshot {
+  metrics: Metric[]
   cpu_percent: number
   cores: number[]
   ram_used_bytes: number
@@ -356,6 +373,32 @@ export function HealthMonitorView({ app }: { app: AppState }) {
           )}
         </div>
       </div>
+
+      {snap.metrics.length > 0 && (
+        <>
+          <div className="section-head">
+            <h2>Czujniki</h2>
+            <span className="count">{snap.metrics.length} odczytów</span>
+          </div>
+          <div className="hm-sensors">
+            {snap.metrics.map((m) => (
+              <div className="glass hm-sensor" key={m.id}>
+                <div className="hm-sensor-label">{m.label}</div>
+                <div className="hm-sensor-value mono">
+                  {m.value.toFixed(m.unit === 'W' ? 1 : 0)}
+                  <span>{m.unit}</span>
+                </div>
+                {m.detail && <div className="hm-sensor-sub">{m.detail}</div>}
+                {m.percent !== undefined && (
+                  <div className="vital-track">
+                    <div className="vital-fill" style={{ width: `${m.percent}%`, background: 'linear-gradient(90deg, var(--g-teal-1), var(--g-blue-2))' }} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
 
       <div className="section-head"><h2>Rdzenie ({snap.cores.length})</h2></div>
       <div className="hm-cores">

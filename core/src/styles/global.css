@@ -1061,3 +1061,12 @@ button { font-family: inherit; }
 
 /* Odpowiednik przycisku „Zakończ" — trzyma podpisy nad właściwymi liczbami. */
 .hm-legend__gap { width: 84px; flex-shrink: 0; }
+
+/* ---------- monitor zdrowia: czujniki ---------- */
+.hm-sensors { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 6px; }
+.hm-sensor { padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.hm-sensor-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.hm-sensor-value { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+.hm-sensor-value span { font-size: 11px; margin-left: 2px; color: var(--muted); }
+.hm-sensor-sub { font-size: 10.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-sensor .vital-track { margin-top: auto; }

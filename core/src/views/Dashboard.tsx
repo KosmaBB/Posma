@@ -27,7 +27,9 @@ interface Metric {
   unit: string
   percent?: number
   detail?: string
-  kind: 'load' | 'capacity' | 'temperature'
+  kind: 'load' | 'capacity' | 'temperature' | 'power'
+  /** Ties related readings together — a card's load, memory and heat. */
+  group?: string
 }
 
 interface SystemInfo {
@@ -48,6 +50,7 @@ const DISK_WARN_PCT = 90
 function sparkColour(id: string): string {
   if (id === 'cpu') return 'var(--g-teal-1)'
   if (id === 'ram') return 'var(--g-blue-2)'
+  if (id.startsWith('gpu-')) return 'var(--g-green-1)'
   return 'var(--g-violet-1)'
 }
 
@@ -205,7 +208,7 @@ export function Dashboard({ app, settings }: { app: AppState; settings: Settings
                   />
                 </div>
               )}
-              {m.kind === 'temperature' && <div className="vital-spacer" />}
+              {m.kind !== 'load' && m.percent === undefined && <div className="vital-spacer" />}
             </div>
           ))}
         </div>

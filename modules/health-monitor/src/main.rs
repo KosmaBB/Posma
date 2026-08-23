@@ -53,6 +53,10 @@ struct DiskInfo {
 
 #[derive(Serialize)]
 struct Snapshot {
+    /// Sensors, GPUs and anything else the shared crate learns to read.
+    /// Optional by construction: a machine without a card contributes
+    /// nothing here rather than a row of zeroes.
+    metrics: Vec<sysmetrics::Metric>,
     cpu_percent: f32,
     cores: Vec<f32>,
     ram_used_bytes: u64,
@@ -133,6 +137,7 @@ fn snapshot() -> Snapshot {
         .collect();
 
     Snapshot {
+        metrics: sysmetrics::collect(),
         cpu_percent: sys.global_cpu_usage(),
         cores,
         ram_used_bytes: sys.used_memory(),
