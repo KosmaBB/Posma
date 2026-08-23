@@ -24,7 +24,7 @@ use std::process::Command;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sysinfo::{Disks, ProcessesToUpdate, System};
+use sysinfo::{Disks, Pid, ProcessesToUpdate, Signal, System};
 
 #[derive(Deserialize)]
 #[serde(tag = "cmd", rename_all = "snake_case")]
@@ -32,6 +32,7 @@ enum Request {
     Snapshot,
     ListDisks,
     Smart { device: String },
+    Kill { pid: u32 },
 }
 
 #[derive(Serialize)]
@@ -270,6 +271,55 @@ fn smart(device: String) -> SmartInfo {
     info
 }
 
+#[derive(Serialize)]
+struct KillResult {
+    success: bool,
+    message: String,
+}
+
+/// Asks a process to stop.
+///
+/// Sends SIGTERM rather than SIGKILL: the point is to end something that has
+/// run away, not to deny it the chance to close its files. A process the
+/// user does not own refuses at the kernel, which is reported as it comes
+/// back rather than escalated — killing another user's process is not
+/// something this module should be able to arrange.
+fn kill(pid: u32) -> KillResult {
+    if pid <= 1 {
+        return KillResult {
+            success: false,
+            message: "Odmowa: to proces init systemu".into(),
+        };
+    }
+    if pid == std::process::id() {
+        return KillResult {
+            success: false,
+            message: "Odmowa: to sam moduł monitora".into(),
+        };
+    }
+
+    let mut sys = System::new();
+    let target = Pid::from_u32(pid);
+    sys.refresh_processes(ProcessesToUpdate::Some(&[target]), true);
+
+    let Some(process) = sys.process(target) else {
+        return KillResult { success: false, message: format!("Nie ma procesu {pid}") };
+    };
+    let name = process.name().to_string_lossy().into_owned();
+
+    match process.kill_with(Signal::Term) {
+        Some(true) => KillResult { success: true, message: format!("Wysłano SIGTERM do {name} ({pid})") },
+        Some(false) => KillResult {
+            success: false,
+            message: format!("{name} ({pid}): odmowa — proces należy do innego użytkownika"),
+        },
+        None => KillResult {
+            success: false,
+            message: "Ten system nie obsługuje SIGTERM".into(),
+        },
+    }
+}
+
 fn main() {
     let mut line = String::new();
     let output = match io::stdin().lock().read_line(&mut line) {
@@ -281,6 +331,7 @@ fn main() {
             Ok(Request::Snapshot) => serde_json::to_string(&ok(snapshot())),
             Ok(Request::ListDisks) => serde_json::to_string(&ok(list_block_devices())),
             Ok(Request::Smart { device }) => serde_json::to_string(&ok(smart(device))),
+            Ok(Request::Kill { pid }) => serde_json::to_string(&ok(kill(pid))),
             Err(e) => serde_json::to_string(&Response::<()>::Err {
                 ok: false,
                 error: format!("invalid request: {e}"),

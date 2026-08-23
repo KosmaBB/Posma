@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { AppState } from '../../state/appState'
 import { currentBlacklist } from '../../state/settings'
 import { Preparing } from '../../components/Preparing'
 import { invoke } from '@tauri-apps/api/core'
@@ -37,7 +38,7 @@ function loadViewMode(): ViewMode {
   return stored === 'treemap' || stored === 'rings' || stored === 'bars' ? stored : 'bars'
 }
 
-export function DiskMapView() {
+export function DiskMapView({ app }: { app: AppState }) {
   const [data, setData] = useState<ScanData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -62,10 +63,14 @@ export function DiskMapView() {
     }
   }
 
+  // A module can hand us a starting volume — the health monitor does, when
+  // a disk in its list is clicked.
+  const requested = app.view.kind === 'module' ? app.view.param : undefined
+
   useEffect(() => {
-    goTo()
+    goTo(requested)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [requested])
 
   useEffect(() => {
     localStorage.setItem(VIEW_MODE_KEY, viewMode)

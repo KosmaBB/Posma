@@ -18,7 +18,9 @@ export interface OnboardingResult {
 
 export type View =
   | { kind: 'dashboard' }
-  | { kind: 'module'; moduleId: string }
+  /** `param` lets one module hand another a starting point — the health
+   *  monitor opening the disk map on a particular volume, for instance. */
+  | { kind: 'module'; moduleId: string; param?: string }
   | { kind: 'folder'; folderId: string }
   | { kind: 'settings' }
   | { kind: 'manager' }

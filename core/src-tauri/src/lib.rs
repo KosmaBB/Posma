@@ -319,9 +319,24 @@ async fn health_list_disks(app: tauri::AppHandle) -> Result<serde_json::Value, S
     call_sidecar(&app, "health-monitor", serde_json::json!({ "cmd": "list_disks" })).await
 }
 
+/// Ends a process the user owns. Not gated: SIGTERM to your own process
+/// needs no more authority than a shell already gives, and anything else is
+/// refused by the kernel rather than escalated here.
 #[tauri::command]
-async fn health_smart(app: tauri::AppHandle, device: String) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "health-monitor", serde_json::json!({ "cmd": "smart", "device": device })).await
+async fn health_kill(app: tauri::AppHandle, pid: u32) -> Result<serde_json::Value, String> {
+    call_sidecar(&app, "health-monitor", serde_json::json!({ "cmd": "kill", "pid": pid })).await
+}
+
+/// Raw ATA/NVMe passthrough needs root, so this goes through the broker
+/// rather than the sidecar. It was wired to the sidecar, which can only ever
+/// come back with a permission error — the module's own comment said as much.
+#[tauri::command]
+async fn health_smart(
+    state: tauri::State<'_, PermissionRegistry>,
+    device: String,
+) -> Result<serde_json::Value, String> {
+    state.require_operation("health_smart").await?;
+    broker::call_broker(serde_json::json!({ "op": "smart_read", "device": device })).await
 }
 
 #[tauri::command]
@@ -601,6 +616,7 @@ pub fn run() {
             health_snapshot,
             health_list_disks,
             health_smart,
+            health_kill,
             scan_uninstaller,
             clean_uninstaller,
             list_installed_apps,

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { AppState } from '../../state/appState'
 import { Preparing } from '../../components/Preparing'
 import { invoke } from '@tauri-apps/api/core'
 import { formatBytes } from './TempCleanView'
@@ -50,7 +51,50 @@ interface SmartInfo {
 type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: string }
 
 const POLL_MS = 1500
-const HISTORY_LEN = 30
+const HISTORY_LEN = 40
+
+/**
+ * One reading kept for the graph. The top processes travel with it, so
+ * pointing at a spike can answer what caused it rather than only how big
+ * it was.
+ */
+interface Sample {
+  cpu: number
+  ram: number
+  top: ProcessInfo[]
+}
+
+/**
+ * Eases a value toward its target every frame.
+ *
+ * Readings arrive every POLL_MS; without this the numbers and bars jump in
+ * steps. Lowering the poll interval would smooth it at the cost of doing
+ * far more work, which is the trade this avoids — the data rate is
+ * unchanged, only the drawing is continuous.
+ */
+function useSmoothed(target: number, rate = 0.18): number {
+  const [value, setValue] = useState(target)
+  const current = useRef(target)
+
+  useEffect(() => {
+    let raf = 0
+    const step = () => {
+      const delta = target - current.current
+      if (Math.abs(delta) < 0.05) {
+        current.current = target
+        setValue(target)
+        return
+      }
+      current.current += delta * rate
+      setValue(current.current)
+      raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+  }, [target, rate])
+
+  return value
+}
 
 function formatUptime(secs: number): string {
   if (secs < 60) return `${secs} s`
@@ -64,46 +108,132 @@ function formatUptime(secs: number): string {
   return `${days} dni ${remHours} godz`
 }
 
-function Sparkline({ values, max, color }: { values: number[]; max: number; color: string }) {
-  const w = 120
-  const h = 30
-  if (values.length < 2) return <svg width={w} height={h} />
+function Sparkline({
+  values,
+  max,
+  color,
+  hover,
+  onHover,
+}: {
+  values: number[]
+  max: number
+  color: string
+  hover: number | null
+  onHover: (index: number | null) => void
+}) {
+  const w = 220
+  const h = 44
+  if (values.length < 2) return <svg width={w} height={h} className="hm-spark" />
+
   const step = w / (HISTORY_LEN - 1)
-  const points = values.map((v, i) => {
-    const x = w - (values.length - 1 - i) * step
-    const y = h - Math.min(v / max, 1) * (h - 2) - 1
-    return `${x.toFixed(1)},${y.toFixed(1)}`
-  })
+  const xOf = (i: number) => w - (values.length - 1 - i) * step
+  const yOf = (v: number) => h - Math.min(v / max, 1) * (h - 3) - 1.5
+  const points = values.map((v, i) => `${xOf(i).toFixed(1)},${yOf(v).toFixed(1)}`)
+
+  // Index nearest the pointer, in the graph's own coordinates rather than
+  // the element's, so it stays right whatever the interface is scaled to.
+  function pick(e: React.MouseEvent<SVGSVGElement>) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = ((e.clientX - rect.left) / rect.width) * w
+    let best = 0
+    let bestDist = Infinity
+    for (let i = 0; i < values.length; i++) {
+      const d = Math.abs(xOf(i) - x)
+      if (d < bestDist) {
+        bestDist = d
+        best = i
+      }
+    }
+    onHover(best)
+  }
+
   return (
-    <svg width={w} height={h} className="hm-spark">
-      <polyline points={points.join(' ')} fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      width={w}
+      height={h}
+      className="hm-spark"
+      onMouseMove={pick}
+      onMouseLeave={() => onHover(null)}
+    >
+      <polyline
+        points={points.join(' ')}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      {hover !== null && hover < values.length && (
+        <>
+          <line x1={xOf(hover)} y1={0} x2={xOf(hover)} y2={h} stroke={color} strokeWidth="1" opacity="0.35" />
+          <circle cx={xOf(hover)} cy={yOf(values[hover])} r="3" fill={color} />
+        </>
+      )}
     </svg>
   )
 }
 
-function StatTile({ label, value, sub, history, max, color }: { label: string; value: string; sub?: string; history: number[]; max: number; color: string }) {
+function StatTile({
+  label,
+  value,
+  sub,
+  history,
+  max,
+  color,
+  hover,
+  onHover,
+  frozen,
+}: {
+  label: string
+  value: string
+  sub?: string
+  history: number[]
+  max: number
+  color: string
+  hover?: number | null
+  onHover?: (index: number | null) => void
+  /** Reading being pointed at, shown instead of the live one. */
+  frozen?: string
+}) {
   return (
-    <div className="glass hm-tile">
+    <div className="glass hm-tile" data-frozen={frozen !== undefined}>
       <div className="hm-tile-head">
         <div>
-          <div className="hm-tile-label">{label}</div>
-          <div className="hm-tile-value">{value}</div>
+          <div className="hm-tile-label">
+            {label}
+            {frozen !== undefined && <span className="hm-frozen">zatrzymany</span>}
+          </div>
+          <div className="hm-tile-value">{frozen ?? value}</div>
           {sub && <div className="hm-tile-sub">{sub}</div>}
         </div>
       </div>
-      <Sparkline values={history} max={max} color={color} />
+      <Sparkline
+        values={history}
+        max={max}
+        color={color}
+        hover={hover ?? null}
+        onHover={onHover ?? (() => {})}
+      />
     </div>
   )
 }
 
-export function HealthMonitorView() {
+export function HealthMonitorView({ app }: { app: AppState }) {
   const [snap, setSnap] = useState<Snapshot | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [cpuHistory, setCpuHistory] = useState<number[]>([])
-  const [ramHistory, setRamHistory] = useState<number[]>([])
+  const [samples, setSamples] = useState<Sample[]>([])
   const [disks, setDisks] = useState<BlockDevice[]>([])
   const [smart, setSmart] = useState<Map<string, SmartInfo | 'loading'>>(new Map())
+  const [killResult, setKillResult] = useState<string | null>(null)
+  /** Sample the pointer is on. While set, the graph stops advancing. */
+  const [hover, setHover] = useState<number | null>(null)
   const timerRef = useRef<number | null>(null)
+  const hoverRef = useRef<number | null>(null)
+  hoverRef.current = hover
+
+  const latest = samples.length > 0 ? samples[samples.length - 1] : undefined
+  const smoothCpu = useSmoothed(latest?.cpu ?? 0)
+  const smoothRam = useSmoothed(latest?.ram ?? 0)
 
   async function poll() {
     try {
@@ -114,8 +244,19 @@ export function HealthMonitorView() {
       }
       setError(null)
       setSnap(res.data)
-      setCpuHistory((prev) => [...prev, res.data.cpu_percent].slice(-HISTORY_LEN))
-      setRamHistory((prev) => [...prev, res.data.ram_used_bytes / res.data.ram_total_bytes * 100].slice(-HISTORY_LEN))
+      // Held still while the pointer is on the graph: appending would slide
+      // the reading out from under the cursor mid-inspection.
+      if (hoverRef.current !== null) return
+      setSamples((prev) =>
+        [
+          ...prev,
+          {
+            cpu: res.data.cpu_percent,
+            ram: (res.data.ram_used_bytes / res.data.ram_total_bytes) * 100,
+            top: res.data.top_processes.slice(0, 3),
+          },
+        ].slice(-HISTORY_LEN),
+      )
     } catch (e) {
       setError(String(e))
     }
@@ -136,6 +277,9 @@ export function HealthMonitorView() {
   async function checkSmart(device: string) {
     setSmart((prev) => new Map(prev).set(device, 'loading'))
     try {
+      // Goes through the broker now, so consent has to exist before the
+      // call rather than the call failing with a permission error.
+      await invoke('request_permission', { capability: 'disk-smart' })
       const res = await invoke<ApiResponse<SmartInfo>>('health_smart', { device })
       setSmart((prev) => new Map(prev).set(device, res.ok ? res.data : { device, available: false, model: null, passed: null, temperature_c: null, power_on_hours: null, error: res.error, missing_tool: null, install_hint: null }))
     } catch (e) {
@@ -150,26 +294,46 @@ export function HealthMonitorView() {
     return <Preparing title="Odpytuję podzespoły" note="Zbieram temperatury, obciążenie i stan dysków. Pierwszy odczyt trwa dłużej niż kolejne." />
   }
 
-  const ramUsedFrac = snap.ram_used_bytes / snap.ram_total_bytes
   const maxCoreUsage = 100
+
+  const cpuHistory = samples.map((x) => x.cpu)
+  const ramHistory = samples.map((x) => x.ram)
+  const pointed = hover !== null ? samples[hover] : null
+
+  async function killProcess(pid: number, name: string) {
+    if (!window.confirm(`Zakończyć proces „${name}" (PID ${pid})? Niezapisane dane w nim przepadną.`)) return
+    setKillResult(null)
+    try {
+      const res = await invoke<ApiResponse<{ success: boolean; message: string }>>('health_kill', { pid })
+      setKillResult(res.ok ? res.data.message : res.error)
+    } catch (e) {
+      setKillResult(String(e))
+    }
+  }
 
   return (
     <div>
       <div className="hm-grid">
         <StatTile
           label="Procesor"
-          value={`${snap.cpu_percent.toFixed(0)}%`}
+          value={`${smoothCpu.toFixed(0)}%`}
           history={cpuHistory}
           max={100}
           color="var(--accent)"
+          hover={hover}
+          onHover={setHover}
+          frozen={pointed ? `${pointed.cpu.toFixed(0)}%` : undefined}
         />
         <StatTile
           label="Pamięć RAM"
-          value={`${(ramUsedFrac * 100).toFixed(0)}%`}
+          value={`${smoothRam.toFixed(0)}%`}
           sub={`${formatBytes(snap.ram_used_bytes)} / ${formatBytes(snap.ram_total_bytes)}`}
           history={ramHistory}
           max={100}
           color="var(--g-blue-2)"
+          hover={hover}
+          onHover={setHover}
+          frozen={pointed ? `${pointed.ram.toFixed(0)}%` : undefined}
         />
         <div className="glass hm-tile">
           <div className="hm-tile-label">Czas działania</div>
@@ -189,14 +353,21 @@ export function HealthMonitorView() {
         ))}
       </div>
 
-      <div className="section-head"><h2>Najbardziej obciążające procesy</h2></div>
+      <div className="section-head">
+        <h2>Najbardziej obciążające procesy</h2>
+        {pointed && <span className="count">z zatrzymanego odczytu</span>}
+      </div>
+      {killResult && <div className="glass hm-killed">{killResult}</div>}
       <div className="clean-list">
-        {snap.top_processes.map((p) => (
+        {(pointed ? pointed.top : snap.top_processes).map((p) => (
           <div key={p.pid} className="glass clean-row" style={{ cursor: 'default', opacity: 1 }}>
             <span className="cr-path mono">{p.name}</span>
             <span className="cr-files">PID {p.pid}</span>
             <span className="cr-size mono">{p.cpu_percent.toFixed(1)}%</span>
             <span className="cr-size mono">{formatBytes(p.mem_bytes)}</span>
+            <button className="btn btn-ghost btn-mini" onClick={() => killProcess(p.pid, p.name)}>
+              Zakończ
+            </button>
           </div>
         ))}
       </div>
@@ -204,11 +375,17 @@ export function HealthMonitorView() {
       <div className="section-head"><h2>Dyski</h2></div>
       <div className="clean-list">
         {snap.disks.map((d) => (
-          <div key={d.mount_point} className="glass clean-row" style={{ cursor: 'default', opacity: 1 }}>
+          <button
+            key={d.mount_point}
+            className="glass clean-row hm-disk"
+            title={`Pokaż mapę dysku dla ${d.mount_point}`}
+            onClick={() => app.setView({ kind: 'module', moduleId: 'disk-map', param: d.mount_point })}
+          >
             <span className="cr-path mono">{d.mount_point}</span>
             <span className="cr-files">{d.name}</span>
             <span className="cr-size mono">{formatBytes(d.total_bytes - d.available_bytes)} / {formatBytes(d.total_bytes)}</span>
-          </div>
+            <span className="hm-disk-go" aria-hidden="true">→</span>
+          </button>
         ))}
       </div>
 

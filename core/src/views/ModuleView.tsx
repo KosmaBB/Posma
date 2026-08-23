@@ -18,8 +18,14 @@ import { KernelMgrView } from './modules/KernelMgrView'
 import { GrubEditorView } from './modules/GrubEditorView'
 import { DesktopThemeView } from './modules/DesktopThemeView'
 
-/** Modules with a real UI — everything else falls back to the placeholder. */
-const MODULE_VIEWS: Record<string, () => React.ReactElement> = {
+/**
+ * Modules with a real UI — everything else falls back to the placeholder.
+ *
+ * Typed as taking the app state so a module can navigate; a view that has
+ * no use for it stays declared with no parameters, which TypeScript accepts
+ * where more are passed.
+ */
+const MODULE_VIEWS: Record<string, React.ComponentType<{ app: AppState }>> = {
   'temp-clean': TempCleanView,
   duplicates: DuplicatesView,
   'big-files': BigFilesView,
@@ -69,7 +75,7 @@ export function ModuleView({ app, moduleId }: { app: AppState; moduleId: string 
         <span className={`chip ${mod.risk}`} style={{ marginLeft: 'auto' }}>{riskLabel[mod.risk]}</span>
       </div>
       {ActiveModuleView ? (
-        <ActiveModuleView key={mod.id} />
+        <ActiveModuleView key={mod.id} app={app} />
       ) : (
         <div className="glass placeholder-body">
           Interfejs modułu „{mod.name}" powstanie w kolejnych etapach —

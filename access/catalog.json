@@ -193,6 +193,11 @@
       "module": "uninstaller",
       "capability": "pkg",
       "broker_op": "pkg_remove"
+    },
+    "health_smart": {
+      "module": "health-monitor",
+      "capability": "disk-smart",
+      "broker_op": "smart_read"
     }
   }
 }
