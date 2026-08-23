@@ -12,4 +12,4 @@ aes-gcm = "0.10"
 rand = "0.8"
 zeroize = { version = "1", features = ["derive"] }
 keyring = "2"
-base64 = "0.22"
+base64 = "0.23"
