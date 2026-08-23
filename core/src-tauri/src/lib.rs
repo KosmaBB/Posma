@@ -147,8 +147,8 @@ async fn clean_temp(app: tauri::AppHandle, paths: Vec<String>) -> Result<serde_j
 }
 
 #[tauri::command]
-async fn scan_duplicates(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "duplicates", serde_json::json!({ "cmd": "scan" })).await
+async fn scan_duplicates(app: tauri::AppHandle, blacklist: Vec<String>) -> Result<serde_json::Value, String> {
+    call_sidecar(&app, "duplicates", serde_json::json!({ "cmd": "scan", "blacklist": blacklist })).await
 }
 
 #[tauri::command]
@@ -157,8 +157,8 @@ async fn clean_duplicates(app: tauri::AppHandle, paths: Vec<String>) -> Result<s
 }
 
 #[tauri::command]
-async fn scan_duplicate_versions(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "duplicates", serde_json::json!({ "cmd": "scan_versions" })).await
+async fn scan_duplicate_versions(app: tauri::AppHandle, blacklist: Vec<String>) -> Result<serde_json::Value, String> {
+    call_sidecar(&app, "duplicates", serde_json::json!({ "cmd": "scan_versions", "blacklist": blacklist })).await
 }
 
 #[tauri::command]
@@ -171,11 +171,12 @@ async fn scan_big_files(
     app: tauri::AppHandle,
     min_size_mb: Option<u64>,
     max_results: Option<usize>,
+    blacklist: Vec<String>,
 ) -> Result<serde_json::Value, String> {
     call_sidecar(
         &app,
         "big-files",
-        serde_json::json!({ "cmd": "scan", "min_size_mb": min_size_mb, "max_results": max_results }),
+        serde_json::json!({ "cmd": "scan", "min_size_mb": min_size_mb, "max_results": max_results, "blacklist": blacklist }),
     )
     .await
 }
@@ -294,8 +295,8 @@ async fn shred_files(app: tauri::AppHandle, paths: Vec<String>) -> Result<serde_
 }
 
 #[tauri::command]
-async fn scan_disk_map(app: tauri::AppHandle, path: Option<String>) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "disk-map", serde_json::json!({ "cmd": "scan", "path": path })).await
+async fn scan_disk_map(app: tauri::AppHandle, path: Option<String>, blacklist: Vec<String>) -> Result<serde_json::Value, String> {
+    call_sidecar(&app, "disk-map", serde_json::json!({ "cmd": "scan", "path": path, "blacklist": blacklist })).await
 }
 
 #[tauri::command]

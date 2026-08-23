@@ -61,6 +61,17 @@ export function autoScale(width: number): number {
   return 1
 }
 
+/**
+ * The blacklist as it stands right now, readable outside React.
+ *
+ * Scanners need it at the moment a scan starts, not as something to react
+ * to, so threading the whole settings object through every module view
+ * would be ceremony. Same storage, same source.
+ */
+export function currentBlacklist(): string[] {
+  return load().blacklist
+}
+
 export function useSettings() {
   const [settings, setSettings] = useState<Settings>(load)
 

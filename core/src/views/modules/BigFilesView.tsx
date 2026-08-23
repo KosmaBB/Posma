@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { currentBlacklist } from '../../state/settings'
 import { invoke } from '@tauri-apps/api/core'
 import { Icon } from '../../components/Icons'
 import { formatBytes } from './TempCleanView'
@@ -42,7 +43,7 @@ export function BigFilesView() {
   async function runScan() {
     setPhase({ kind: 'scanning' })
     try {
-      const res = await invoke<ApiResponse<ScanData>>('scan_big_files', { minSizeMb, maxResults })
+      const res = await invoke<ApiResponse<ScanData>>('scan_big_files', { minSizeMb, maxResults, blacklist: currentBlacklist() })
       if (!res.ok) {
         setPhase({ kind: 'error', message: res.error })
         return

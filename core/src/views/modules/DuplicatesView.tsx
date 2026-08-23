@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { currentBlacklist } from '../../state/settings'
 import { invoke } from '@tauri-apps/api/core'
 import { Icon } from '../../components/Icons'
 import { formatBytes } from './TempCleanView'
@@ -87,7 +88,7 @@ export function DuplicatesView() {
   async function runScan() {
     setPhase({ kind: 'scanning' })
     try {
-      const res = await invoke<ApiResponse<ScanData>>('scan_duplicates')
+      const res = await invoke<ApiResponse<ScanData>>('scan_duplicates', { blacklist: currentBlacklist() })
       if (!res.ok) {
         setPhase({ kind: 'error', message: res.error })
         return
@@ -160,7 +161,7 @@ export function DuplicatesView() {
   async function runVerScan() {
     setVerPhase({ kind: 'scanning' })
     try {
-      const res = await invoke<ApiResponse<VersionScanData>>('scan_duplicate_versions')
+      const res = await invoke<ApiResponse<VersionScanData>>('scan_duplicate_versions', { blacklist: currentBlacklist() })
       if (!res.ok) {
         setVerPhase({ kind: 'error', message: res.error })
         return

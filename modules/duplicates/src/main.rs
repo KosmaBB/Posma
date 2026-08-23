@@ -13,6 +13,7 @@
 //! can never empty out a group entirely.
 
 use std::collections::HashMap;
+use scan_filter::Filter;
 use std::env;
 use std::fs::{self, File};
 use std::io::{self, BufRead, Read, Write};
@@ -27,22 +28,18 @@ use walkdir::WalkDir;
 /// Skip files smaller than this — tiny configs/icons aren't worth flagging.
 const MIN_SIZE: u64 = 4 * 1024;
 /// Skip trees that blow up scan time — dev caches, VCS metadata, etc.
-/// Directories that hold generated build/dependency artifacts rather than
-/// content a user would think of as "their files" — duplicates inside these
-/// are compiler/toolchain noise, not something to offer up for cleanup.
-const SKIP_DIR_NAMES: &[&str] = &[
-    ".git", ".hg", ".svn",
-    "node_modules", "target", ".cache", "__pycache__", ".venv", "venv",
-    "build", "dist", "out", ".gradle", ".idea", ".next", ".nuxt", ".cxx",
-    "Pods", "DerivedData", "vendor", ".dart_tool",
-];
-
 #[derive(Deserialize)]
 #[serde(tag = "cmd", rename_all = "snake_case")]
 enum Request {
-    Scan,
+    Scan {
+        #[serde(default)]
+        blacklist: Vec<String>,
+    },
     Clean { paths: Vec<String> },
-    ScanVersions,
+    ScanVersions {
+        #[serde(default)]
+        blacklist: Vec<String>,
+    },
     CleanVersions { paths: Vec<String> },
 }
 
@@ -129,13 +126,14 @@ fn hash_file(path: &Path) -> io::Result<String> {
     Ok(digest.iter().map(|b| format!("{b:02x}")).collect())
 }
 
-fn scan() -> ScanResult {
+fn scan(blacklist: Vec<String>) -> ScanResult {
+    let filter = Filter::new(blacklist);
     let mut by_size: HashMap<u64, Vec<PathBuf>> = HashMap::new();
 
     for root in scan_roots() {
         let walker = WalkDir::new(&root).follow_links(false).into_iter().filter_entry(|e| {
             e.file_type().is_file()
-                || !SKIP_DIR_NAMES.contains(&e.file_name().to_string_lossy().as_ref())
+                || filter.allows(e.path())
         });
         for entry in walker.flatten() {
             if !entry.file_type().is_file() {
@@ -300,14 +298,15 @@ struct VersionCandidate {
 /// leftover old installer/archive/build the user forgot to delete.
 /// Grouped strictly within the same directory to avoid unrelated matches
 /// scattered across the disk.
-fn scan_versions() -> VersionScanResult {
+fn scan_versions(blacklist: Vec<String>) -> VersionScanResult {
+    let filter = Filter::new(blacklist);
     let mut candidates: Vec<VersionCandidate> = Vec::new();
 
     for root in scan_roots() {
         let walker = WalkDir::new(&root).follow_links(false).into_iter().filter_entry(|e| {
             e.depth() == 0
                 || e.file_type().is_file()
-                || !SKIP_DIR_NAMES.contains(&e.file_name().to_string_lossy().as_ref())
+                || filter.allows(e.path())
         });
         for entry in walker.flatten() {
             if entry.depth() == 0 {
@@ -472,9 +471,9 @@ fn main() {
             error: "no command received on stdin".into(),
         }),
         Ok(_) => match serde_json::from_str::<Request>(line.trim()) {
-            Ok(Request::Scan) => serde_json::to_string(&ok(scan())),
+            Ok(Request::Scan { blacklist }) => serde_json::to_string(&ok(scan(blacklist))),
             Ok(Request::Clean { paths }) => serde_json::to_string(&ok(clean(paths))),
-            Ok(Request::ScanVersions) => serde_json::to_string(&ok(scan_versions())),
+            Ok(Request::ScanVersions { blacklist }) => serde_json::to_string(&ok(scan_versions(blacklist))),
             Ok(Request::CleanVersions { paths }) => serde_json::to_string(&ok(clean_paths(paths))),
             Err(e) => serde_json::to_string(&Response::<()>::Err {
                 ok: false,

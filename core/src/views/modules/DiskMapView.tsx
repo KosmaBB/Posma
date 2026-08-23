@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { currentBlacklist } from '../../state/settings'
 import { Preparing } from '../../components/Preparing'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
@@ -48,7 +49,7 @@ export function DiskMapView() {
     setLoading(true)
     setError(null)
     try {
-      const res = await invoke<ApiResponse<ScanData>>('scan_disk_map', { path: path ?? null })
+      const res = await invoke<ApiResponse<ScanData>>('scan_disk_map', { path: path ?? null, blacklist: currentBlacklist() })
       if (!res.ok) {
         setError(res.error)
         return

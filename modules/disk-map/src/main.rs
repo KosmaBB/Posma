@@ -15,6 +15,7 @@
 //! counting when a symlink points back up the tree or across directories.
 
 use std::fs;
+use scan_filter::Filter;
 use std::io::{self, BufRead, Write};
 use std::path::{Path, PathBuf};
 
@@ -28,6 +29,8 @@ enum Request {
     Scan {
         #[serde(default)]
         path: Option<String>,
+        #[serde(default)]
+        blacklist: Vec<String>,
     },
 }
 
@@ -73,15 +76,18 @@ fn home_dir() -> PathBuf {
 /// (their own tiny lstat size would otherwise double-count or cycle).
 /// Unreadable entries are silently skipped — a partial total from a
 /// permission-denied subtree is more useful than aborting the whole scan.
-fn dir_size(path: &Path) -> u64 {
+fn dir_size(path: &Path, filter: &Filter) -> u64 {
     let mut total = 0u64;
     let Ok(read) = fs::read_dir(path) else { return 0 };
     for entry in read.flatten() {
+        if !filter.allows(&entry.path()) {
+            continue;
+        }
         let Ok(meta) = entry.metadata() else { continue }; // lstat — does not follow symlinks
         if meta.file_type().is_symlink() {
             continue;
         } else if meta.is_dir() {
-            total += dir_size(&entry.path());
+            total += dir_size(&entry.path(), filter);
         } else {
             total += meta.len();
         }
@@ -89,8 +95,11 @@ fn dir_size(path: &Path) -> u64 {
     total
 }
 
-fn scan(path: Option<String>) -> ScanData {
+fn scan(path: Option<String>, blacklist: Vec<String>) -> ScanData {
     let root = path.map(PathBuf::from).unwrap_or_else(home_dir);
+    // A map counts generated content: it occupies the space, and hiding it
+    // would answer "where did my space go" wrongly.
+    let filter = Filter::including_noise(blacklist);
     let mut entries = Vec::new();
     let mut errors = Vec::new();
 
@@ -98,13 +107,19 @@ fn scan(path: Option<String>) -> ScanData {
         Ok(read) => {
             for entry in read.flatten() {
                 let p = entry.path();
+                // Also checked here, not only inside dir_size: without this a
+                // blocked directory still appears in the listing, merely
+                // reported as empty.
+                if !filter.allows(&p) {
+                    continue;
+                }
                 let name = entry.file_name().to_string_lossy().into_owned();
                 let Ok(meta) = entry.metadata() else {
                     errors.push(format!("{}: nie udało się odczytać", p.display()));
                     continue;
                 };
                 let is_dir = meta.is_dir(); // false for symlinks — lstat metadata never reports symlink-to-dir as a dir
-                let size = if is_dir { dir_size(&p) } else { meta.len() };
+                let size = if is_dir { dir_size(&p, &filter) } else { meta.len() };
                 entries.push(Entry { name, path: Some(p.to_string_lossy().into_owned()), is_dir, size_bytes: size });
             }
         }
@@ -135,7 +150,7 @@ fn main() {
             error: "no command received on stdin".into(),
         }),
         Ok(_) => match serde_json::from_str::<Request>(line.trim()) {
-            Ok(Request::Scan { path }) => serde_json::to_string(&ok(scan(path))),
+            Ok(Request::Scan { path, blacklist }) => serde_json::to_string(&ok(scan(path, blacklist))),
             Err(e) => serde_json::to_string(&Response::<()>::Err {
                 ok: false,
                 error: format!("invalid request: {e}"),

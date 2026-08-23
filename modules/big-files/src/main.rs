@@ -11,6 +11,7 @@
 //! (never a directory) before touching it.
 
 use std::env;
+use scan_filter::Filter;
 use std::fs;
 use std::io::{self, BufRead, Write};
 use std::path::PathBuf;
@@ -34,6 +35,9 @@ enum Request {
         min_size_mb: Option<u64>,
         #[serde(default)]
         max_results: Option<usize>,
+        /// Paths the user marked as never to be listed.
+        #[serde(default)]
+        blacklist: Vec<String>,
     },
     Clean {
         paths: Vec<String>,
@@ -75,23 +79,23 @@ fn home() -> PathBuf {
     PathBuf::from(env::var("HOME").unwrap_or_else(|_| "/root".into()))
 }
 
-fn scan(min_size_mb: Option<u64>, max_results: Option<usize>) -> ScanResult {
+fn scan(min_size_mb: Option<u64>, max_results: Option<usize>, blacklist: Vec<String>) -> ScanResult {
     let min_size_mb = min_size_mb.unwrap_or(DEFAULT_MIN_SIZE_MB).clamp(1, MAX_ALLOWED_MIN_SIZE_MB);
     let min_size = min_size_mb * 1024 * 1024;
     let max_results = max_results.unwrap_or(DEFAULT_MAX_RESULTS).clamp(1, MAX_ALLOWED_RESULTS);
 
     let h = home();
+    let filter = Filter::new(blacklist);
     let mut files: Vec<FileEntry> = Vec::new();
 
     for entry in WalkDir::new(&h).follow_links(false).into_iter().flatten() {
         if !entry.file_type().is_file() {
             continue;
         }
-        // Git's packed object store is legitimately large but not something
-        // a user can usefully "clean" one file at a time — skip it to keep
-        // the list actionable; everything else (build artifacts, VM disks,
-        // downloads...) stays, since those genuinely are worth surfacing.
-        if entry.path().components().any(|c| c.as_os_str() == ".git") {
+        // Shared rules: another system's volume and anything the user
+        // blacklisted are invisible, and generated content is hidden from a
+        // list whose whole purpose is "what can I delete".
+        if !filter.allows(entry.path()) {
             continue;
         }
         let Ok(meta) = entry.metadata() else { continue };
@@ -165,7 +169,9 @@ fn main() {
             error: "no command received on stdin".into(),
         }),
         Ok(_) => match serde_json::from_str::<Request>(line.trim()) {
-            Ok(Request::Scan { min_size_mb, max_results }) => serde_json::to_string(&ok(scan(min_size_mb, max_results))),
+            Ok(Request::Scan { min_size_mb, max_results, blacklist }) => {
+                serde_json::to_string(&ok(scan(min_size_mb, max_results, blacklist)))
+            }
             Ok(Request::Clean { paths }) => serde_json::to_string(&ok(clean(paths))),
             Err(e) => serde_json::to_string(&Response::<()>::Err {
                 ok: false,
