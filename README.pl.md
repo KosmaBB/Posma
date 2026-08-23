@@ -86,7 +86,7 @@ zbudowane i zweryfikowane na Linuksie; na macOS-ie i Windowsie mają status
 | **Niszczarka plików** | Kasuje wskazane pliki bezpowrotnie — wielokrotne nadpisanie, zmiana nazwy, usunięcie — i uczciwie informuje o ograniczeniach na dyskach SSD | ✅ Linux · 🧪 macOS/Windows |
 | **Usuwanie metadanych** | Usuwa dane EXIF, GPS i XMP ze zdjęć przed udostępnieniem, zapisując atomowo, żeby przerwanie nie uszkodziło oryginału | ✅ Linux · 🧪 macOS/Windows |
 | **Mapa dysków** | Uporządkowany podgląd z możliwością wchodzenia w głąb, pokazujący co faktycznie zajmuje dysk | ✅ Linux · 🧪 macOS/Windows |
-| **Monitor zdrowia** | Podgląd CPU, RAM i procesów na żywo oraz odczyt S.M.A.R.T. tam, gdzie system go udostępnia | ✅ Linux · 🧪 macOS/Windows |
+| **Monitor zdrowia** | CPU, RAM, temperatury i karta graficzna na żywo; zatrzymanie wykresu pokazuje odczyt z wybranej chwili razem z procesami, które go wywołały, a proces da się z tego miejsca zakończyć | ✅ Linux · 🧪 macOS/Windows |
 | **Higiena przeglądarek** | Czyszczenie cache, ciasteczek i historii osobno dla każdego profilu, dla Firefoksa i przeglądarek opartych na Chromium | ✅ Linux · 🧪 macOS/Windows |
 | **Menedżer haseł** | Lokalny, szyfrowany sejf (Argon2id + AES-256-GCM): foldery, generator haseł, ocena siły i audyt powtórzeń | ✅ Linux · 🧪 macOS/Windows |
 
@@ -144,6 +144,35 @@ Dwa istniejące moduły również mają docelowo działać wieloplatformowo, zam
 zostać wyłącznie linuksowe: **menedżer autostartu** (klucze Run w rejestrze
 Windows, elementy logowania macOS) oraz **uninstaller** (pozostałości w
 rejestrze Windows, `/Applications` i porozrzucane pliki wsparcia na macOS).
+
+### Czego skanery nigdy nie pokażą
+
+Trzy moduły przeszukują dysk w poszukiwaniu rzeczy do usunięcia i wszystkie
+trzy trzymają się jednej listy wykluczeń. Plik ukryty w jednym, a widoczny w
+drugim, oznaczałby, że zasada nic nie znaczy.
+
+Rozróżnienie jest celowe, bo to nie to samo pytanie:
+
+- **Zablokowane** — nie pokazuje ich nic. Dysk drugiego systemu, pliki
+  systemowe działającej maszyny i ścieżki, które sam dodasz w ustawieniach.
+  Przy dwusystemowym komputerze to nie teoria: zamontowany dysk Windows
+  wygląda dla skanera jak zwykłe pliki.
+- **Szum** — prawdziwe pliki, których nikt nie napisał: drzewa zależności,
+  wyniki kompilacji, zainstalowane gry. Nie pojawiają się na liście „co mogę
+  usunąć", bo kasowanie ich plik po pliku to zły sposób. **Mapa dysków liczy
+  je normalnie** — tam pytanie brzmi „gdzie poszło miejsce", a odpowiedź bez
+  nich byłaby fałszywa.
+
+Własne ścieżki dodajesz w **Ustawieniach → Czarna lista skanerów**: archiwum
+zdjęć, dokumenty klienta, cokolwiek, co nie jest niczyim śmieciem.
+
+### Ustawienia
+
+Skalowanie interfejsu ma sześć poziomów plus tryb automatyczny dobierający
+się do szerokości okna — przy gęstych ekranach i niestandardowych
+rozdzielczościach domyślny rozmiar bywa nieczytelny. Poziom dostępu można
+zmienić po instalacji, a zaostrzenie go z pełnego na wybiórczy odbiera
+uprawnienia sesyjne od razu, nie przy następnym uruchomieniu.
 
 ### O co moduł może poprosić
 
@@ -325,10 +354,13 @@ to nie są rzeczy, które dokleja się do projektu jednoosobowego.
 
 ```
 core/            Aplikacja Tauri — backend w Rust (src-tauri) + interfejs React (src)
+access/          catalog.json — jedyne źródło prawdy o uprawnieniach
 crates/
   broker-common/ Wspólny katalog operacji uprzywilejowanych, zabezpieczenia, dyspozytor
+  scan-filter/   Jedna lista wykluczeń dla wszystkich skanerów dysku
+  sysmetrics/    Odczyt czujników, temperatur i kart graficznych — bez uprawnień
 modules/         Po jednym crate na moduł, plus brokery per system
-scripts/         sync-sidecars.sh — buduje moduły i wgrywa je do aplikacji
+scripts/         sync-sidecars.sh — buduje moduły dla tego systemu i wgrywa je do aplikacji
 ```
 ## Budowanie ze źródeł
 

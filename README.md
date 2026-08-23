@@ -90,7 +90,7 @@ have been exercised on real hardware.
 | **Shredder** | Destroys picked files irrecoverably — multi-pass overwrite, rename, delete — and is honest about SSD limits | ✅ Linux · 🧪 macOS/Windows |
 | **Metadata stripping** | Removes EXIF, GPS and XMP data from images before you share them, writing atomically so an interruption can't corrupt the original | ✅ Linux · 🧪 macOS/Windows |
 | **Disk map** | Ranked, drill-down view of what is actually filling a drive | ✅ Linux · 🧪 macOS/Windows |
-| **Health monitor** | Live CPU, RAM and process view, plus S.M.A.R.T. drive health where the system exposes it | ✅ Linux · 🧪 macOS/Windows |
+| **Health monitor** | Live CPU, memory, temperatures and graphics card; holding the graph shows the reading at a chosen moment together with the processes that caused it, and one can be ended from there | ✅ Linux · 🧪 macOS/Windows |
 | **Browser hygiene** | Per-profile cache, cookie and history clearing across Firefox and Chromium-family browsers | ✅ Linux · 🧪 macOS/Windows |
 | **Password vault** | Local encrypted vault (Argon2id + AES-256-GCM), folders, generator, strength and reuse audit | ✅ Linux · 🧪 macOS/Windows |
 
@@ -153,6 +153,35 @@ Two existing modules are also planned to go cross-platform rather than stay
 Linux-only: the **autostart manager** (Windows registry Run keys, macOS login
 items) and the **uninstaller** (Windows registry leftovers, macOS
 `/Applications` and its scattered support files).
+
+### What the scanners will never show
+
+Three modules search the disk for things to remove, and all three follow one
+list of exclusions. A file hidden by one and offered by another would mean
+the rule counts for nothing.
+
+The distinction is deliberate, because these are not the same question:
+
+- **Blocked** — shown by nothing. Another operating system's volume, the
+  running machine's own files, and any path you add in settings. On a
+  dual-boot machine this is not theoretical: a mounted Windows volume looks
+  to a scanner like ordinary files.
+- **Noise** — real files nobody wrote: dependency trees, build output,
+  installed games. They stay off a list headed "what can I delete", because
+  removing them file by file is the wrong tool. **The disk map counts them
+  normally** — there the question is where the space went, and an answer
+  without them would be false.
+
+Paths of your own go in **Settings → Scanner blacklist**: a photo archive, a
+client's documents, anything that is nobody's junk.
+
+### Settings
+
+Interface scaling has six levels plus an automatic mode that follows the
+window width — on dense displays and unusual resolutions the default size
+can be unreadable. The access level can be changed after installation, and
+tightening it from full to selective withdraws session grants immediately
+rather than at the next start.
 
 ### What a module may ask for
 
@@ -324,10 +353,13 @@ are not something to bolt onto a single-user design.
 
 ```
 core/            Tauri app — Rust backend (src-tauri) + React UI (src)
+access/          catalog.json — the single source of truth for permissions
 crates/
   broker-common/ Shared privileged-operation catalog, guards, dispatch
+  scan-filter/   One list of exclusions, shared by every disk scanner
+  sysmetrics/    Sensor, temperature and graphics-card readings — no privilege
 modules/         One crate per feature module, plus the per-OS brokers
-scripts/         sync-sidecars.sh — builds modules into the app bundle
+scripts/         sync-sidecars.sh — builds this system's modules into the bundle
 ```
 
 ## Building from source

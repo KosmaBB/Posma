@@ -70,6 +70,23 @@ security argument only holds if this code is small enough to actually read.
 
 All three share `crates/broker-common`, which holds:
 
+### The other shared crates
+
+Two more crates exist for the same reason: a rule that lives in one module
+is not a rule.
+
+- **`scan-filter`** — what a disk scanner may show. Three modules walk the
+  filesystem looking for things to delete; a file hidden by one and offered
+  by another would make the exclusion meaningless. It separates *blocked*
+  (another system's volume, the running system, the user's own list) from
+  *noise* (games, dependency trees) because a disk map must count the second
+  and hide neither the first.
+- **`sysmetrics`** — readings the machine gives up without privilege:
+  temperatures from hwmon, graphics cards from sysfs or `nvidia-smi`. Adding
+  a source is one function returning a list; the dashboard and the health
+  monitor both pick it up without being edited. Anything needing root stays
+  out of it — that is what the broker is for, and why S.M.A.R.T. is not here.
+
 - **the closed operation catalog** (`ops.rs`) — a Rust enum of every
   permitted privileged operation across all OSes. There is no
   "run arbitrary command" variant. An unrecognised operation is rejected by
