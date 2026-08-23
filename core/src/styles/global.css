@@ -1017,7 +1017,15 @@ button { font-family: inherit; }
 
 .hm-tile[data-frozen='true'] { border-color: color-mix(in srgb, var(--warn) 35%, transparent); }
 
-.hm-spark { cursor: crosshair; width: 100%; height: auto; }
+.hm-spark {
+  cursor: crosshair;
+  width: 100%;
+  /* Stała wysokość: viewBox skaluje szerokość, a przy preserveAspectRatio
+     "none" wysokość musi być podana, bo inaczej nie ma z czego jej wyliczyć. */
+  height: 44px;
+  display: block;
+  margin-top: 10px;
+}
 
 /* Dysk na liście prowadzi do mapy — musi wyglądać na klikalny. */
 .hm-disk {
@@ -1031,3 +1039,25 @@ button { font-family: inherit; }
   padding: 10px 14px; margin-bottom: 10px; font-size: 12.5px;
   border-color: color-mix(in srgb, var(--accent) 35%, transparent);
 }
+
+/* Nagłówek listy procesów. Kopiuje układ .clean-row (flex, ten sam gap i
+   te same klasy kolumn), bo siatka o własnych szerokościach rozjeżdżałaby
+   się z wartościami pod spodem przy każdej zmianie treści. */
+.hm-legend {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 0 15px 6px;
+  font-family: 'Martian Mono', monospace;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hm-legend .cr-path { flex: 1; min-width: 0; }
+.hm-legend .cr-size { min-width: 76px; text-align: right; }
+.hm-legend .cr-files { white-space: nowrap; }
+
+/* Odpowiednik przycisku „Zakończ" — trzyma podpisy nad właściwymi liczbami. */
+.hm-legend__gap { width: 84px; flex-shrink: 0; }

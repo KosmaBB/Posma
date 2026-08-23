@@ -123,7 +123,9 @@ function Sparkline({
 }) {
   const w = 220
   const h = 44
-  if (values.length < 2) return <svg width={w} height={h} className="hm-spark" />
+  if (values.length < 2) {
+    return <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="hm-spark" />
+  }
 
   const step = w / (HISTORY_LEN - 1)
   const xOf = (i: number) => w - (values.length - 1 - i) * step
@@ -149,8 +151,8 @@ function Sparkline({
 
   return (
     <svg
-      width={w}
-      height={h}
+      viewBox={`0 0 ${w} ${h}`}
+      preserveAspectRatio="none"
       className="hm-spark"
       onMouseMove={pick}
       onMouseLeave={() => onHover(null)}
@@ -162,10 +164,21 @@ function Sparkline({
         strokeWidth="1.8"
         strokeLinecap="round"
         strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
       />
       {hover !== null && hover < values.length && (
         <>
-          <line x1={xOf(hover)} y1={0} x2={xOf(hover)} y2={h} stroke={color} strokeWidth="1" opacity="0.35" />
+          <line
+            x1={xOf(hover)}
+            y1={0}
+            x2={xOf(hover)}
+            y2={h}
+            stroke="var(--muted)"
+            strokeWidth="1"
+            strokeDasharray="2 3"
+            opacity="0.7"
+            vectorEffect="non-scaling-stroke"
+          />
           <circle cx={xOf(hover)} cy={yOf(values[hover])} r="3" fill={color} />
         </>
       )}
@@ -358,6 +371,18 @@ export function HealthMonitorView({ app }: { app: AppState }) {
         {pointed && <span className="count">z zatrzymanego odczytu</span>}
       </div>
       {killResult && <div className="glass hm-killed">{killResult}</div>}
+      {/* Without headings the four figures on each row are a guess — and
+          CPU above 100% looks like a fault until you know it is summed
+          across cores. */}
+      <div className="hm-legend">
+        <span className="cr-path">Proces</span>
+        <span className="cr-files">PID</span>
+        <span className="cr-size" title="Suma po wszystkich rdzeniach — 150% to półtora rdzenia">
+          CPU Σ
+        </span>
+        <span className="cr-size">Pamięć</span>
+        <span className="hm-legend__gap" />
+      </div>
       <div className="clean-list">
         {(pointed ? pointed.top : snap.top_processes).map((p) => (
           <div key={p.pid} className="glass clean-row" style={{ cursor: 'default', opacity: 1 }}>
