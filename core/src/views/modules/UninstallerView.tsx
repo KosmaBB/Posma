@@ -6,6 +6,8 @@ import { Icon } from '../../components/Icons'
 import { MissingDependency } from '../../components/MissingDependency'
 import { Modal } from '../../components/Modal'
 import { formatBytes } from './TempCleanView'
+import { confirmAction } from '../../components/confirm'
+import { callModule } from '../../data/callModule'
 
 // ------------------------------------------------------------- shared types
 
@@ -41,7 +43,8 @@ interface InstalledApp {
   id: string
   name: string
   version: string
-  source: 'apt' | 'flatpak' | 'snap'
+  /** apt | pacman | dnf | zypper (menedżer systemu), flatpak albo snap */
+  source: string
   size_bytes: number | null
   user_scope: boolean
   description: string
@@ -60,8 +63,6 @@ interface UninstallResult {
   install_hint: string | null
 }
 
-const SOURCE_LABEL: Record<string, string> = { apt: 'apt', flatpak: 'flatpak', snap: 'snap' }
-
 function AppDetail({ app, onClose, onUninstalled }: { app: InstalledApp; onClose: () => void; onUninstalled: () => void }) {
   const [leftovers, setLeftovers] = useState<OrphanEntry[] | null>(null)
   const [checked, setChecked] = useState<Set<string>>(new Set())
@@ -76,7 +77,7 @@ function AppDetail({ app, onClose, onUninstalled }: { app: InstalledApp; onClose
   async function loadLeftovers() {
     setLeftoversLoading(true)
     try {
-      const res = await invoke<ApiResponse<OrphanEntry[]>>('app_leftovers', { appRef, name: app.name })
+      const res = await callModule<OrphanEntry[]>('uninstaller', { cmd: 'app_leftovers', app: appRef, name: app.name })
       if (res.ok) setLeftovers(res.data)
     } finally {
       setLeftoversLoading(false)
@@ -89,12 +90,12 @@ function AppDetail({ app, onClose, onUninstalled }: { app: InstalledApp; onClose
   }, [])
 
   async function runUninstall() {
-    if (!window.confirm(`Odinstalować "${app.name}"? Ta operacja zmienia system i może wymagać uprawnień administratora.`)) return
+    if (!(await confirmAction(`Odinstalować "${app.name}"? Ta operacja zmienia system i może wymagać uprawnień administratora.`))) return
     setUninstallState('running')
     try {
       let res: ApiResponse<UninstallResult>
-      if (app.source === 'apt' || app.source === 'snap') {
-        // apt/snap zawsze wymagają roota — idzie od razu przez brokera
+      if (app.source !== 'flatpak') {
+        // menedżer systemu i snap zawsze wymagają roota — idzie od razu przez brokera
         // (Access_plan.md §6 krok 3) zamiast czekać na nieuprzywilejowaną
         // próbę i pokazywać podpowiedź "uruchom ręcznie sudo ...".
         await invoke('request_permission', { capability: 'pkg' })
@@ -104,7 +105,7 @@ function AppDetail({ app, onClose, onUninstalled }: { app: InstalledApp; onClose
         )
         res = raw.ok ? { ok: true, data: { ...raw.data, install_hint: null } } : raw
       } else {
-        res = await invoke<ApiResponse<UninstallResult>>('uninstall_app', { appRef })
+        res = await callModule<UninstallResult>('uninstaller', { cmd: 'uninstall', app: appRef })
       }
       const result = res.ok ? res.data : { success: false, output: '', error: res.error, install_hint: null }
       setUninstallState(result)
@@ -119,7 +120,7 @@ function AppDetail({ app, onClose, onUninstalled }: { app: InstalledApp; onClose
     if (paths.length === 0) return
     setCleaning(true)
     try {
-      const res = await invoke<ApiResponse<CleanData>>('clean_uninstaller', { paths })
+      const res = await callModule<CleanData>('uninstaller', { cmd: 'clean', paths })
       if (res.ok) {
         setCleanResult(res.data)
         setLeftovers((prev) => prev?.filter((e) => !checked.has(e.path)) ?? null)
@@ -170,7 +171,7 @@ function AppDetail({ app, onClose, onUninstalled }: { app: InstalledApp; onClose
           <div>
             <h3 style={{ fontSize: 17 }}>{app.name}</h3>
             <div className="mono" style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
-              {SOURCE_LABEL[app.source]} · {app.id} · {app.version}
+              {app.source} · {app.id} · {app.version}
               {app.size_bytes ? ` · ${formatBytes(app.size_bytes)}` : ''}
             </div>
           </div>
@@ -187,7 +188,7 @@ function AppDetail({ app, onClose, onUninstalled }: { app: InstalledApp; onClose
               onClick={runUninstall}
               disabled={uninstallState === 'running'}
             >
-              {uninstallState === 'running' ? 'Odinstalowywanie...' : `Odinstaluj (${SOURCE_LABEL[app.source]})`}
+              {uninstallState === 'running' ? 'Odinstalowywanie...' : `Odinstaluj (${app.source})`}
             </button>
             {typeof uninstallState === 'object' && uninstallState.success && (
               <span className="chip low">Odinstalowano</span>
@@ -277,13 +278,14 @@ function AppsPanel() {
   const [apps, setApps] = useState<InstalledApp[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
-  const [sourceFilter, setSourceFilter] = useState<Set<string>>(new Set(['apt', 'flatpak', 'snap']))
+  // Ukryte, nie pokazane: źródło, którego nikt nie wyłączył, jest widoczne — także takie, o którym ten widok nie wiedział.
+  const [hiddenSources, setHiddenSources] = useState<Set<string>>(new Set())
   const [selected, setSelected] = useState<InstalledApp | null>(null)
 
   async function load() {
     setError(null)
     try {
-      const res = await invoke<ApiResponse<InstalledApp[]>>('list_installed_apps')
+      const res = await callModule<InstalledApp[]>('uninstaller', { cmd: 'list_apps' })
       if (!res.ok) {
         setError(res.error)
         return
@@ -299,7 +301,7 @@ function AppsPanel() {
   }, [])
 
   function toggleSource(s: string) {
-    setSourceFilter((prev) => {
+    setHiddenSources((prev) => {
       const next = new Set(prev)
       if (next.has(s)) next.delete(s)
       else next.add(s)
@@ -310,8 +312,8 @@ function AppsPanel() {
   const filtered = useMemo(() => {
     if (!apps) return []
     const q = query.trim().toLowerCase()
-    return apps.filter((a) => sourceFilter.has(a.source) && (q === '' || a.name.toLowerCase().includes(q) || a.id.toLowerCase().includes(q)))
-  }, [apps, query, sourceFilter])
+    return apps.filter((a) => !hiddenSources.has(a.source) && (q === '' || a.name.toLowerCase().includes(q) || a.id.toLowerCase().includes(q)))
+  }, [apps, query, hiddenSources])
 
   if (error) {
     return (
@@ -323,7 +325,7 @@ function AppsPanel() {
     )
   }
   if (!apps) {
-    return <Preparing title="Zbieram listę aplikacji" note="Pytam apt, snap i flatpak po kolei. Każdy odpowiada we własnym tempie." />
+    return <Preparing title="Zbieram listę aplikacji" note="Pytam menedżer pakietów systemu, snap i flatpak po kolei. Każdy odpowiada we własnym tempie." />
   }
 
   return (
@@ -337,8 +339,8 @@ function AppsPanel() {
           style={{ flex: 1, minWidth: 200, padding: '9px 14px', borderRadius: 10, background: 'var(--bg-3)', border: '1px solid var(--border)', color: 'var(--ink)', fontSize: 13 }}
         />
         <div className="diskmap-viewtabs">
-          {(['apt', 'flatpak', 'snap'] as const).map((s) => (
-            <button key={s} className={`diskmap-viewtab ${sourceFilter.has(s) ? 'active' : ''}`} onClick={() => toggleSource(s)}>{s}</button>
+          {[...new Set(apps.map((a) => a.source))].sort().map((s) => (
+            <button key={s} className={`diskmap-viewtab ${hiddenSources.has(s) ? '' : 'active'}`} onClick={() => toggleSource(s)}>{s}</button>
           ))}
         </div>
         <span className="count mono">{filtered.length} / {apps.length}</span>
@@ -351,7 +353,7 @@ function AppsPanel() {
               {a.name}
               {a.description && <span style={{ color: 'var(--muted)', marginLeft: 8, fontSize: 11 }}>{a.description}</span>}
             </span>
-            <span className="chip os">{SOURCE_LABEL[a.source]}</span>
+            <span className="chip os">{a.source}</span>
             <span className="cr-files mono">{a.version}</span>
             <span className="cr-size mono">{a.size_bytes ? formatBytes(a.size_bytes) : ''}</span>
           </div>
@@ -394,7 +396,7 @@ function BlindScanPanel() {
     setPhase({ kind: 'scanning' })
     setChecked(new Set())
     try {
-      const res = await invoke<ApiResponse<ScanData>>('scan_uninstaller')
+      const res = await callModule<ScanData>('uninstaller', { cmd: 'scan' })
       if (!res.ok) {
         setPhase({ kind: 'error', message: res.error })
         return
@@ -409,10 +411,10 @@ function BlindScanPanel() {
     const paths = [...checked]
     if (paths.length === 0) return
     const total = selectedBytes(scan)
-    if (!window.confirm(`Usunąć ${paths.length} pozycji (${formatBytes(total)})? Tej operacji nie można cofnąć.`)) return
+    if (!(await confirmAction(`Usunąć ${paths.length} pozycji (${formatBytes(total)})? Tej operacji nie można cofnąć.`))) return
     setPhase({ kind: 'cleaning', scan })
     try {
-      const res = await invoke<ApiResponse<CleanData>>('clean_uninstaller', { paths })
+      const res = await callModule<CleanData>('uninstaller', { cmd: 'clean', paths })
       if (!res.ok) {
         setPhase({ kind: 'error', message: res.error })
         return

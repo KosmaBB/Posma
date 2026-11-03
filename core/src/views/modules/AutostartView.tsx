@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { Modal } from '../../components/Modal'
+import { confirmAction } from '../../components/confirm'
+import { callModule } from '../../data/callModule'
+import { detectOs } from '../../state/appState'
 
 interface Entry {
   id: string
@@ -23,8 +25,6 @@ interface CheckPathData {
   executable: boolean
   has_shebang: boolean
 }
-
-type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: string }
 
 type Phase =
   | { kind: 'idle' }
@@ -82,7 +82,7 @@ export function AutostartView() {
   async function runScan() {
     setPhase({ kind: 'loading' })
     try {
-      const res = await invoke<ApiResponse<ScanData>>('scan_autostart')
+      const res = await callModule<ScanData>('autostart', { cmd: 'scan' })
       if (!res.ok) {
         setPhase({ kind: 'error', message: res.error })
         return
@@ -102,7 +102,7 @@ export function AutostartView() {
         : p,
     )
     try {
-      const res = await invoke<ApiResponse<{ enabled: boolean }>>('toggle_autostart', { id: entry.id, enabled: nextEnabled })
+      const res = await callModule<{ enabled: boolean }>('autostart', { cmd: 'toggle', id: entry.id, enabled: nextEnabled })
       if (!res.ok) {
         setPhase((p) =>
           p.kind === 'loaded'
@@ -151,7 +151,7 @@ export function AutostartView() {
   async function setPathAndCheck(path: string) {
     setForm((f) => (f ? { ...f, path, checking: true, pathCheck: null } : f))
     try {
-      const res = await invoke<ApiResponse<CheckPathData>>('check_autostart_path', { path })
+      const res = await callModule<CheckPathData>('autostart', { cmd: 'check_path', path })
       setForm((f) => (f ? { ...f, checking: false, pathCheck: res.ok ? res.data : null } : f))
     } catch {
       setForm((f) => (f ? { ...f, checking: false, pathCheck: null } : f))
@@ -174,14 +174,15 @@ export function AutostartView() {
     setSaving(true)
     setFormError(null)
     try {
-      const res = await invoke<ApiResponse<{ id: string }>>('add_autostart', {
+      const res = await callModule<{ id: string }>('autostart', {
+        cmd: 'add',
         id: form.id,
         name: form.name.trim(),
         path: form.path.trim(),
         args: form.args.trim() || null,
         icon: form.icon.trim() || null,
-        wrapInShell: form.wrapInShell,
-        makeExecutable: form.makeExecutable,
+        wrap_in_shell: form.wrapInShell,
+        make_executable: form.makeExecutable,
       })
       if (!res.ok) {
         setFormError(res.error)
@@ -197,9 +198,9 @@ export function AutostartView() {
   }
 
   async function handleDelete(entry: Entry) {
-    if (!window.confirm(`Usunąć wpis „${entry.name}"? Tej operacji nie można cofnąć.`)) return
+    if (!(await confirmAction(`Usunąć wpis „${entry.name}"? Tej operacji nie można cofnąć.`))) return
     try {
-      const res = await invoke<ApiResponse<{ removed: boolean }>>('delete_autostart', { id: entry.id })
+      const res = await callModule<{ removed: boolean }>('autostart', { cmd: 'delete', id: entry.id })
       if (!res.ok) {
         window.alert(`Nie udało się usunąć: ${res.error}`)
         return
@@ -243,7 +244,8 @@ export function AutostartView() {
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               <span className="count">{phase.entries.length}</span>
               <button className="btn btn-ghost btn-mini" onClick={runScan}>Odśwież</button>
-              <button className="btn btn-primary btn-mini" onClick={openAddForm}>+ Dodaj własny wpis</button>
+              {/* Na Windowsie programy same dopisują się do autostartu; tu tylko je przełączamy. */}
+              {detectOs() !== 'windows' && <button className="btn btn-primary btn-mini" onClick={openAddForm}>+ Dodaj własny wpis</button>}
             </div>
           </div>
 

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
 import { Preparing } from '../../components/Preparing'
 import { formatBytes } from './TempCleanView'
+import { confirmAction } from '../../components/confirm'
+import { callModule } from '../../data/callModule'
 
 type Recovery = 'rebuilt' | 'refetched' | 'permanent'
 
@@ -32,8 +33,6 @@ interface CleanData {
   errors: string[]
 }
 
-type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: string }
-
 const RECOVERY: Record<Recovery, { label: string; chip: string }> = {
   rebuilt: { label: 'Odbuduje się', chip: 'low' },
   refetched: { label: 'Pobierze się ponownie', chip: 'medium' },
@@ -51,7 +50,7 @@ export function XcodeCacheView() {
     setError(null)
     setResult(null)
     try {
-      const res = await invoke<ApiResponse<ScanData>>('scan_xcode_cache')
+      const res = await callModule<ScanData>('xcode-cache', { cmd: 'scan' })
       if (!res.ok) {
         setError(res.error)
         return
@@ -113,11 +112,12 @@ export function XcodeCacheView() {
       permanentPicked > 0
         ? `\n\nWśród nich jest ${permanentPicked} archiwów, których nie da się odtworzyć.`
         : ''
-    if (!window.confirm(`Usunąć ${selected.length} pozycji (${formatBytes(selectedBytes)})?${warning}`)) return
+    if (!(await confirmAction(`Usunąć ${selected.length} pozycji (${formatBytes(selectedBytes)})?${warning}`))) return
 
     setBusy(true)
     try {
-      const res = await invoke<ApiResponse<CleanData>>('clean_xcode_cache', {
+      const res = await callModule<CleanData>('xcode-cache', {
+        cmd: 'clean',
         paths: selected.map((e) => e.path),
       })
       if (res.ok) {

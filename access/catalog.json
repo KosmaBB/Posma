@@ -22,7 +22,7 @@
     {
       "id": "pkg",
       "name": "Menedżer pakietów",
-      "desc": "apt/pacman/flatpak/snap (Linux), winget (Windows), brew (macOS).",
+      "desc": "apt/pacman/dnf/zypper/flatpak/snap (Linux), winget (Windows), brew (macOS).",
       "elevation": "optional"
     },
     {
@@ -46,7 +46,7 @@
     {
       "id": "boot",
       "name": "Bootloader / jądro",
-      "desc": "GRUB, partycja /boot, zarządzanie wersjami jądra. Zawsze z automatycznym backupem przed zmianą.",
+      "desc": "GRUB i inne programy rozruchowe, partycja /boot, zarządzanie wersjami jądra. Zawsze z automatycznym backupem przed zmianą.",
       "elevation": "required"
     },
     {
@@ -87,6 +87,10 @@
     ],
     "big-files": [
       "fs-user"
+    ],
+    "bloatware": [
+      "pkg",
+      "restore-point"
     ],
     "browser-hygiene": [
       "fs-user",
@@ -134,11 +138,25 @@
       "fs-user",
       "pkg"
     ],
+    "time-machine": [
+      "fs-system"
+    ],
     "vault": [
       "secrets"
     ],
     "xcode-cache": [
       "fs-user"
+    ],
+    "services": [
+      "svc",
+      "restore-point"
+    ],
+    "winget-ui": [
+      "pkg"
+    ],
+    "winsxs": [
+      "fs-system",
+      "restore-point"
     ]
   },
   "operations": {
@@ -152,12 +170,12 @@
       "capability": "fs-system",
       "broker_op": "trim_system_logs"
     },
-    "apt_clean": {
+    "pkg_cache_clean": {
       "module": "pkg-cache",
       "capability": "fs-system",
       "broker_op": "pkg_cache_clean"
     },
-    "apt_autoremove": {
+    "pkg_autoremove": {
       "module": "pkg-cache",
       "capability": "pkg",
       "broker_op": "pkg_autoremove"
@@ -170,6 +188,11 @@
     "remove_kernel": {
       "module": "kernel-mgr",
       "capability": "boot",
+      "broker_op": "remove_kernel"
+    },
+    "remove_kernel_package": {
+      "module": "kernel-mgr",
+      "capability": "pkg",
       "broker_op": "remove_kernel"
     },
     "write_grub_config": {
@@ -187,10 +210,25 @@
       "capability": "boot",
       "broker_op": "restore_system_file_backup"
     },
+    "set_boot_options": {
+      "module": "grub-editor",
+      "capability": "boot",
+      "broker_op": "set_boot_options"
+    },
     "read_boot_entries": {
       "module": "grub-editor",
       "capability": "boot",
       "broker_op": "read_boot_entries"
+    },
+    "delete_local_snapshots": {
+      "module": "time-machine",
+      "capability": "fs-system",
+      "broker_op": "delete_local_snapshots"
+    },
+    "bloatware_restore_point": {
+      "module": "bloatware",
+      "capability": "restore-point",
+      "broker_op": "create_restore_point"
     },
     "uninstall_pkg_privileged": {
       "module": "uninstaller",
@@ -201,6 +239,36 @@
       "module": "health-monitor",
       "capability": "disk-smart",
       "broker_op": "smart_read"
+    },
+    "set_services": {
+      "module": "services",
+      "capability": "svc",
+      "broker_op": "service_set_enabled"
+    },
+    "services_restore_point": {
+      "module": "services",
+      "capability": "restore-point",
+      "broker_op": "create_restore_point"
+    },
+    "analyze_component_store": {
+      "module": "winsxs",
+      "capability": "fs-system",
+      "broker_op": "analyze_component_store"
+    },
+    "clean_component_store": {
+      "module": "winsxs",
+      "capability": "fs-system",
+      "broker_op": "component_store_cleanup"
+    },
+    "winsxs_restore_point": {
+      "module": "winsxs",
+      "capability": "restore-point",
+      "broker_op": "create_restore_point"
+    },
+    "winget_upgrade": {
+      "module": "winget-ui",
+      "capability": "pkg",
+      "broker_op": "pkg_upgrade"
     }
   }
 }

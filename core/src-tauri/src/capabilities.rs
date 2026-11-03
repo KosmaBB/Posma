@@ -49,10 +49,6 @@ pub struct CapabilityDef {
     #[allow(dead_code)]
     pub desc: String,
     pub elevation: Elevation,
-    /// True where the operating system only ever allows a person to grant
-    /// this by hand — macOS Full Disk Access being the case that exists.
-    #[serde(default, rename = "manualOnly")]
-    pub manual_only: bool,
 }
 
 /// A privileged operation: which module it belongs to and what it costs.
@@ -81,10 +77,6 @@ static CATALOG: LazyLock<Catalog> = LazyLock::new(|| {
     serde_json::from_str(CATALOG_JSON).expect("access/catalog.json must parse")
 });
 
-pub fn capabilities() -> &'static [CapabilityDef] {
-    &CATALOG.capabilities
-}
-
 pub fn definition(id: CapabilityId) -> Option<&'static CapabilityDef> {
     CATALOG.capabilities.iter().find(|d| d.id == id)
 }
@@ -93,6 +85,11 @@ pub fn definition(id: CapabilityId) -> Option<&'static CapabilityDef> {
 /// nothing, which is the safe answer: every request from it is refused.
 pub fn declared_by(module: &str) -> &'static [CapabilityId] {
     CATALOG.modules.get(module).map(|v| v.as_slice()).unwrap_or(&[])
+}
+
+/// Whether `name` is a module POSMA ships, and so may be started at all.
+pub fn is_module(name: &str) -> bool {
+    CATALOG.modules.contains_key(name)
 }
 
 pub fn operation(name: &str) -> Option<&'static OperationDef> {
@@ -123,7 +120,7 @@ mod tests {
     /// describe the same set, or the compile-time safety is a fiction.
     #[test]
     fn enum_and_catalog_agree() {
-        let mut from_catalog: Vec<CapabilityId> = capabilities().iter().map(|d| d.id).collect();
+        let mut from_catalog: Vec<CapabilityId> = CATALOG.capabilities.iter().map(|d| d.id).collect();
         let mut from_enum = ALL.to_vec();
         from_catalog.sort();
         from_enum.sort();
@@ -132,7 +129,7 @@ mod tests {
 
     #[test]
     fn every_capability_is_described() {
-        for def in capabilities() {
+        for def in &CATALOG.capabilities {
             assert!(!def.name.trim().is_empty(), "{:?} has no name", def.id);
             assert!(!def.desc.trim().is_empty(), "{:?} has no description", def.id);
         }
@@ -210,5 +207,42 @@ mod tests {
         }
 
         assert!(checked > 0, "no manifests were found to check");
+    }
+
+    /// Each system's bundle carries exactly the modules whose manifest
+    /// names that system, and its broker. Both lists are kept by hand; a
+    /// module missing from one is a view that fails to start there.
+    #[test]
+    fn every_bundle_carries_the_modules_of_its_system() {
+        use std::collections::BTreeSet;
+        use std::path::PathBuf;
+
+        #[derive(serde::Deserialize)]
+        struct Manifest {
+            id: String,
+            platforms: Vec<String>,
+        }
+
+        let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        let manifests: Vec<Manifest> = std::fs::read_dir(root.join("../../modules"))
+            .expect("modules directory")
+            .filter_map(|e| std::fs::read_to_string(e.ok()?.path().join("module.json")).ok())
+            .map(|raw| serde_json::from_str(&raw).expect("manifest parses"))
+            .collect();
+
+        for os in ["linux", "macos", "windows"] {
+            let conf: serde_json::Value =
+                serde_json::from_str(&std::fs::read_to_string(root.join(format!("tauri.{os}.conf.json"))).expect("bundle config")).unwrap();
+            let bundled: BTreeSet<String> = conf["bundle"]["externalBin"]
+                .as_array()
+                .expect("externalBin")
+                .iter()
+                .map(|b| b.as_str().unwrap().trim_start_matches("binaries/").to_string())
+                .collect();
+            let mut wanted: BTreeSet<String> =
+                manifests.iter().filter(|m| m.platforms.iter().any(|p| p == os)).map(|m| m.id.clone()).collect();
+            wanted.insert(format!("{os}-broker"));
+            assert_eq!(bundled, wanted, "tauri.{os}.conf.json");
+        }
     }
 }

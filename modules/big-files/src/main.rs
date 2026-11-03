@@ -76,7 +76,7 @@ fn ok<T: Serialize>(data: T) -> Response<T> {
 }
 
 fn home() -> PathBuf {
-    PathBuf::from(env::var("HOME").unwrap_or_else(|_| "/root".into()))
+    PathBuf::from(env::var("HOME").or_else(|_| env::var("USERPROFILE")).unwrap_or_else(|_| "/root".into()))
 }
 
 fn scan(min_size_mb: Option<u64>, max_results: Option<usize>, blacklist: Vec<String>) -> ScanResult {
@@ -88,14 +88,13 @@ fn scan(min_size_mb: Option<u64>, max_results: Option<usize>, blacklist: Vec<Str
     let filter = Filter::new(blacklist);
     let mut files: Vec<FileEntry> = Vec::new();
 
-    for entry in WalkDir::new(&h).follow_links(false).into_iter().flatten() {
+    // Shared rules: another system's volume and anything the user
+    // blacklisted are invisible, and generated content is hidden from a list
+    // whose whole purpose is "what can I delete". The verdict on a directory
+    // holds for everything below it, so a refused one is skipped whole
+    // rather than walked and refused file by file.
+    for entry in WalkDir::new(&h).follow_links(false).into_iter().filter_entry(|e| if e.depth() == 0 { filter.allows(e.path()) } else { filter.allows_child(e.path()) }).flatten() {
         if !entry.file_type().is_file() {
-            continue;
-        }
-        // Shared rules: another system's volume and anything the user
-        // blacklisted are invisible, and generated content is hidden from a
-        // list whose whole purpose is "what can I delete".
-        if !filter.allows(entry.path()) {
             continue;
         }
         let Ok(meta) = entry.metadata() else { continue };

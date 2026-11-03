@@ -49,20 +49,23 @@ scratch.
 
 1. **Register the crate** — the workspace already globs `modules/*`, so no
    root `Cargo.toml` change is needed.
-2. **Add a core command** in `core/src-tauri/src/lib.rs`:
+2. **List it in `access/catalog.json`** under `modules`, with the same
+   capabilities as its manifest (`cargo test -p core` compares the two).
+   The core starts only modules listed there, and nothing else is needed on
+   the Rust side: the view talks to the module through one command,
 
-   ```rust
-   #[tauri::command]
-   async fn scan_my_thing(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-       call_sidecar(&app, "my-module", serde_json::json!({ "cmd": "scan" })).await
-   }
+   ```ts
+   const res = await callModule<ScanData>('my-module', { cmd: 'scan' })
    ```
 
-   …and add it to the `invoke_handler!` list.
+   with the request in the module's own snake_case. A core command of its
+   own is for the privileged half only — one that asks the broker, gated by
+   an `operations` entry in the same catalog.
 3. **Build and sync**: `bash scripts/sync-sidecars.sh`
-4. **Add it to `externalBin`** in `core/src-tauri/tauri.conf.json` — *after*
-   the binary exists, or the Tauri build fails with
-   `resource path ... doesn't exist`.
+4. **Add it to `externalBin`** in `core/src-tauri/tauri.<system>.conf.json`
+   for every system its manifest names — *after* the binary exists, or the
+   Tauri build fails with `resource path ... doesn't exist`. A test checks
+   that each bundle carries exactly the modules of its system.
 5. **Add a catalog entry** in `core/src/data/modules.ts` (folder, supported
    OSes, risk level, capabilities).
 6. **Add a view** in `core/src/views/modules/` and register it in
@@ -168,6 +171,27 @@ brokers, for the same reason.
 **Rule of thumb:** a different *location* is a branch; a different *mechanism*
 is a file. Scheduling is the clearest example — systemd timers, `launchd` and
 Task Scheduler have nothing in common but the intent.
+
+### Linux is not one system
+
+A module that runs `apt-get`, reads `/var/lib/dpkg/status` or calls
+`update-grub` works on Debian's family and nowhere else. Anything that
+depends on the distribution goes through `crates/distro`, which answers
+three questions for every caller, the root broker included:
+
+- which package manager is native here — `distro::manager()` — or why
+  there is none to use (an image-based system, a manager POSMA does not
+  drive);
+- which kernels are installed and which package owns each;
+- where GRUB keeps its files and how its menu is rebuilt.
+
+If the answer is "none", pass the reason through to the interface. Do not
+test for a distribution by name, and do not guess from which binaries
+happen to be installed — a Fedora machine can have `apt` on it.
+
+`scripts/distro-check.sh` runs every Linux module in a container of each
+supported distribution. A module that parses a tool's output needs a check
+there: package managers on rolling distributions change what they print.
 
 ### Keep the protocol identical
 

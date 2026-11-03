@@ -13,8 +13,9 @@ you should be able to *verify* what the tool doing it actually does. Most
 maintenance software makes you pick one or the other.
 
 > **Status: work in progress.** Linux is feature-complete against the planned
-> module catalog; macOS and Windows are scaffolded but not yet verified on
-> real hardware. Installers come later — for now this is a source repository.
+> module catalog. The app starts on a real Mac and on Arch, but its modules
+> have not been tried there one by one yet; Windows has not run on real
+> hardware at all. Installers come later — for now this is a source repository.
 >
 > No screenshots yet, on purpose: the interface is still being shaped, and
 > showing a version that won't match what ships would be worse than showing
@@ -80,11 +81,12 @@ Status here means what has actually been run, not what compiles:
 
 These are written once and run on Windows, macOS and Linux. All are built,
 and all are verified on Linux; on macOS and Windows they are 🧪 until they
-have been exercised on real hardware.
+have been exercised on real hardware. On a Mac the app itself starts, which
+says nothing yet about any one module.
 
 | Module | What it does | Status |
 |---|---|---|
-| **Temp cleanup** | Scans and clears system and application temp folders, showing what will go before anything is deleted | ✅ Linux · 🧪 macOS/Windows |
+| **Temp cleanup** | Scans and clears system and application temp folders, showing what will go before anything is deleted; on Windows also the system temp folder and Windows Update's downloads, through the broker | ✅ Linux · 🧪 macOS/Windows |
 | **Large files** | Walks your home directory and ranks the biggest files so space is easy to reclaim | ✅ Linux · 🧪 macOS/Windows |
 | **Duplicates** | Finds byte-identical files by SHA-256, and separately spots superseded versioned copies (`app_1.2` next to `app_1.5`) | ✅ Linux · 🧪 macOS/Windows |
 | **Shredder** | Destroys picked files irrecoverably — multi-pass overwrite, rename, delete — and is honest about SSD limits | ✅ Linux · 🧪 macOS/Windows |
@@ -98,13 +100,46 @@ have been exercised on real hardware.
 
 | Module | What it does | Status |
 |---|---|---|
-| **Package caches** | Clears apt's download cache, removes orphaned packages, and reclaims superseded snap revisions | ✅ |
+| **Package caches** | Clears the download cache of the system's package manager (apt, pacman, dnf or zypper), removes orphaned packages, and reclaims superseded snap revisions | ✅ |
 | **systemd journal** | Trims the journal to a target size or age, with presets instead of remembering `journalctl` flags | ✅ |
-| **Autostart manager** | Lists and toggles what starts with your session; entries you add yourself can be edited and removed, entries other apps installed are never touched | ✅ |
-| **Kernel versions** | Removes old kernels while the running and newest ones are locked — the privileged half re-derives both itself and refuses if it cannot tell | ✅ |
+| **Autostart manager** | Lists and toggles what starts with your session; entries you add yourself can be edited and removed, entries other apps installed are never touched. On Windows: the Run key and the Startup folder, switched the way Task Manager does | ✅ Linux · 🧪 Windows |
+| **Kernel versions** | Removes old kernels while the running and newest ones are locked — the privileged half re-derives both itself and refuses if it cannot tell. Where old kernels do not pile up (Arch-based systems, openSUSE) it lists them and says why there is nothing to remove | ✅ |
 | **Desktop personalisation** | GTK themes, icons, cursors and interface fonts; installs a theme or a font from a folder, working out for itself which it is | ✅ GNOME · 🧪 KDE Plasma |
-| **Visual GRUB editor** | Boot menu timeout, default system, and themes installed by pointing at a folder, with a preview and automatic backup and rollback | ✅ |
-| **Uninstaller** | Lists apt, snap and flatpak applications, removes one, then finds the configuration, cache and sandbox data it left behind | ✅ |
+| **Boot editor** | GRUB: boot menu timeout, default system, and themes installed by pointing at a folder, with a preview and automatic backup and rollback. Limine, systemd-boot and rEFInd: default entry and timeout, with the same backups | ✅ GRUB · 🧪 Limine, systemd-boot, rEFInd |
+| **Uninstaller** | Lists applications from the system's package manager, snap and flatpak, removes one, then finds the configuration, cache and sandbox data it left behind | ✅ |
+
+✅ in this table means Ubuntu on real hardware. The other distributions —
+twenty for home use and three for servers — are checked in containers of
+each, which proves less; on Arch the app has also started on a real
+machine, though its modules have not been tried there one by one.
+[What was run where, and what was not](docs/distributions.md) is written
+down per distribution.
+
+### Supported Linux distributions
+
+| Family | Distributions | What works |
+|---|---|---|
+| apt | Ubuntu 22.04 / 24.04 / 26.04, Debian 12 / 13, Linux Mint, Pop!_OS, Zorin OS, elementary OS, KDE neon, MX Linux, Kali | Everything |
+| pacman | CachyOS, Arch Linux, Manjaro, EndeavourOS, Garuda | Everything — kernels are listed, not removed: an update replaces them instead of keeping old ones |
+| dnf | Fedora, Nobara, RHEL 10 and its rebuilds (AlmaLinux 10, Rocky 10) | Everything — on RHEL 10, WebKitGTK comes from EPEL |
+| zypper | openSUSE Tumbleweed | Everything — kernels are listed, not removed: openSUSE purges old ones itself |
+| image-based | Bazzite, SteamOS, Fedora Silverblue | Everything except packages, kernels and GRUB, which belong to the system image |
+| other | NixOS, Void, Alpine, Gentoo | Everything that does not go through the package manager |
+
+On any of them the boot editor needs GRUB, Limine, systemd-boot or rEFInd,
+and the journal module needs systemd; where either is missing the module
+says so.
+
+At first start POSMA shows what it detected — the distribution and what it
+descends from, the package manager, the desktop (GNOME, KDE Plasma,
+Cinnamon, MATE, Xfce, Budgie, Pantheon…) and the boot loader — and asks
+whether that is right. A correction, there or later in Settings, reaches
+every module: desktop personalisation drives that desktop's own settings,
+and the boot editor opens for the loader that actually starts the system.
+
+**Not supported:** RHEL 9 and its rebuilds (AlmaLinux 9, Rocky Linux 9).
+The modules run, but the window cannot be built: only WebKitGTK 4.0 is
+packaged there, and the app needs 4.1.
 
 ### macOS — 3 modules
 
@@ -112,20 +147,24 @@ have been exercised on real hardware.
 |---|---|---|
 | **Xcode cache** | Lists what Xcode left behind — build products, device symbols, simulator caches — marking what rebuilds itself and what cannot be recovered | 🧪 |
 | **Mail and Messages slimming** | Removes cached attachments without touching the messages themselves | 📋 |
-| **Time Machine snapshots** | Deletes local snapshots that consume disk between real backups | 📋 |
+| **Time Machine snapshots** | Lists the local snapshots that consume disk between real backups and deletes them, all or all but the newest | 🧪 |
 
-The privileged operations these need — Homebrew, `launchctl`, `tmutil`, log
-trimming — are already written in the macOS broker, but have never run on a
-Mac. Verifying them is the next milestone.
+The privileged operations these need — `launchctl` and `tmutil` — are
+written in the macOS broker, which asks for the administrator password per
+action the way macOS's own prompt does. The app starts on a real Mac, but
+none of these operations has been tried there yet.
+Homebrew, SMART and log trimming are deliberately not in it: Homebrew refuses
+root and its prefix belongs to the user, macOS reads SMART without root, and
+`log erase` takes no age to trim by.
 
 ### Windows — 4 modules
 
 | Module | What it does | Status |
 |---|---|---|
-| **WinSxS cleanup** | DISM component-store cleanup, removing superseded Windows Update files | 📋 |
-| **Service manager** | Services managed through ready-made profiles rather than a list of hundreds of entries | 📋 |
-| **Bloatware removal** | Removes preinstalled UWP applications | 📋 |
-| **Winget front end** | Installed applications and bulk updates through the system's own package manager | 📋 |
+| **WinSxS cleanup** | DISM's report on the component store first, then the cleanup that removes superseded Windows Update files, after a System Restore point | 🧪 |
+| **Service manager** | Services in ready-made profiles — telemetry, Xbox, printing, offline maps — rather than a list of hundreds; each says what stops working, and switching back restores Windows' own start types | 🧪 |
+| **Bloatware removal** | Lists the Store apps Windows lets an account remove, marking the preinstalled ones, and removes the picked ones after a System Restore point | 🧪 |
+| **Winget front end** | The applications with an update waiting, updated together through the system's own package manager | 🧪 |
 
 Every critical Windows operation creates a System Restore point first — that
 is a design requirement, not an option.
@@ -140,19 +179,18 @@ in the 23 above:
 | **Smart reminders** | Quiet background notice when a disk passes ~85% or memory is chronically short — a nudge when it's useful, never a nag | All systems |
 | **LaunchAgents and LaunchDaemons** | The macOS side of autostart, including the system-level agents Apple hides away | macOS |
 
-Four more are chosen and queued, in the order they'd be built:
+Three more are chosen and queued, in the order they'd be built:
 
 | Module | What it would do | For |
 |---|---|---|
 | **Developer caches** | Separate, safe cleanup for npm, cargo, pip, gradle, go and Maven caches — routinely tens of gigabytes on a machine used for development, all of it reproducible | All systems |
 | **Maintenance schedule** | Runs chosen modules on a schedule. Scan-only by default: a scheduled run reports what it found and waits, and acts unattended only where that is explicitly turned on, module by module | All systems |
 | **Font manager** | Duplicate and broken fonts, and cache rebuilds — duplicated families quietly disorder font pickers and slow application startup | All systems |
-| **Windows Update cache** | Clears `SoftwareDistribution` after failed or stale updates; the natural companion to WinSxS cleanup | Windows |
 
-Two existing modules are also planned to go cross-platform rather than stay
-Linux-only: the **autostart manager** (Windows registry Run keys, macOS login
-items) and the **uninstaller** (Windows registry leftovers, macOS
-`/Applications` and its scattered support files).
+Two existing modules are also planned to go further than they do: the
+**autostart manager** to macOS login items (it covers Windows' Run key and
+Startup folder already) and the **uninstaller** (Windows registry leftovers,
+macOS `/Applications` and its scattered support files).
 
 ### What the scanners will never show
 
@@ -221,6 +259,8 @@ enough — and readable enough — to actually audit. So:
 - **Destructive edits are reversible:** system config changes go through
   backup → rotation → atomic write → verification → automatic rollback if the
   verification fails.
+- **Every privileged operation is recorded** in `/var/log/posma/broker.log`:
+  when, for which account, what was asked and whether it worked.
 - **Elevation is your choice:** a prompt per action, or an installed helper
   for prompt-free use, where access is granted by the caller's verified user
   ID rather than by file permissions.
@@ -248,30 +288,54 @@ manager, GRUB editor, browser hygiene, vault, uninstaller. The privileged
 broker with its closed operation catalog is complete here, in both
 prompt-per-action and installed-helper modes.
 
+"Linux" started out meaning Ubuntu. The modules that depend on the
+distribution — package caches, the uninstaller, kernel versions, the GRUB
+editor — now work across the four package-manager families (apt, pacman,
+dnf, zypper) and say plainly where a system offers them nothing to do, as
+on image-based distributions. That is checked in a container of each
+distribution rather than on installed systems — on Arch only the app
+starting has been seen on a real machine so far; [Linux distributions](docs/distributions.md)
+keeps the two apart.
+
 ### Next — macOS
 
 The second platform that can be tested live, so it's next in line.
 
-- Verify the scaffolded macOS broker on real hardware — Homebrew, `launchctl`,
-  unified-log trimming, Time Machine snapshots and SMART are written but have
-  never run on a Mac.
-- macOS-only modules: Xcode derived-data cleanup, Mail/Messages cache
-  slimming, Time Machine local snapshots.
-- A guided Full Disk Access flow — macOS deliberately makes this grantable
-  only by hand in System Settings, so POSMA can open the right pane and
-  confirm the result, never grant it silently.
+- The app starts on a real Mac. Next is each module there, and the broker —
+  the administrator prompt, `launchctl` and Time Machine snapshots are
+  written but have never run on a Mac. Every module builds for both Apple
+  silicon and Intel.
+- macOS-only modules: Xcode derived-data cleanup and Time Machine local
+  snapshots are written; Mail/Messages slimming waits for a Mac — Messages'
+  attachments are content, not cache, and the line between the two has to
+  be seen on a real one.
+- Full Disk Access: Settings shows whether macOS has granted it and opens
+  the one pane where it is granted. POSMA never grants it itself — macOS
+  makes that impossible on purpose.
+- CI builds and tests every macOS module on Apple silicon and on Intel, and
+  makes one universal bundle on request.
 
 ### Then — Windows
 
 Built with the least hardware access, so deliberately the most conservative.
 
-- A named-pipe helper with proper caller authentication. The Unix side uses
-  the peer's verified user ID; the Windows equivalent is exactly the kind of
-  security-critical code that should not be written blind, so it is
-  intentionally still missing rather than guessed at.
-- Windows-only modules: WinSxS/DISM component cleanup, service profiles,
-  bloatware removal, a winget front end.
-- Automatic restore point before every critical operation.
+- One UAC consent per run. The first operation that needs an administrator
+  starts the broker through UAC; it stays connected over a pipe POSMA
+  created and serves only that process, until POSMA closes. What needs no
+  administrator does without one — Store apps leave the account that owns
+  them, winget lists as the user.
+- An installed helper that needs no consent at all is still not written:
+  it would be a server anything could knock on, and the check on who knocks
+  is exactly the code that should not be written blind.
+- Windows-only modules: bloatware removal, WinSxS/DISM component cleanup,
+  service profiles and a winget front end are written. Temp cleanup, large
+  files, duplicates, browser cleanup, the health monitor and the autostart
+  manager know Windows' own locations.
+- Automatic restore point before every critical operation — bloatware
+  removal, the service profiles and the WinSxS cleanup make one first and
+  change nothing without it.
+- CI builds and tests everything for Windows, including the elevated
+  session end to end. None of it has run on a Windows desktop yet.
 
 ### 1.0 — module distribution
 
@@ -356,10 +420,12 @@ core/            Tauri app — Rust backend (src-tauri) + React UI (src)
 access/          catalog.json — the single source of truth for permissions
 crates/
   broker-common/ Shared privileged-operation catalog, guards, dispatch
+  distro/        Which Linux this is — package manager, kernels, GRUB layout
   scan-filter/   One list of exclusions, shared by every disk scanner
   sysmetrics/    Sensor, temperature and graphics-card readings — no privilege
 modules/         One crate per feature module, plus the per-OS brokers
 scripts/         sync-sidecars.sh — builds this system's modules into the bundle
+                 distro-check.sh — runs the modules in a container of each distribution
 ```
 
 ## Building from source
@@ -368,7 +434,9 @@ End users will get an installer; this section is for developers and for
 anyone who would rather build the thing they audited.
 
 Requires a [Rust toolchain](https://rustup.rs), Node.js 20+, and the
-[Tauri system dependencies](https://tauri.app/start/prerequisites/) for your OS.
+[Tauri system dependencies](https://tauri.app/start/prerequisites/) for your OS
+— [the package names for each Linux family](docs/building.md#requirements)
+are listed with the build notes.
 
 ```bash
 npm --prefix core install
@@ -460,6 +528,7 @@ a link back here.
 | [Security model](https://kosmabb.github.io/Posma/security-model.html) | What can reach root, what stops it, and an explicit list of what is *not* protected |
 | [Writing a module](https://kosmabb.github.io/Posma/writing-a-module.html) | The module contract — protocol, manifest, capabilities, per-OS logic, safety rules |
 | [Building and development](https://kosmabb.github.io/Posma/building.html) | Toolchain, build order, the sidecar sync step, testing |
+| [Linux distributions](https://kosmabb.github.io/Posma/distributions.html) | Which distributions POSMA runs on, what each module does there, and what was actually run to find out |
 | [`Access_plan.md`](Access_plan.md) | The original permission and capability design (Polish) |
 
 | | |

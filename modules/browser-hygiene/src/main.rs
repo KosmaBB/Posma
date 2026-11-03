@@ -115,7 +115,7 @@ struct BrowserDef {
     name: &'static str,
     kind: Kind,
     /// Candidate base directories, checked in order — the first that exists
-    /// wins. Covers apt/traditional installs, snap, and flatpak on Linux.
+    /// wins. Covers native-package installs, snap, and flatpak on Linux.
     bases: Vec<PathBuf>,
     /// Process names to look for under /proc to flag "currently running".
     process_names: &'static [&'static str],
@@ -131,6 +131,9 @@ fn browser_defs() -> Vec<BrowserDef> {
             kind: Kind::Firefox,
             bases: vec![
                 h.join(".mozilla/firefox"),
+                // Firefox 147 and later put a new profile here instead —
+                // what a fresh install on a rolling distribution gets.
+                h.join(".config/mozilla/firefox"),
                 h.join("snap/firefox/common/.mozilla/firefox"),
                 h.join(".var/app/org.mozilla.firefox/.mozilla/firefox"),
             ],
@@ -139,13 +142,17 @@ fn browser_defs() -> Vec<BrowserDef> {
         defs.push(BrowserDef {
             name: "Google Chrome",
             kind: Kind::Chromium,
-            bases: vec![h.join(".config/google-chrome")],
+            bases: vec![h.join(".config/google-chrome"), h.join(".var/app/com.google.Chrome/config/google-chrome")],
             process_names: &["chrome", "google-chrome"],
         });
         defs.push(BrowserDef {
             name: "Chromium",
             kind: Kind::Chromium,
-            bases: vec![h.join(".config/chromium"), h.join("snap/chromium/current/.config/chromium")],
+            bases: vec![
+                h.join(".config/chromium"),
+                h.join("snap/chromium/current/.config/chromium"),
+                h.join(".var/app/org.chromium.Chromium/config/chromium"),
+            ],
             process_names: &["chromium", "chromium-browser"],
         });
         defs.push(BrowserDef {
@@ -154,6 +161,7 @@ fn browser_defs() -> Vec<BrowserDef> {
             bases: vec![
                 h.join(".config/BraveSoftware/Brave-Browser"),
                 h.join("snap/brave/current/.config/BraveSoftware/Brave-Browser"),
+                h.join(".var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser"),
             ],
             process_names: &["brave", "brave-browser"],
         });
@@ -181,7 +189,8 @@ fn browser_defs() -> Vec<BrowserDef> {
         defs.push(BrowserDef {
             name: "Firefox",
             kind: Kind::Firefox,
-            bases: vec![support.join("Firefox/Profiles")],
+            // The cache lives under Caches, by the profile's own name.
+            bases: vec![support.join("Firefox/Profiles"), h.join("Library/Caches/Firefox/Profiles")],
             process_names: &["firefox"],
         });
         defs.push(BrowserDef {
@@ -198,16 +207,24 @@ fn browser_defs() -> Vec<BrowserDef> {
         });
     }
     if cfg!(target_os = "windows") {
-        if let Ok(appdata) = env::var("APPDATA") {
+        if let (Ok(appdata), Ok(local)) = (env::var("APPDATA"), env::var("LOCALAPPDATA")) {
+            // Profiles roam; their caches stay in Local AppData, under the
+            // same directory name — the second base is where scan finds them.
             defs.push(BrowserDef {
                 name: "Firefox",
                 kind: Kind::Firefox,
-                bases: vec![PathBuf::from(&appdata).join("Mozilla/Firefox/Profiles")],
+                bases: vec![PathBuf::from(appdata).join("Mozilla/Firefox/Profiles"), PathBuf::from(local).join("Mozilla/Firefox/Profiles")],
                 process_names: &["firefox.exe"],
             });
         }
         if let Ok(local) = env::var("LOCALAPPDATA") {
             let local = PathBuf::from(local);
+            defs.push(BrowserDef {
+                name: "Brave",
+                kind: Kind::Chromium,
+                bases: vec![local.join("BraveSoftware/Brave-Browser/User Data")],
+                process_names: &["brave.exe"],
+            });
             defs.push(BrowserDef {
                 name: "Google Chrome",
                 kind: Kind::Chromium,
@@ -272,7 +289,22 @@ fn is_running(process_names: &[&str]) -> bool {
     false
 }
 
-#[cfg(not(target_os = "linux"))]
+/// Image names are not translated, so tasklist's CSV is read as it is.
+#[cfg(windows)]
+fn is_running(process_names: &[&str]) -> bool {
+    let Ok(out) = std::process::Command::new("tasklist").args(["/FO", "CSV", "/NH"]).output() else { return false };
+    String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .filter_map(|line| line.split(',').next())
+        .any(|image| process_names.iter().any(|name| image.trim_matches('"').eq_ignore_ascii_case(name)))
+}
+
+#[cfg(target_os = "macos")]
+fn is_running(process_names: &[&str]) -> bool {
+    process_names.iter().any(|name| std::process::Command::new("pgrep").args(["-x", name]).output().is_ok_and(|o| o.status.success()))
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
 fn is_running(_process_names: &[&str]) -> bool {
     false
 }
@@ -309,8 +341,12 @@ fn scan() -> ScanResult {
             Kind::Firefox => {
                 for (profile_label, profile_dir) in firefox_profiles(base) {
                     let tag = format!("{} — {profile_label}", def.name);
-                    for sub in ["cache2", "startupCache", "OfflineCache"] {
-                        add_if_exists(&mut cache_entries, format!("{tag} — {sub}"), profile_dir.join(sub));
+                    // The profile itself, and its namesake in any other base.
+                    let dirname = profile_dir.file_name().unwrap_or_default();
+                    for dir in def.bases.iter().map(|b| b.join(dirname)) {
+                        for sub in ["cache2", "startupCache", "OfflineCache"] {
+                            add_if_exists(&mut cache_entries, format!("{tag} — {sub}"), dir.join(sub));
+                        }
                     }
                     add_if_exists(&mut cookie_entries, format!("{tag} — cookies.sqlite"), profile_dir.join("cookies.sqlite"));
                     // History deliberately omitted — see module doc comment.

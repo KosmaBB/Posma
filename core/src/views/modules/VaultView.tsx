@@ -3,6 +3,7 @@ import { Preparing } from '../../components/Preparing'
 import { Icon } from '../../components/Icons'
 import { Modal } from '../../components/Modal'
 import { vaultCall, vaultStart } from './vaultApi'
+import { confirmAction } from '../../components/confirm'
 
 // ------------------------------------------------------------------ types
 
@@ -400,7 +401,7 @@ function EntryDetailModal({ id, onClose, onEdit, onDeleted }: { id: number; onCl
   }, [id])
 
   async function remove() {
-    if (!window.confirm('Usunąć ten wpis? Tej operacji nie można cofnąć.')) return
+    if (!(await confirmAction('Usunąć ten wpis? Tej operacji nie można cofnąć.'))) return
     await vaultCall<boolean>({ cmd: 'delete_entry', id })
     onDeleted()
     onClose()

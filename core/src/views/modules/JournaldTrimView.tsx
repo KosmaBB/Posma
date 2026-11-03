@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { formatBytes } from './TempCleanView'
+import { confirmAction } from '../../components/confirm'
+import { callModule } from '../../data/callModule'
 
 interface UsageData {
   total_bytes: number
   files: number
   readable: boolean
+  /** Powód, dla którego nie ma tu dziennika do przycięcia (brak systemd albo dziennik tylko w pamięci). */
+  unavailable: string | null
 }
 
 interface VacuumResult {
@@ -36,7 +40,7 @@ export function JournaldTrimView() {
   async function loadUsage() {
     setUsageError(null)
     try {
-      const res = await invoke<ApiResponse<UsageData>>('journal_usage')
+      const res = await callModule<UsageData>('journald-trim', { cmd: 'usage' })
       if (res.ok) setUsage(res.data)
       else setUsageError(res.error)
     } catch (e) {
@@ -52,9 +56,9 @@ export function JournaldTrimView() {
     const unit = preset.mode === 'size' ? 'do rozmiaru' : 'starsze niż'
     const amount = preset.mode === 'size' ? formatBytes(preset.value * 1024 * 1024) : `${preset.value} dni`
     if (
-      !window.confirm(
+      !(await confirmAction(
         `Przyciąć logi systemowe (${unit} ${amount})? Usunięte wpisy dziennika nie wrócą — to nie dotyczy aplikacji ani ich danych, tylko historii logów systemd.`,
-      )
+      ))
     ) {
       return
     }
@@ -76,6 +80,10 @@ export function JournaldTrimView() {
     } finally {
       setRunning(null)
     }
+  }
+
+  if (usage?.unavailable) {
+    return <div className="glass empty-state">{usage.unavailable}</div>
   }
 
   return (

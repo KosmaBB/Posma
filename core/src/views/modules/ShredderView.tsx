@@ -1,16 +1,14 @@
 import { useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { Icon } from '../../components/Icons'
 import { formatBytes } from './TempCleanView'
+import { callModule } from '../../data/callModule'
 
 interface ShredResult {
   freed_bytes: number
   removed: number
   errors: string[]
 }
-
-type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: string }
 
 type Phase =
   | { kind: 'idle' }
@@ -49,7 +47,7 @@ export function ShredderView() {
     if (selected.length === 0) return
     setPhase({ kind: 'shredding' })
     try {
-      const res = await invoke<ApiResponse<ShredResult>>('shred_files', { paths: selected })
+      const res = await callModule<ShredResult>('shredder', { cmd: 'shred', paths: selected })
       if (!res.ok) {
         setPhase({ kind: 'error', message: res.error })
         return

@@ -12,7 +12,8 @@
       "binaries/temp-clean",
       "binaries/vault",
       "binaries/macos-broker",
-      "binaries/xcode-cache"
+      "binaries/xcode-cache",
+      "binaries/time-machine"
     ]
   }
 }

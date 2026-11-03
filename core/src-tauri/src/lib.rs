@@ -5,11 +5,12 @@ use tauri_plugin_shell::{process::CommandEvent, ShellExt};
 use tokio::sync::{mpsc::Receiver, Mutex};
 
 // Capability catalog (Access_plan.md §2), the permission registry that
-// tracks grant state against it (§6 step 2), and the Linux privileged
-// broker (§6 step 3) that real elevated operations go through.
+// tracks grant state against it (§6 step 2), and the privileged broker
+// (§6 step 3) that real elevated operations go through.
 mod broker;
 mod capabilities;
 mod permissions;
+mod profile;
 
 use capabilities::CapabilityId;
 
@@ -18,10 +19,13 @@ use capabilities::CapabilityId;
 /// broker protocol is now cross-OS and generic — the broker re-validates it
 /// against its own closed list of managed files regardless.
 const GRUB_CONFIG_PATH: &str = "/etc/default/grub";
-use permissions::{AccessLevel, PermissionEntry, PermissionRegistry, PermissionStatus};
+use permissions::{AccessLevel, PermissionRegistry, PermissionStatus};
+use profile::{ProfileOverrides, ProfileStore};
 
 /// Spawns a sidecar module, sends one JSON request line over stdin and
-/// returns the single JSON response line it prints to stdout.
+/// returns the single JSON response line it prints to stdout. Every module
+/// starts with the user's corrections to the system profile in its
+/// environment.
 async fn call_sidecar(
     app: &tauri::AppHandle,
     module: &str,
@@ -31,6 +35,7 @@ async fn call_sidecar(
         .shell()
         .sidecar(module)
         .map_err(|e| e.to_string())?
+        .envs(app.state::<ProfileStore>().get().env())
         .spawn()
         .map_err(|e| e.to_string())?;
 
@@ -63,6 +68,18 @@ async fn call_sidecar(
     } else {
         Err(stderr_lines.join("\n"))
     }
+}
+
+/// Any request to an unprivileged module. No capability gate: a module runs
+/// as the user and checks its own input, so the interface could do nothing
+/// through it that the user cannot already. Only modules the catalog lists
+/// start — the name becomes a path next to the executable.
+#[tauri::command]
+async fn call_module(app: tauri::AppHandle, module: String, request: serde_json::Value) -> Result<serde_json::Value, String> {
+    if !capabilities::is_module(&module) {
+        return Err(format!("moduł {module} nie występuje w access/catalog.json — odmowa"));
+    }
+    call_sidecar(&app, &module, request).await
 }
 
 /// The vault sidecar is the one exception to "spawn fresh per request":
@@ -131,64 +148,31 @@ async fn vault_request(state: tauri::State<'_, VaultState>, payload: serde_json:
     Err("proces sejfu nie odpowiedział".into())
 }
 
+/// The Linux system profile: what detection found and, where the user
+/// corrected it, the correction — plus the stored corrections themselves,
+/// which the profile alone cannot tell apart from detection.
 #[tauri::command]
-async fn get_system_info(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "system-info", serde_json::json!({ "cmd": "get_info" })).await
+async fn get_system_profile(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
+    let mut profile = call_sidecar(&app, "system-info", serde_json::json!({ "cmd": "profile" })).await?;
+    if let Some(data) = profile.get_mut("data").and_then(|d| d.as_object_mut()) {
+        let overrides = app.state::<ProfileStore>().get();
+        data.insert("overrides".into(), serde_json::to_value(overrides).map_err(|e| e.to_string())?);
+    }
+    Ok(profile)
 }
 
+/// Stores the user's corrections and answers with the profile as every
+/// module will now see it.
 #[tauri::command]
-async fn scan_temp(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "temp-clean", serde_json::json!({ "cmd": "scan" })).await
-}
-
-#[tauri::command]
-async fn clean_temp(app: tauri::AppHandle, paths: Vec<String>) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "temp-clean", serde_json::json!({ "cmd": "clean", "paths": paths })).await
-}
-
-#[tauri::command]
-async fn scan_duplicates(app: tauri::AppHandle, blacklist: Vec<String>) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "duplicates", serde_json::json!({ "cmd": "scan", "blacklist": blacklist })).await
-}
-
-#[tauri::command]
-async fn clean_duplicates(app: tauri::AppHandle, paths: Vec<String>) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "duplicates", serde_json::json!({ "cmd": "clean", "paths": paths })).await
-}
-
-#[tauri::command]
-async fn scan_duplicate_versions(app: tauri::AppHandle, blacklist: Vec<String>) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "duplicates", serde_json::json!({ "cmd": "scan_versions", "blacklist": blacklist })).await
-}
-
-#[tauri::command]
-async fn clean_duplicate_versions(app: tauri::AppHandle, paths: Vec<String>) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "duplicates", serde_json::json!({ "cmd": "clean_versions", "paths": paths })).await
-}
-
-#[tauri::command]
-async fn scan_big_files(
+async fn set_system_profile(
     app: tauri::AppHandle,
-    min_size_mb: Option<u64>,
-    max_results: Option<usize>,
-    blacklist: Vec<String>,
+    store: tauri::State<'_, ProfileStore>,
+    overrides: ProfileOverrides,
 ) -> Result<serde_json::Value, String> {
-    call_sidecar(
-        &app,
-        "big-files",
-        serde_json::json!({ "cmd": "scan", "min_size_mb": min_size_mb, "max_results": max_results, "blacklist": blacklist }),
-    )
-    .await
+    store.set(overrides)?;
+    get_system_profile(app).await
 }
 
-#[tauri::command]
-async fn clean_big_files(app: tauri::AppHandle, paths: Vec<String>) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "big-files", serde_json::json!({ "cmd": "clean", "paths": paths })).await
-}
-
-/// desktop-theme runs entirely in the user's own home, so none of these
-/// commands take a capability: there is nothing here to consent to that the
-/// user could not do with a file manager and the settings app.
 /// Records the level chosen at onboarding. Kept in the core, not only in
 /// local storage: it decides whether a privileged grant survives a restart.
 #[tauri::command]
@@ -205,203 +189,133 @@ async fn get_access_level(state: tauri::State<'_, PermissionRegistry>) -> Result
     Ok(state.access_level().await)
 }
 
-/// Xcode's leftovers. No capability: every location is inside the user's
-/// own Library, and the module refuses anything outside the list it knows.
+/// Deleting local Time Machine snapshots is the broker's, which lists them
+/// again as root.
 #[tauri::command]
-async fn scan_xcode_cache(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "xcode-cache", serde_json::json!({ "cmd": "scan" })).await
-}
-
-#[tauri::command]
-async fn clean_xcode_cache(app: tauri::AppHandle, paths: Vec<String>) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "xcode-cache", serde_json::json!({ "cmd": "clean", "paths": paths })).await
-}
-
-#[tauri::command]
-async fn scan_desktop_theme(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "desktop-theme", serde_json::json!({ "cmd": "scan" })).await
-}
-
-#[tauri::command]
-async fn apply_desktop_theme(app: tauri::AppHandle, changes: serde_json::Value) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "desktop-theme", serde_json::json!({ "cmd": "apply", "changes": changes })).await
-}
-
-#[tauri::command]
-async fn install_desktop_theme(app: tauri::AppHandle, source_dir: String, name: Option<String>) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "desktop-theme", serde_json::json!({ "cmd": "install_theme", "source_dir": source_dir, "name": name })).await
-}
-
-#[tauri::command]
-async fn install_desktop_font(app: tauri::AppHandle, path: String) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "desktop-theme", serde_json::json!({ "cmd": "install_font", "path": path })).await
-}
-
-#[tauri::command]
-async fn save_desktop_preset(app: tauri::AppHandle, name: String) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "desktop-theme", serde_json::json!({ "cmd": "save_preset", "name": name })).await
-}
-
-#[tauri::command]
-async fn load_desktop_preset(app: tauri::AppHandle, name: String) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "desktop-theme", serde_json::json!({ "cmd": "load_preset", "name": name })).await
-}
-
-#[tauri::command]
-async fn delete_desktop_preset(app: tauri::AppHandle, name: String) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "desktop-theme", serde_json::json!({ "cmd": "delete_preset", "name": name })).await
-}
-
-#[tauri::command]
-async fn scan_autostart(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "autostart", serde_json::json!({ "cmd": "scan" })).await
-}
-
-#[tauri::command]
-async fn toggle_autostart(app: tauri::AppHandle, id: String, enabled: bool) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "autostart", serde_json::json!({ "cmd": "toggle", "id": id, "enabled": enabled })).await
-}
-
-#[tauri::command]
-async fn check_autostart_path(app: tauri::AppHandle, path: String) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "autostart", serde_json::json!({ "cmd": "check_path", "path": path })).await
-}
-
-#[tauri::command]
-#[allow(clippy::too_many_arguments)]
-async fn add_autostart(
-    app: tauri::AppHandle,
-    id: Option<String>,
-    name: String,
-    path: String,
-    args: Option<String>,
-    icon: Option<String>,
-    wrap_in_shell: bool,
-    make_executable: bool,
+async fn delete_local_snapshots(
+    state: tauri::State<'_, PermissionRegistry>,
+    keep_latest: bool,
 ) -> Result<serde_json::Value, String> {
-    call_sidecar(
-        &app,
-        "autostart",
-        serde_json::json!({
-            "cmd": "add",
-            "id": id,
-            "name": name,
-            "path": path,
-            "args": args,
-            "icon": icon,
-            "wrap_in_shell": wrap_in_shell,
-            "make_executable": make_executable,
-        }),
-    )
-    .await
+    state.require_operation("delete_local_snapshots").await?;
+    broker::call_broker(serde_json::json!({ "op": "delete_local_snapshots", "keep_latest": keep_latest })).await
 }
 
-#[tauri::command]
-async fn delete_autostart(app: tauri::AppHandle, id: String) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "autostart", serde_json::json!({ "cmd": "delete", "id": id })).await
+/// The reason in a broker answer that did not succeed.
+fn broker_failure(answer: &serde_json::Value) -> String {
+    answer["data"]["error"].as_str().or(answer["error"].as_str()).unwrap_or("nieznany błąd").to_string()
 }
 
-#[tauri::command]
-async fn shred_files(app: tauri::AppHandle, paths: Vec<String>) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "shredder", serde_json::json!({ "cmd": "shred", "paths": paths })).await
+/// A System Restore point before a critical Windows change, and without one
+/// no change: Access_plan.md makes it a condition, not an option. `operation`
+/// names the catalog entry of the module asking, so its grant is checked.
+async fn restore_point(state: &PermissionRegistry, operation: &str, description: &str) -> Result<(), String> {
+    state.require_operation(operation).await?;
+    let point = broker::call_broker(serde_json::json!({ "op": "create_restore_point", "description": description })).await?;
+    if point["data"]["success"] == true {
+        return Ok(());
+    }
+    Err(format!(
+        "Nie udało się utworzyć punktu przywracania, więc nic nie zostało zmienione. Potrzebna jest włączona \
+         Ochrona systemu dla dysku C: (Panel sterowania → Odzyskiwanie). ({})",
+        broker_failure(&point)
+    ))
 }
 
+/// Removes the picked apps for this account, after a restore point. The
+/// module removes them itself: they are the account's own.
 #[tauri::command]
-async fn scan_disk_map(app: tauri::AppHandle, path: Option<String>, blacklist: Vec<String>) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "disk-map", serde_json::json!({ "cmd": "scan", "path": path, "blacklist": blacklist })).await
-}
-
-/// Deletes one entry the disk map is showing. Not gated by a capability:
-/// the module refuses anything the shared exclusion list covers, so what
-/// remains is the user's own files, which they can already delete with a
-/// file manager.
-#[tauri::command]
-async fn delete_disk_map_entry(
+async fn remove_bloatware(
     app: tauri::AppHandle,
-    path: String,
-    blacklist: Vec<String>,
+    state: tauri::State<'_, PermissionRegistry>,
+    packages: Vec<String>,
 ) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "disk-map", serde_json::json!({ "cmd": "delete", "path": path, "blacklist": blacklist })).await
+    restore_point(&state, "bloatware_restore_point", "POSMA przed usunieciem aplikacji").await?;
+    call_sidecar(&app, "bloatware", serde_json::json!({ "cmd": "remove", "packages": packages })).await
+}
+
+/// Switches the services of a profile off, or back to their Windows
+/// defaults, after one restore point. The broker accepts only services a
+/// profile lists, and decides the start type itself.
+#[tauri::command]
+async fn set_services(
+    state: tauri::State<'_, PermissionRegistry>,
+    names: Vec<String>,
+    enabled: bool,
+) -> Result<serde_json::Value, String> {
+    state.require_operation("set_services").await?;
+    restore_point(&state, "services_restore_point", "POSMA przed zmiana uslug").await?;
+    let mut changed = Vec::new();
+    let mut errors = Vec::new();
+    for name in names {
+        match broker::call_broker(serde_json::json!({ "op": "service_set_enabled", "name": name, "enabled": enabled })).await {
+            Ok(answer) if answer["data"]["success"] == true => changed.push(name),
+            Ok(answer) => errors.push(format!("{name}: {}", broker_failure(&answer))),
+            Err(e) => errors.push(format!("{name}: {e}")),
+        }
+    }
+    Ok(serde_json::json!({ "ok": true, "data": { "changed": changed, "errors": errors } }))
+}
+
+/// DISM's report on the component store — the preview before cleaning it.
+#[tauri::command]
+async fn analyze_component_store(state: tauri::State<'_, PermissionRegistry>) -> Result<serde_json::Value, String> {
+    state.require_operation("analyze_component_store").await?;
+    broker::call_broker(serde_json::json!({ "op": "analyze_component_store" })).await
 }
 
 #[tauri::command]
-async fn scan_browser_hygiene(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "browser-hygiene", serde_json::json!({ "cmd": "scan" })).await
+async fn clean_component_store(state: tauri::State<'_, PermissionRegistry>) -> Result<serde_json::Value, String> {
+    state.require_operation("clean_component_store").await?;
+    restore_point(&state, "winsxs_restore_point", "POSMA przed czyszczeniem WinSxS").await?;
+    broker::call_broker(serde_json::json!({ "op": "component_store_cleanup" })).await
 }
 
+/// Updates the picked applications one by one, elevated. No restore point:
+/// an update replaces an application, not the system.
 #[tauri::command]
-async fn clean_browser_hygiene(app: tauri::AppHandle, paths: Vec<String>) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "browser-hygiene", serde_json::json!({ "cmd": "clean", "paths": paths })).await
-}
-
-#[tauri::command]
-async fn health_snapshot(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "health-monitor", serde_json::json!({ "cmd": "snapshot" })).await
-}
-
-#[tauri::command]
-async fn health_list_disks(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "health-monitor", serde_json::json!({ "cmd": "list_disks" })).await
-}
-
-/// Ends a process the user owns. Not gated: SIGTERM to your own process
-/// needs no more authority than a shell already gives, and anything else is
-/// refused by the kernel rather than escalated here.
-#[tauri::command]
-async fn health_kill(app: tauri::AppHandle, pid: u32) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "health-monitor", serde_json::json!({ "cmd": "kill", "pid": pid })).await
+async fn winget_upgrade(state: tauri::State<'_, PermissionRegistry>, ids: Vec<String>) -> Result<serde_json::Value, String> {
+    state.require_operation("winget_upgrade").await?;
+    let mut upgraded = Vec::new();
+    let mut errors = Vec::new();
+    for id in ids {
+        match broker::call_broker(serde_json::json!({ "op": "pkg_upgrade", "source": "winget", "id": id })).await {
+            Ok(answer) if answer["data"]["success"] == true => upgraded.push(id),
+            Ok(answer) => errors.push(format!("{id}: {}", broker_failure(&answer))),
+            Err(e) => errors.push(format!("{id}: {e}")),
+        }
+    }
+    Ok(serde_json::json!({ "ok": true, "data": { "upgraded": upgraded, "errors": errors } }))
 }
 
 /// Raw ATA/NVMe passthrough needs root, so this goes through the broker
 /// rather than the sidecar. It was wired to the sidecar, which can only ever
 /// come back with a permission error — the module's own comment said as much.
+///
+/// The broker hands back smartctl's own output; reading it stays with the
+/// module, the same code that reads it when no root is needed.
 #[tauri::command]
 async fn health_smart(
+    app: tauri::AppHandle,
     state: tauri::State<'_, PermissionRegistry>,
     device: String,
 ) -> Result<serde_json::Value, String> {
+    // macOS gives SMART to an ordinary user, and its smartctl comes from a
+    // Homebrew prefix the user owns, which a root broker must never run.
+    if cfg!(target_os = "macos") {
+        return call_sidecar(&app, "health-monitor", serde_json::json!({ "cmd": "smart", "device": device })).await;
+    }
     state.require_operation("health_smart").await?;
-    broker::call_broker(serde_json::json!({ "op": "smart_read", "device": device })).await
-}
-
-#[tauri::command]
-async fn scan_uninstaller(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "uninstaller", serde_json::json!({ "cmd": "scan" })).await
-}
-
-#[tauri::command]
-async fn clean_uninstaller(app: tauri::AppHandle, paths: Vec<String>) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "uninstaller", serde_json::json!({ "cmd": "clean", "paths": paths })).await
-}
-
-#[tauri::command]
-async fn list_installed_apps(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "uninstaller", serde_json::json!({ "cmd": "list_apps" })).await
-}
-
-#[tauri::command]
-async fn app_leftovers(app: tauri::AppHandle, app_ref: serde_json::Value, name: String) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "uninstaller", serde_json::json!({ "cmd": "app_leftovers", "app": app_ref, "name": name })).await
-}
-
-#[tauri::command]
-async fn uninstall_app(app: tauri::AppHandle, app_ref: serde_json::Value) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "uninstaller", serde_json::json!({ "cmd": "uninstall", "app": app_ref })).await
-}
-
-#[tauri::command]
-async fn inspect_metadata(app: tauri::AppHandle, paths: Vec<String>) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "metadata", serde_json::json!({ "cmd": "inspect", "paths": paths })).await
-}
-
-#[tauri::command]
-async fn clean_metadata(app: tauri::AppHandle, items: Vec<serde_json::Value>) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "metadata", serde_json::json!({ "cmd": "clean", "items": items })).await
-}
-
-#[tauri::command]
-async fn get_permissions(state: tauri::State<'_, PermissionRegistry>) -> Result<Vec<PermissionEntry>, String> {
-    Ok(state.snapshot().await)
+    let raw = broker::call_broker(serde_json::json!({ "op": "smart_read", "device": device })).await?;
+    let Some(data) = raw.get("data").filter(|_| raw["ok"] == true) else {
+        return Ok(raw);
+    };
+    let request = serde_json::json!({
+        "cmd": "smart_report",
+        "device": device,
+        "output": data["output"],
+        "error": data["error"],
+    });
+    call_sidecar(&app, "health-monitor", request).await
 }
 
 #[tauri::command]
@@ -412,21 +326,30 @@ async fn request_permission(
     state.request(capability).await
 }
 
+/// Whether macOS has given POSMA Full Disk Access — always so elsewhere.
 #[tauri::command]
-async fn deny_permission(state: tauri::State<'_, PermissionRegistry>, capability: CapabilityId) -> Result<(), String> {
-    state.deny(capability).await;
-    Ok(())
+fn full_disk_access() -> bool {
+    permissions::full_disk_access()
+}
+
+/// Opens the one System Settings pane that grants Full Disk Access; macOS
+/// lets no program grant it to itself.
+#[tauri::command]
+fn open_full_disk_access_settings() -> Result<(), String> {
+    if !cfg!(target_os = "macos") {
+        return Err("Pełny dostęp do dysku istnieje tylko na macOS".into());
+    }
+    let opened = std::process::Command::new("/usr/bin/open")
+        .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")
+        .status()
+        .map_err(|e| e.to_string())?;
+    if opened.success() { Ok(()) } else { Err("nie udało się otworzyć Ustawień systemowych".into()) }
 }
 
 /// Deletes flat files directly inside /var/log via the privileged broker —
 /// the operation temp-clean's own unprivileged "syslog" category cannot
 /// perform itself. Gated on `fs-system` already being granted; the broker
 /// re-validates every path itself regardless.
-#[tauri::command]
-async fn journal_usage(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "journald-trim", serde_json::json!({ "cmd": "usage" })).await
-}
-
 #[tauri::command]
 async fn clean_system_paths(
     state: tauri::State<'_, PermissionRegistry>,
@@ -436,11 +359,6 @@ async fn clean_system_paths(
     broker::call_broker(serde_json::json!({ "op": "clean_system_paths", "paths": paths })).await
 }
 
-/// Removes an apt/snap package via the privileged broker. modules/uninstaller's
-/// own `uninstall_app` always fails for these two sources (needs root);
-/// flatpak keeps using that unprivileged path since it has its own
-/// escalation. Gated on `pkg` already granted; the broker re-validates the
-/// package id itself regardless.
 /// Trims the systemd journal via the privileged broker (journalctl
 /// --vacuum-size/--vacuum-time always need root). `mode` is `"size"`
 /// (megabytes) or `"time"` (days); the broker re-validates both
@@ -455,21 +373,19 @@ async fn vacuum_journal(
     broker::call_broker(serde_json::json!({ "op": "trim_system_logs", "mode": mode, "value": value })).await
 }
 
+/// `source` is the manager the scan reported for this system (apt, pacman,
+/// dnf, zypper). The broker checks it against the machine itself and
+/// refuses a mismatch, so it names the manager rather than choosing it.
 #[tauri::command]
-async fn scan_pkg_cache(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "pkg-cache", serde_json::json!({ "cmd": "scan" })).await
+async fn pkg_cache_clean(state: tauri::State<'_, PermissionRegistry>, source: String) -> Result<serde_json::Value, String> {
+    state.require_operation("pkg_cache_clean").await?;
+    broker::call_broker(serde_json::json!({ "op": "pkg_cache_clean", "source": source })).await
 }
 
 #[tauri::command]
-async fn apt_clean(state: tauri::State<'_, PermissionRegistry>) -> Result<serde_json::Value, String> {
-    state.require_operation("apt_clean").await?;
-    broker::call_broker(serde_json::json!({ "op": "pkg_cache_clean", "source": "apt" })).await
-}
-
-#[tauri::command]
-async fn apt_autoremove(state: tauri::State<'_, PermissionRegistry>) -> Result<serde_json::Value, String> {
-    state.require_operation("apt_autoremove").await?;
-    broker::call_broker(serde_json::json!({ "op": "pkg_autoremove", "source": "apt" })).await
+async fn pkg_autoremove(state: tauri::State<'_, PermissionRegistry>, source: String) -> Result<serde_json::Value, String> {
+    state.require_operation("pkg_autoremove").await?;
+    broker::call_broker(serde_json::json!({ "op": "pkg_autoremove", "source": source })).await
 }
 
 #[tauri::command]
@@ -482,11 +398,6 @@ async fn snap_remove_revision(
     broker::call_broker(serde_json::json!({ "op": "pkg_remove_revision", "source": "snap", "id": name, "revision": revision })).await
 }
 
-#[tauri::command]
-async fn scan_kernels(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "kernel-mgr", serde_json::json!({ "cmd": "scan" })).await
-}
-
 /// Gated on both `boot` and `pkg` (module.json declares both) — the broker
 /// re-derives the running/latest-kernel lock itself regardless (see
 /// remove_kernel in linux-broker), this is just the consent gate.
@@ -496,43 +407,8 @@ async fn remove_kernel(
     package: String,
 ) -> Result<serde_json::Value, String> {
     state.require_operation("remove_kernel").await?;
-    state.require_operation("remove_kernel").await?;
+    state.require_operation("remove_kernel_package").await?;
     broker::call_broker(serde_json::json!({ "op": "remove_kernel", "package": package })).await
-}
-
-#[tauri::command]
-async fn scan_grub(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "grub-editor", serde_json::json!({ "cmd": "scan" })).await
-}
-
-#[tauri::command]
-async fn list_grub_presets(app: tauri::AppHandle) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "grub-editor", serde_json::json!({ "cmd": "list_presets" })).await
-}
-
-#[tauri::command]
-async fn load_grub_preset(app: tauri::AppHandle, name: String) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "grub-editor", serde_json::json!({ "cmd": "load_preset", "name": name })).await
-}
-
-#[tauri::command]
-async fn save_grub_preset(app: tauri::AppHandle, name: String, content: String) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "grub-editor", serde_json::json!({ "cmd": "save_preset", "name": name, "content": content })).await
-}
-
-#[tauri::command]
-async fn delete_grub_preset(app: tauri::AppHandle, name: String) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "grub-editor", serde_json::json!({ "cmd": "delete_preset", "name": name })).await
-}
-
-#[tauri::command]
-async fn inspect_grub_theme(app: tauri::AppHandle, path: String) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "grub-editor", serde_json::json!({ "cmd": "inspect_theme", "path": path })).await
-}
-
-#[tauri::command]
-async fn preview_grub_theme(app: tauri::AppHandle, theme_dir: String) -> Result<serde_json::Value, String> {
-    call_sidecar(&app, "grub-editor", serde_json::json!({ "cmd": "preview_theme", "theme_dir": theme_dir })).await
 }
 
 #[tauri::command]
@@ -560,14 +436,31 @@ async fn install_grub_theme(
     .await
 }
 
+/// `path` names another loader's config, as `read_boot_entries` reported
+/// it; the broker accepts only the one this machine boots through.
 #[tauri::command]
 async fn restore_grub_backup(
     state: tauri::State<'_, PermissionRegistry>,
     filename: String,
     keep_backups: u64,
+    path: Option<String>,
 ) -> Result<serde_json::Value, String> {
     state.require_operation("restore_grub_backup").await?;
-    broker::call_broker(serde_json::json!({ "op": "restore_system_file_backup", "path": GRUB_CONFIG_PATH, "filename": filename, "keep_backups": keep_backups })).await
+    let path = path.unwrap_or_else(|| GRUB_CONFIG_PATH.into());
+    broker::call_broker(serde_json::json!({ "op": "restore_system_file_backup", "path": path, "filename": filename, "keep_backups": keep_backups })).await
+}
+
+/// Default entry and timeout of Limine, systemd-boot or rEFInd. `None`
+/// leaves a setting as it is.
+#[tauri::command]
+async fn set_boot_options(
+    state: tauri::State<'_, PermissionRegistry>,
+    default_entry: Option<String>,
+    timeout: Option<String>,
+    keep_backups: u64,
+) -> Result<serde_json::Value, String> {
+    state.require_operation("set_boot_options").await?;
+    broker::call_broker(serde_json::json!({ "op": "set_boot_options", "default_entry": default_entry, "timeout": timeout, "keep_backups": keep_backups })).await
 }
 
 #[tauri::command]
@@ -576,16 +469,10 @@ async fn read_boot_entries(state: tauri::State<'_, PermissionRegistry>) -> Resul
     broker::call_broker(serde_json::json!({ "op": "read_boot_entries" })).await
 }
 
-/// Asks this OS's broker which catalogued operations it actually
-/// implements, so the UI can disable unavailable actions up front instead
-/// of letting the user find out by failing. Deliberately NOT permission-
-/// gated: it performs nothing, and knowing what's possible shouldn't
-/// require consenting to anything.
-#[tauri::command]
-async fn broker_capabilities() -> Result<serde_json::Value, String> {
-    broker::call_broker(serde_json::json!({ "op": "capabilities" })).await
-}
-
+/// Removes a native-manager or snap package via the privileged broker.
+/// The uninstaller's own `uninstall` always fails for these two sources
+/// (needs root); flatpak keeps that unprivileged path since it has its own
+/// escalation. The broker re-validates the package id itself regardless.
 #[tauri::command]
 async fn uninstall_pkg_privileged(
     state: tauri::State<'_, PermissionRegistry>,
@@ -606,78 +493,40 @@ pub fn run() {
         .setup(|app| {
             let permissions_path = app.path().app_data_dir()?.join("permissions.json");
             app.manage(PermissionRegistry::load(permissions_path));
+            app.manage(ProfileStore::load(app.path().app_data_dir()?.join("system-profile.json")));
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            get_system_info,
-            scan_temp,
-            clean_temp,
-            scan_duplicates,
-            clean_duplicates,
-            scan_duplicate_versions,
-            clean_duplicate_versions,
-            scan_big_files,
-            clean_big_files,
+            call_module,
+            get_system_profile,
+            set_system_profile,
             set_access_level,
             get_access_level,
-            scan_xcode_cache,
-            clean_xcode_cache,
-            scan_desktop_theme,
-            apply_desktop_theme,
-            install_desktop_theme,
-            install_desktop_font,
-            save_desktop_preset,
-            load_desktop_preset,
-            delete_desktop_preset,
-            scan_autostart,
-            toggle_autostart,
-            check_autostart_path,
-            add_autostart,
-            delete_autostart,
-            shred_files,
-            inspect_metadata,
-            clean_metadata,
-            scan_disk_map,
-            delete_disk_map_entry,
-            scan_browser_hygiene,
-            clean_browser_hygiene,
-            health_snapshot,
-            health_list_disks,
+            remove_bloatware,
+            set_services,
+            analyze_component_store,
+            clean_component_store,
+            winget_upgrade,
+            delete_local_snapshots,
             health_smart,
-            health_kill,
-            scan_uninstaller,
-            clean_uninstaller,
-            list_installed_apps,
-            app_leftovers,
-            uninstall_app,
             vault_start,
             vault_stop,
             vault_request,
-            get_permissions,
             request_permission,
-            deny_permission,
+            full_disk_access,
+            open_full_disk_access_settings,
             clean_system_paths,
             uninstall_pkg_privileged,
-            journal_usage,
             vacuum_journal,
-            scan_pkg_cache,
-            apt_clean,
-            apt_autoremove,
+            pkg_cache_clean,
+            pkg_autoremove,
             snap_remove_revision,
-            scan_kernels,
             remove_kernel,
-            scan_grub,
-            list_grub_presets,
-            load_grub_preset,
-            save_grub_preset,
-            delete_grub_preset,
-            inspect_grub_theme,
-            preview_grub_theme,
             write_grub_config,
             install_grub_theme,
             restore_grub_backup,
-            read_boot_entries,
-            broker_capabilities
+            set_boot_options,
+            read_boot_entries
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

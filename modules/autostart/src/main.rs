@@ -1,7 +1,8 @@
 //! autostart sidecar: lists and toggles user-scope XDG autostart entries
 //! (~/.config/autostart/*.desktop) — no elevation, nothing system-wide.
 //! Also supports adding/editing/deleting *custom* entries the user creates
-//! from inside the app.
+//! from inside the app. On Windows: the account's Run key and Startup
+//! folder, listed and toggled only (see `windows`).
 //!
 //! Protocol (one JSON line on stdin -> one JSON line on stdout):
 //!   {"cmd":"scan"}
@@ -157,7 +158,122 @@ fn parse_desktop_entry(text: &str) -> Option<ParsedEntry> {
     Some((name, exec, icon, comment, enabled, custom))
 }
 
+/// Windows: the account's Run key and its Startup folder. Off is what Task
+/// Manager writes — a value under StartupApproved, never the entry itself —
+/// so it is always reversible. Programs add themselves there; adding one by
+/// hand is the Linux module's, built around .desktop files.
+mod windows {
+    use super::{Entry, ScanResult, ToggleResult};
+    use serde::Deserialize;
+    use std::process::Command;
+
+    /// UTF-8, because Windows PowerShell writes its OEM code page otherwise
+    /// and a name in it would not come back to be switched. No double
+    /// quotes, which it reads back unreliably from its command line. Off is
+    /// an odd first byte under StartupApproved; no value there is on. Every
+    /// list is wrapped in `@()` where it lands: PowerShell unrolls what a
+    /// function returns, so one name would arrive as a string, none as null.
+    const LIST_SCRIPT: &str = "[Console]::OutputEncoding = [Text.Encoding]::UTF8; \
+        $cv = 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion'; \
+        function Values($path) { $k = Get-Item -LiteralPath $path -ErrorAction SilentlyContinue; \
+          if ($k) { foreach ($n in $k.Property) { [pscustomobject]@{ name = $n; value = $k.GetValue($n) } } } }; \
+        function Off($kind) { @(Values ($cv + '\\Explorer\\StartupApproved\\' + $kind) | \
+          Where-Object { $_.value -is [byte[]] -and $_.value[0] % 2 } | ForEach-Object { $_.name }) }; \
+        [pscustomobject]@{ \
+          run = @(Values ($cv + '\\Run') | ForEach-Object { [pscustomobject]@{ name = $_.name; command = [string]$_.value } }); \
+          folder = @(Get-ChildItem -LiteralPath ([Environment]::GetFolderPath('Startup')) -File -ErrorAction SilentlyContinue | \
+            Where-Object { $_.Name -ne 'desktop.ini' } | ForEach-Object { [pscustomobject]@{ name = $_.Name; command = $_.FullName } }); \
+          off_run = @(Off 'Run'); off_folder = @(Off 'StartupFolder') \
+        } | ConvertTo-Json -Compress -Depth 4";
+
+    const APPROVED: &str = r"HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved";
+
+    #[derive(Deserialize, Default)]
+    pub struct Listing {
+        run: Vec<Item>,
+        folder: Vec<Item>,
+        off_run: Vec<String>,
+        off_folder: Vec<String>,
+    }
+
+    #[derive(Deserialize)]
+    struct Item {
+        name: String,
+        command: String,
+    }
+
+    fn listing() -> Result<Listing, String> {
+        let out = Command::new("powershell.exe")
+            .args(["-NoProfile", "-NonInteractive", "-Command", LIST_SCRIPT])
+            .output()
+            .map_err(|e| format!("powershell.exe: {e}"))?;
+        if !out.status.success() {
+            return Err(String::from_utf8_lossy(&out.stderr).trim().to_string());
+        }
+        let text = String::from_utf8_lossy(&out.stdout);
+        serde_json::from_str(text.trim().trim_start_matches('\u{feff}')).map_err(|e| format!("nie udało się odczytać autostartu: {e}"))
+    }
+
+    pub fn entries(listing: Listing) -> Vec<Entry> {
+        let off = |names: &[String], name: &str| names.iter().any(|n| n.eq_ignore_ascii_case(name));
+        let run = listing.run.into_iter().map(|i| Entry {
+            id: format!("run:{}", i.name),
+            enabled: !off(&listing.off_run, &i.name),
+            name: i.name,
+            exec: i.command,
+            icon: None,
+            comment: Some("Rejestr: Run".into()),
+            custom: false,
+        });
+        let folder = listing.folder.into_iter().map(|i| Entry {
+            id: format!("folder:{}", i.name),
+            enabled: !off(&listing.off_folder, &i.name),
+            name: i.name.rsplit_once('.').map_or(i.name.as_str(), |(stem, _)| stem).to_string(),
+            exec: i.command,
+            icon: None,
+            comment: Some("Folder Autostart".into()),
+            custom: false,
+        });
+        let mut entries: Vec<Entry> = run.chain(folder).collect();
+        entries.sort_by_key(|e| e.name.to_lowercase());
+        entries
+    }
+
+    pub fn scan() -> ScanResult {
+        ScanResult { entries: listing().map(entries).unwrap_or_default() }
+    }
+
+    /// Only an entry listed right now: the name goes to reg.exe as an
+    /// argument of its own, and it must be one that is there.
+    pub fn toggle(id: String, enabled: bool) -> Result<ToggleResult, String> {
+        let (kind, name) = match id.split_once(':') {
+            Some(("run", name)) => ("Run", name),
+            Some(("folder", name)) => ("StartupFolder", name),
+            _ => return Err("nieprawidłowy identyfikator wpisu".into()),
+        };
+        let current = listing()?;
+        let items = if kind == "Run" { &current.run } else { &current.folder };
+        if !items.iter().any(|i| i.name == name) {
+            return Err(format!("{name}: nie ma takiego wpisu autostartu"));
+        }
+        let data = format!("{}0000000000000000000000", if enabled { "02" } else { "03" });
+        let key = format!("{APPROVED}\\{kind}");
+        let out = Command::new("reg")
+            .args(["add", &key, "/v", name, "/t", "REG_BINARY", "/d", &data, "/f"])
+            .output()
+            .map_err(|e| format!("reg.exe: {e}"))?;
+        if out.status.success() {
+            Ok(ToggleResult { enabled })
+        } else {
+            Err(String::from_utf8_lossy(&out.stderr).trim().to_string())
+        }
+    }
+}
+
 fn scan() -> ScanResult {
+    if cfg!(windows) {
+        return windows::scan();
+    }
     let dir = autostart_dir();
     let mut entries = Vec::new();
 
@@ -235,6 +351,9 @@ fn add(
     wrap_in_shell: bool,
     make_executable: bool,
 ) -> Result<AddResult, String> {
+    if cfg!(windows) {
+        return Err("Na Windowsie programy same dopisują się do autostartu — POSMA tylko je włącza i wyłącza".into());
+    }
     let dir = autostart_dir();
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
 
@@ -322,6 +441,9 @@ fn delete(id: String) -> Result<DeleteResult, String> {
 /// file's [Desktop Entry] section in place; every other line (including
 /// localized Name[xx]/Comment[xx] variants) passes through untouched.
 fn toggle(id: String, enabled: bool) -> Result<ToggleResult, String> {
+    if cfg!(windows) {
+        return windows::toggle(id, enabled);
+    }
     if id.contains('/') || id.contains("..") || !id.ends_with(".desktop") {
         return Err("nieprawidłowy identyfikator wpisu".into());
     }
@@ -409,4 +531,26 @@ fn main() {
     };
     println!("{}", output.expect("response must serialize"));
     io::stdout().flush().ok();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::windows::{entries, Listing};
+
+    /// Both Windows sources become entries, each on unless StartupApproved
+    /// says off, with an id that names where it came from.
+    #[test]
+    fn windows_entries_carry_their_source_and_state() {
+        let listing: Listing = serde_json::from_str(
+            r#"{"run":[{"name":"OneDrive","command":"\"C:\\OneDrive.exe\" /background"}],
+                "folder":[{"name":"Notatki.lnk","command":"C:\\Startup\\Notatki.lnk"}],
+                "off_run":["onedrive"],"off_folder":[]}"#,
+        )
+        .unwrap();
+        let read = entries(listing);
+        assert_eq!(read.iter().map(|e| (e.id.as_str(), e.name.as_str(), e.enabled)).collect::<Vec<_>>(), [
+            ("folder:Notatki.lnk", "Notatki", true),
+            ("run:OneDrive", "OneDrive", false)
+        ]);
+    }
 }

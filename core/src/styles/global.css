@@ -204,6 +204,8 @@ button { font-family: inherit; }
 .os-row { display: flex; align-items: center; gap: 14px; padding: 16px; border-radius: 14px; background: var(--bg-3); border: 1px solid var(--border); }
 .os-row .os-name { font-weight: 700; font-size: 15px; }
 .os-row .os-sub { font-size: 12px; color: var(--muted); }
+.profile-fields { display: flex; flex-direction: column; gap: 8px; }
+.onboarding-actions-end { display: flex; gap: 8px; }
 
 .module-pick-list { display: flex; flex-direction: column; gap: 8px; max-height: 42vh; overflow-y: auto; padding-right: 6px; }
 .module-pick {

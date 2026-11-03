@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { currentBlacklist } from '../../state/settings'
-import { invoke } from '@tauri-apps/api/core'
 import { Icon } from '../../components/Icons'
 import { formatBytes } from './TempCleanView'
+import { confirmAction } from '../../components/confirm'
+import { callModule } from '../../data/callModule'
 
 interface FileEntry {
   path: string
@@ -20,8 +21,6 @@ interface CleanData {
   removed: number
   errors: string[]
 }
-
-type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: string }
 
 type Phase =
   | { kind: 'idle' }
@@ -43,7 +42,7 @@ export function BigFilesView() {
   async function runScan() {
     setPhase({ kind: 'scanning' })
     try {
-      const res = await invoke<ApiResponse<ScanData>>('scan_big_files', { minSizeMb, maxResults, blacklist: currentBlacklist() })
+      const res = await callModule<ScanData>('big-files', { cmd: 'scan', min_size_mb: minSizeMb, max_results: maxResults, blacklist: currentBlacklist() })
       if (!res.ok) {
         setPhase({ kind: 'error', message: res.error })
         return
@@ -59,12 +58,12 @@ export function BigFilesView() {
     const paths = [...checked]
     if (paths.length === 0) return
     const bytes = selectedBytes(scan)
-    if (!window.confirm(`Usunąć ${paths.length} plików (${formatBytes(bytes)})? Tej operacji nie można cofnąć.`)) {
+    if (!(await confirmAction(`Usunąć ${paths.length} plików (${formatBytes(bytes)})? Tej operacji nie można cofnąć.`))) {
       return
     }
     setPhase({ kind: 'cleaning', scan })
     try {
-      const res = await invoke<ApiResponse<CleanData>>('clean_big_files', { paths })
+      const res = await callModule<CleanData>('big-files', { cmd: 'clean', paths })
       if (!res.ok) {
         setPhase({ kind: 'error', message: res.error })
         return

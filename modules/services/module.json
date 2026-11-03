@@ -1,0 +1,9 @@
+{
+  "id": "services",
+  "name": "Menedżer usług",
+  "description": "Windows services grouped in ready-made profiles (telemetry, Xbox, printing, offline maps) instead of a list of hundreds. Reading their state is unprivileged (Get-Service). Switching a profile off disables and stops its services through the broker after a System Restore point; switching it on restores the start type Windows gives each. The broker refuses any service no profile lists.",
+  "version": "0.1.0",
+  "platforms": ["windows"],
+  "binary": "services",
+  "capabilities": ["svc", "restore-point"]
+}

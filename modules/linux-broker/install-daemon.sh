@@ -22,6 +22,15 @@ if [ -z "${SUDO_USER:-}" ]; then
     exit 1
 fi
 
+# The daemon is a systemd service. Where systemd is not the running init
+# (MX Linux by default, Void, Alpine, Artix) there is nothing to install it
+# into — and nothing is lost: the app asks through pkexec for each action.
+if [ ! -d /run/systemd/system ]; then
+    echo "Ten system nie używa systemd — demona nie da się tu zainstalować." >&2
+    echo "POSMA działa bez niego: każda operacja zapyta o hasło przez pkexec." >&2
+    exit 1
+fi
+
 owner_uid="$(id -u "$SUDO_USER")"
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 broker_bin="$repo_root/target/debug/linux-broker"

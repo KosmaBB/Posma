@@ -8,6 +8,7 @@ on:
   # a schedule too rather than only when something is pushed.
   schedule:
     - cron: "0 6 * * 1"
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -47,6 +48,85 @@ jobs:
       - name: Clippy
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
+  # Nobody here owns a Mac or a Windows machine to test on, so these are the
+  # first place the code runs on either. Each builds that system's modules
+  # the way a release does and runs every test the workspace has.
+  macos:
+    name: macOS ${{ matrix.arch }} — build, test, clippy
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: Apple silicon
+          - runner: macos-15-intel
+            arch: Intel
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Build modules and sync sidecars
+        run: bash scripts/sync-sidecars.sh
+      - name: Test workspace
+        run: cargo test --workspace --locked
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  windows:
+    name: Windows — build, test, clippy
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - name: Build modules and sync sidecars
+        shell: bash
+        run: bash scripts/sync-sidecars.sh
+      # The Linux and macOS brokers are a Unix-socket daemon at heart and are
+      # never built for Windows.
+      - name: Test workspace
+        run: cargo test --workspace --locked --exclude linux-broker --exclude macos-broker
+      # The UAC path end to end against the broker the sync just built: the
+      # elevated start, the pipe, the check on who connected, and a second
+      # answer from the same session. A runner's account starts it without
+      # a prompt; should one ever appear, the timeout ends the wait.
+      - name: Elevated broker session
+        timeout-minutes: 5
+        run: cargo test -p core --locked -- --ignored one_elevated_session_answers_every_call
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked --exclude linux-broker --exclude macos-broker -- -D warnings
+
+  # One bundle for both Mac architectures, as docs/building.md describes.
+  # Slow, so only on request; the app is unsigned until there is an Apple
+  # developer account to sign it with.
+  macos-bundle:
+    name: macOS universal bundle
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-apple-darwin,aarch64-apple-darwin
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: core/package-lock.json
+      - run: npm --prefix core ci
+      - run: bash scripts/sync-sidecars.sh release --universal
+      - run: npm --prefix core run tauri build -- --target universal-apple-darwin
+      - uses: actions/upload-artifact@v4
+        with:
+          name: posma-macos-universal
+          path: target/universal-apple-darwin/release/bundle/dmg/*.dmg
+
   frontend:
     name: Frontend — typecheck and build
     runs-on: ubuntu-latest
@@ -79,3 +159,20 @@ jobs:
         run: cargo audit
       - name: Audit npm dependencies
         run: npm --prefix core audit --audit-level=high
+
+  # Half the supported distributions are rolling releases: a package
+  # manager can change what it prints without a line of ours changing. So
+  # this runs on the schedule and on request, not on every push — it pulls
+  # some twenty images.
+  distributions:
+    name: Linux distributions — modules against each package manager
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-musl
+      - uses: Swatinem/rust-cache@v2
+      - name: Run every module in a container of each distribution
+        run: bash scripts/distro-check.sh --kernels --grub

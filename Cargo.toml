@@ -8,3 +8,12 @@ members = [
 
 [workspace.package]
 edition = "2021"
+
+# Every module ships as a binary of its own, so what std, serde and the rest
+# cost is paid twenty times over; whole-program optimisation and dropping the
+# symbol tables take about a third off each. opt-level stays at 3: the
+# scanners and the hashing are where the time goes.
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true

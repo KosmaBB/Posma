@@ -1,9 +1,14 @@
 {
   "id": "autostart",
   "name": "Menadżer autostartu",
-  "description": "Lists and toggles user-level autostart entries (XDG ~/.config/autostart) — no elevation, nothing system-wide",
+  "description": "Lists and toggles user-level autostart entries — XDG ~/.config/autostart on Linux, where the user can also add their own; on Windows the account's Run key and Startup folder, switched the way Task Manager does (StartupApproved), never deleted. No elevation, nothing system-wide.",
   "version": "0.1.0",
-  "platforms": ["linux"],
+  "platforms": [
+    "linux",
+    "windows"
+  ],
   "binary": "autostart",
-  "capabilities": ["autostart-user"]
+  "capabilities": [
+    "autostart-user"
+  ]
 }

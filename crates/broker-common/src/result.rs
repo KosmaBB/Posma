@@ -45,14 +45,20 @@ impl CleanResult {
     }
 }
 
-#[derive(Debug, Serialize)]
-pub struct TextResult {
-    pub content: String,
-}
-
 #[derive(Debug, Serialize, Default)]
 pub struct BootEntries {
     pub entries: Vec<String>,
+    /// For a loader edited in place rather than through GRUB's rebuild.
+    pub options: Option<BootOptions>,
+}
+
+/// The two settings `set_boot_options` changes, as the config writes them.
+#[derive(Debug, Serialize)]
+pub struct BootOptions {
+    pub loader: &'static str,
+    pub path: String,
+    pub default_entry: Option<String>,
+    pub timeout: Option<String>,
 }
 
 /// What this broker can actually do, so the frontend can grey out the rest.

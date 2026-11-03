@@ -45,6 +45,8 @@ struct Category {
     name: String,
     entries: Vec<Entry>,
     total_bytes: u64,
+    /// Outside the user's reach: cleaned by the broker, not by this module.
+    privileged: bool,
 }
 
 #[derive(Serialize)]
@@ -72,7 +74,7 @@ fn ok<T: Serialize>(data: T) -> Response<T> {
 }
 
 fn home() -> PathBuf {
-    PathBuf::from(env::var("HOME").unwrap_or_else(|_| "/root".into()))
+    PathBuf::from(env::var("HOME").or_else(|_| env::var("USERPROFILE")).unwrap_or_else(|_| "/root".into()))
 }
 
 #[cfg(unix)]
@@ -163,9 +165,6 @@ fn allowed_roots() -> Vec<PathBuf> {
     if cfg!(target_os = "windows") {
         if let Ok(tmp) = env::var("TEMP") {
             roots.push(PathBuf::from(tmp));
-        }
-        if let Ok(win) = env::var("SystemRoot") {
-            roots.push(PathBuf::from(win).join("Temp"));
         }
     }
     roots
@@ -264,7 +263,11 @@ fn scan_single(path: &Path) -> Vec<Entry> {
 
 fn category(id: &str, name: &str, entries: Vec<Entry>) -> Category {
     let total_bytes = entries.iter().map(|e| e.size_bytes).sum();
-    Category { id: id.into(), name: name.into(), entries, total_bytes }
+    Category { id: id.into(), name: name.into(), entries, total_bytes, privileged: false }
+}
+
+fn privileged(category: Category) -> Category {
+    Category { privileged: true, ..category }
 }
 
 fn scan() -> ScanResult {
@@ -285,11 +288,11 @@ fn scan() -> ScanResult {
         // cleaned through this category (the journal has its own module),
         // so showing them would offer gigabytes that every clean attempt
         // then refuses.
-        categories.push(category(
+        categories.push(privileged(category(
             "syslog",
             "Logi systemowe (wymaga uprawnień administratora)",
             scan_var_log_files(),
-        ));
+        )));
     }
     if cfg!(target_os = "macos") {
         categories.push(category("tmp", "Pliki tymczasowe (starsze niż 48h)", scan_shared_tmp(Path::new("/private/tmp"))));
@@ -297,6 +300,20 @@ fn scan() -> ScanResult {
     if cfg!(target_os = "windows") {
         if let Ok(tmp) = env::var("TEMP") {
             categories.push(category("tmp", "Pliki tymczasowe (starsze niż 48h)", scan_shared_tmp(Path::new(&tmp))));
+        }
+        // Listed only where this account may look inside; the broker finds
+        // the Windows directory itself before deleting anything there.
+        if let Ok(windows) = env::var("SystemRoot").map(PathBuf::from) {
+            categories.push(privileged(category(
+                "wintemp",
+                "Systemowe pliki tymczasowe (starsze niż 48h, wymaga uprawnień administratora)",
+                scan_shared_tmp(&windows.join("Temp")),
+            )));
+            categories.push(privileged(category(
+                "winupdate",
+                "Pobrane aktualizacje Windows Update (wymaga uprawnień administratora)",
+                scan_user_cache(&windows.join("SoftwareDistribution").join("Download"), &[]),
+            )));
         }
     }
 

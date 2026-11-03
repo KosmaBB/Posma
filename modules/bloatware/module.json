@@ -1,0 +1,9 @@
+{
+  "id": "bloatware",
+  "name": "Usuwanie Bloatware",
+  "description": "Lists the Store apps installed for this account that Windows lets be removed, marking the ones it ships preinstalled (Get-AppxPackage, unprivileged). Removal is the account's own Remove-AppxPackage, run only after the broker made a System Restore point — without one nothing is removed.",
+  "version": "0.1.0",
+  "platforms": ["windows"],
+  "binary": "bloatware",
+  "capabilities": ["pkg", "restore-point"]
+}

@@ -69,6 +69,100 @@ compares unequal to everything — silently disabling both protections on any
 system where those values couldn't be read. That was found and fixed in a
 review; it is exactly the kind of defect this rule exists to prevent.
 
+## What the user says the system is
+
+At first start the user confirms or corrects what POSMA detected — package
+family, desktop, boot loader. The correction goes to the modules, in their
+environment, and never to the broker, which is not started by the core
+and decides from detection alone. Where the two could disagree in a way
+that matters — which package manager runs as root — they share one rule
+(`distro::manager_preferring`): a family `os-release` declares, with its
+tool installed, outranks any answer. Only on a system that declares none
+does the broker accept the request's choice, and then only among the
+managers actually installed.
+
+## What a written file may contain
+
+`/etc/default/grub` is not data: `grub-mkconfig` runs it as a shell script,
+as root. A broker that wrote whatever text a request carried would be the
+"run this as root" operation the catalog exists to rule out — and in daemon
+mode, without a password. So the broker compares the request with the file
+on disk:
+
+- a line already in the file passes untouched — Ubuntu's, Debian's and
+  Fedora's `GRUB_DISTRIBUTOR` are command substitutions, and they are root's
+  to keep;
+- any other line must be blank, a comment, or an assignment of a key the
+  editor sets (`GRUB_DEFAULT`, `GRUB_TIMEOUT`, `GRUB_TIMEOUT_STYLE`,
+  `GRUB_DISABLE_OS_PROBER`, `GRUB_THEME`, `GRUB_TERMINAL_OUTPUT`) to plain
+  text: no `$`, no backticks, nothing after the closing quote.
+
+The kernel command line is deliberately not on that list: `init=` there is a
+root shell at the next boot. Changes to it are made by hand. Restoring a
+backup skips the check, because a backup is a copy root took, not text from
+a request.
+
+Limine, systemd-boot and rEFInd read their config themselves, so nothing in
+it runs — but the kernel command line in it is the same root shell at the
+next boot. Their editor therefore sends no file at all: `set_boot_options`
+carries a default entry and a timeout, and the broker finds the file as
+root, changes those two lines and leaves every other byte alone. A timeout
+must be seconds or one of the loader's own words (Limine boots at once on
+anything else), and a default entry must be one line of text.
+
+Packages follow the same rule. The uninstaller leaves kernels and the base
+system off its list, and `pkg_remove` refuses them again inside the root
+process — a kernel removed that way would skip every lock `remove_kernel`
+keeps.
+
+## How a request reaches the privileged process
+
+On Linux the request goes to the broker on stdin, so it is never parsed by
+anything but the broker. Two systems need more care:
+
+- **macOS.** The per-action prompt is `do shell script ... with
+  administrator privileges`, which runs a root shell and passes no stdin, so
+  the request rides on the broker's command line. It is placed in an
+  AppleScript string literal — its backslashes and quotes escaped, nothing
+  else — and `quoted form of` turns that into a single shell word. A request
+  holding quotes, `$` or backticks therefore reaches the broker as text, and
+  a test checks that the literal gives back exactly what went in.
+- **Windows.** UAC is asked once per run. The core creates a named pipe
+  under a fresh name, refusing to join one that already exists, starts the
+  broker through UAC with that name, and serves the pipe only to the process
+  UAC started — `GetNamedPipeClientProcessId` must match it. The broker
+  opens nothing but a pipe under POSMA's prefix: the name is all it is told,
+  and an elevated process told a file path would write its answers there.
+  Requests then go one line at a time until POSMA closes.
+- **PowerShell.** `powershell -Command` parses everything after it as one
+  script. Each script is fixed, with the request's value inserted once in
+  single quotes, after a check that admits neither a quote nor a separator.
+
+On Windows the broker also never takes the Windows directory from
+`%SystemRoot%`, which the account that asked can set for itself; it asks the
+system. And services are switched only from a reviewed list
+(`broker-common/src/windows_services.rs`): the request names a service and on
+or off, the broker refuses any name the list lacks, and "on" means the start
+type Windows gives that service, never one from the request.
+
+Homebrew is never run as root on macOS: its prefix belongs to the user, so
+a root process running from it would be running whatever the user put
+there. That is why the macOS broker has no package operations and why
+SMART is read without it.
+
+## A record of what was done
+
+Every request a broker answers, apart from the `capabilities` probe, which
+changes nothing, is appended to `/var/log/posma/broker.log` (`%ProgramData%\POSMA\broker.log`
+on Windows) as one JSON line: the time, the account that asked — the
+daemon's verified owner, or the user pkexec reports — the request without
+any file contents, and whether it worked. It has a directory of its own
+because `clean_system_paths` may remove flat files in `/var/log`.
+
+A failure to write the record goes to the broker's standard error and does
+not stop the operation. Refusing a cleanup because the disk is full would
+defeat the cleanup.
+
 ## Destructive changes are reversible
 
 System configuration writes go through one shared pipeline
@@ -151,12 +245,19 @@ Being specific here is more useful than reassurance:
   are unprivileged like any module, but within your user account they can do
   whatever your account can. They have not been reviewed by anyone.
 - **A compromised user account.** POSMA's boundary is user-versus-root. It
-  does not defend against something already running as you.
+  does not defend against something already running as you. With the
+  daemon installed, that includes calling the broker as you could — every
+  catalogued operation, without a prompt, but nothing outside the catalog
+  and nothing its checks refuse.
 - **The daemon, if installed by the wrong user.** Access is granted to the
   user ID recorded at install time. Installing it while acting for another
   account grants it to that account.
-- **Windows daemon mode.** It doesn't exist. Windows uses per-action
-  elevation only.
+- **The Windows session, once consented to.** After the first UAC consent
+  of a run, every catalogued operation goes through without another prompt
+  until POSMA closes — the trade the Linux daemon makes, for one run. Whatever
+  takes over POSMA's own process in that time can use it; nothing outside
+  the catalog, and nothing its checks refuse. There is no installed Windows
+  helper.
 - **macOS and Windows brokers generally.** They are written but have never
   run on real hardware. Treat them as unreviewed until that changes.
 

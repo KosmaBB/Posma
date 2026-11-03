@@ -8,14 +8,16 @@
 //!   {"cmd":"app_leftovers","app":{"source":"apt","id":"discord"},"name":"discord"}
 //!   {"cmd":"uninstall","app":{"source":"apt","id":"discord"}}
 //!
-//! App listing merges three sources: apt/dpkg (filtered to packages the
-//! user explicitly installed, via /var/lib/apt/extended_states'
-//! Auto-Installed flag — dpkg alone lists 2000+ packages on a typical
-//! system, almost all of them dependencies nobody would recognize as "a
-//! program"), flatpak, and snap.
+//! App listing merges three sources: the system's own package manager
+//! (filtered to packages the user explicitly installed — a typical system
+//! carries 2000+ packages, almost all of them dependencies nobody would
+//! recognize as "a program"), flatpak, and snap. Which manager is native
+//! comes from the shared `distro` crate; how each records "the user asked
+//! for this" is read here: apt's extended_states, pacman's local database,
+//! dnf's own answer, zypper's AutoInstalled list.
 //!
 //! Uninstall is attempted directly with the package manager's own removal
-//! command — apt-get/snap need root and will simply fail with a permission
+//! command — the native manager and snap need root and will simply fail with a permission
 //! error when this app doesn't have it; flatpak has its own polkit prompt
 //! for system-wide installs and needs nothing extra for --user installs.
 //! This app never wraps any of them in pkexec/sudo itself (same elevation-
@@ -41,7 +43,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Clone)]
 struct AppRef {
-    source: String, // "apt" | "flatpak" | "snap"
+    source: String, // "apt" | "pacman" | "dnf" | "zypper" | "flatpak" | "snap"
     id: String,
     #[serde(default)]
     user_scope: bool,
@@ -140,7 +142,7 @@ fn path_binaries() -> HashSet<String> {
 fn desktop_identifiers() -> HashSet<String> {
     let mut out = HashSet::new();
     let h = home();
-    let dirs = [
+    let mut dirs = vec![
         PathBuf::from("/usr/share/applications"),
         PathBuf::from("/usr/local/share/applications"),
         PathBuf::from("/var/lib/snapd/desktop/applications"),
@@ -148,6 +150,11 @@ fn desktop_identifiers() -> HashSet<String> {
         h.join(".local/share/applications"),
         h.join(".local/share/flatpak/exports/share/applications"),
     ];
+    // Wherever else this system keeps launchers — NixOS, for one, has none
+    // of the paths above.
+    if let Some(data_dirs) = env::var_os("XDG_DATA_DIRS") {
+        dirs.extend(env::split_paths(&data_dirs).map(|d| d.join("applications")));
+    }
     for dir in dirs {
         let Ok(read) = fs::read_dir(&dir) else { continue };
         for entry in read.flatten() {
@@ -309,7 +316,7 @@ struct InstalledApp {
     id: String,
     name: String,
     version: String,
-    source: String, // "apt" | "flatpak" | "snap"
+    source: String, // "apt" | "pacman" | "dnf" | "zypper" | "flatpak" | "snap"
     size_bytes: Option<u64>,
     user_scope: bool,
     description: String,
@@ -404,6 +411,93 @@ fn dpkg_installed() -> Vec<DpkgPkg> {
     out
 }
 
+/// A package the user asked for by name, from a manager other than apt.
+struct NativePkg {
+    name: String,
+    version: String,
+    size_bytes: Option<u64>,
+    description: String,
+}
+
+/// The line following `%KEY%` in a pacman local-database `desc` file.
+fn pacman_desc_field<'a>(desc: &'a str, key: &str) -> Option<&'a str> {
+    let mut lines = desc.lines();
+    lines.find(|l| l.strip_prefix('%').and_then(|l| l.strip_suffix('%')) == Some(key))?;
+    lines.next().map(str::trim).filter(|v| !v.is_empty())
+}
+
+/// pacman's local database, one world-readable directory per package.
+/// `%REASON%` is 1 for a dependency and absent for a package installed by
+/// name — the same thing `pacman -Qe` reports, without its localized text.
+fn pacman_explicit() -> Vec<NativePkg> {
+    let Ok(read) = fs::read_dir("/var/lib/pacman/local") else { return Vec::new() };
+    read.flatten()
+        .filter_map(|entry| fs::read_to_string(entry.path().join("desc")).ok())
+        .filter(|desc| pacman_desc_field(desc, "REASON").unwrap_or("0") == "0")
+        .filter_map(|desc| {
+            Some(NativePkg {
+                name: pacman_desc_field(&desc, "NAME")?.to_string(),
+                version: pacman_desc_field(&desc, "VERSION").unwrap_or_default().to_string(),
+                size_bytes: pacman_desc_field(&desc, "SIZE").and_then(|s| s.parse().ok()),
+                description: pacman_desc_field(&desc, "DESC").unwrap_or_default().to_string(),
+            })
+        })
+        .collect()
+}
+
+fn command_lines(program: &str, args: &[&str]) -> Vec<String> {
+    let Ok(out) = Command::new(program).args(args).env("LC_ALL", "C").output() else { return Vec::new() };
+    String::from_utf8_lossy(&out.stdout).lines().map(|l| l.trim_end().to_string()).filter(|l| !l.is_empty()).collect()
+}
+
+/// The rpm database has every installed package but not why it is there;
+/// that comes from whichever front end manages it. dnf answers directly,
+/// zypper keeps a list of what it installed on its own initiative.
+fn rpm_explicit(manager: distro::Manager) -> Vec<NativePkg> {
+    let auto_or_user: HashSet<String> = match manager {
+        distro::Manager::Dnf => command_lines("dnf", &["repoquery", "--userinstalled", "--disablerepo=*", "--qf", "%{name}\n"]).into_iter().collect(),
+        _ => fs::read_to_string("/var/lib/zypp/AutoInstalled")
+            .unwrap_or_default()
+            .lines()
+            .filter(|l| !l.starts_with('#'))
+            .map(|l| l.trim().to_string())
+            .collect(),
+    };
+    let wanted = |name: &str| match manager {
+        distro::Manager::Dnf => auto_or_user.contains(name),
+        _ => !auto_or_user.contains(name),
+    };
+    let mut seen = HashSet::new();
+    command_lines("rpm", &["-qa", "--qf", "%{NAME}\t%{VERSION}-%{RELEASE}\t%{SIZE}\t%{SUMMARY}\n"])
+        .into_iter()
+        .filter_map(|line| {
+            let cols: Vec<&str> = line.split('\t').collect();
+            let [name, version, size, summary] = cols[..] else { return None };
+            (wanted(name) && seen.insert(name.to_string())).then(|| NativePkg {
+                name: name.to_string(),
+                version: version.to_string(),
+                size_bytes: size.parse().ok(),
+                description: summary.to_string(),
+            })
+        })
+        .collect()
+}
+
+fn kernel_packages(manager: distro::Manager) -> HashSet<String> {
+    distro::kernels(manager).into_iter().map(|k| k.package).collect()
+}
+
+/// Explicitly installed packages from pacman, dnf or zypper, minus the
+/// ones the machine needs to keep running.
+fn native_explicit(manager: distro::Manager) -> Vec<NativePkg> {
+    let kernels = kernel_packages(manager);
+    let all = match manager {
+        distro::Manager::Pacman => pacman_explicit(),
+        _ => rpm_explicit(manager),
+    };
+    all.into_iter().filter(|p| !distro::is_core_package(&p.name, &kernels)).collect()
+}
+
 /// Parses a human size like "128.4 MB" / "1.2 GB" into bytes (binary units).
 fn parse_size_string(s: &str) -> Option<u64> {
     let s = s.trim();
@@ -479,34 +573,53 @@ fn snap_installed() -> Vec<(String, String)> {
 
 fn list_apps() -> Vec<InstalledApp> {
     let mut out = Vec::new();
-    let auto = auto_installed_set();
 
-    for pkg in dpkg_installed() {
-        if auto.contains(&pkg.name) {
-            continue;
+    // Only the manager this system is built on. On an image-based system
+    // there is none to use, and its packages are not listed at all.
+    match distro::manager() {
+        Ok(distro::Manager::Apt) => {
+            let auto = auto_installed_set();
+            // The broker refuses these whatever the list says; offering one
+            // would only end in that refusal.
+            let kernels = kernel_packages(distro::Manager::Apt);
+            for pkg in dpkg_installed() {
+                if auto.contains(&pkg.name) || distro::is_core_package(&pkg.name, &kernels) {
+                    continue;
+                }
+                // Auto-Installed only catches packages pulled in as a dependency —
+                // base-system packages that ship as part of the OS's initial
+                // package selection (bsdutils, ca-certificates, ...) are marked
+                // "manual" by apt even though no human ever chose them, and
+                // removing them can genuinely break the system. Without this
+                // filter a typical desktop install lists well over a hundred
+                // "user-installed" apt packages, many of them base plumbing.
+                // dpkg's own Essential/Priority fields are the actual signal for
+                // "core system package", so use those rather than guessing from
+                // the name.
+                if pkg.essential || matches!(pkg.priority.as_str(), "required" | "important") {
+                    continue;
+                }
+                out.push(InstalledApp {
+                    id: pkg.name.clone(),
+                    name: pkg.name,
+                    version: pkg.version,
+                    source: "apt".into(),
+                    size_bytes: pkg.size_kb.map(|k| k * 1024),
+                    user_scope: false,
+                    description: pkg.description,
+                });
+            }
         }
-        // Auto-Installed only catches packages pulled in as a dependency —
-        // base-system packages that ship as part of the OS's initial
-        // package selection (bsdutils, ca-certificates, ...) are marked
-        // "manual" by apt even though no human ever chose them, and
-        // removing them can genuinely break the system. Without this
-        // filter a typical desktop install lists well over a hundred
-        // "user-installed" apt packages, many of them base plumbing.
-        // dpkg's own Essential/Priority fields are the actual signal for
-        // "core system package", so use those rather than guessing from
-        // the name.
-        if pkg.essential || matches!(pkg.priority.as_str(), "required" | "important") {
-            continue;
-        }
-        out.push(InstalledApp {
+        Ok(manager) => out.extend(native_explicit(manager).into_iter().map(|pkg| InstalledApp {
             id: pkg.name.clone(),
             name: pkg.name,
             version: pkg.version,
-            source: "apt".into(),
-            size_bytes: pkg.size_kb.map(|k| k * 1024),
+            source: manager.id().into(),
+            size_bytes: pkg.size_bytes,
             user_scope: false,
             description: pkg.description,
-        });
+        })),
+        Err(_) => {}
     }
     for app in flatpak_installed() {
         out.push(InstalledApp {
@@ -633,20 +746,27 @@ struct UninstallResult {
 }
 
 fn uninstall(app: AppRef) -> UninstallResult {
-    let (program, args): (&str, Vec<String>) = match app.source.as_str() {
-        "apt" => ("apt-get", vec!["remove".into(), "-y".into(), app.id.clone()]),
+    let (program, args): (String, Vec<String>) = match app.source.as_str() {
         "flatpak" => {
             let mut a = vec!["uninstall".into(), "-y".into()];
             if app.user_scope {
                 a.push("--user".into());
             }
             a.push(app.id.clone());
-            ("flatpak", a)
+            ("flatpak".into(), a)
         }
-        "snap" => ("snap", vec!["remove".into(), app.id.clone()]),
-        _ => {
-            return UninstallResult { success: false, output: String::new(), error: Some("nieznane źródło pakietu".into()), install_hint: None };
-        }
+        "snap" => ("snap".into(), vec!["remove".into(), app.id.clone()]),
+        // The native manager, and only when the request names the one
+        // this system actually has.
+        other => match distro::manager() {
+            Ok(manager) if manager.id() == other => {
+                let mut argv = manager.remove(&app.id).argv;
+                (argv.remove(0), argv)
+            }
+            _ => {
+                return UninstallResult { success: false, output: String::new(), error: Some("nieznane źródło pakietu".into()), install_hint: None };
+            }
+        },
     };
     // flatpak has its own polkit-based privilege escalation for system-wide
     // installs — prefixing `sudo` isn't the idiomatic suggestion there the
@@ -657,7 +777,7 @@ fn uninstall(app: AppRef) -> UninstallResult {
         format!("sudo {program} {}", args.join(" "))
     };
 
-    match Command::new(program).args(&args).output() {
+    match Command::new(&program).args(&args).output() {
         Ok(out) if out.status.success() => {
             let stdout = String::from_utf8_lossy(&out.stdout).into_owned();
             UninstallResult { success: true, output: stdout, error: None, install_hint: None }
@@ -701,4 +821,23 @@ fn main() {
     };
     println!("{}", output.expect("response must serialize"));
     io::stdout().flush().ok();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The layout of a real `desc` file, as read from a CachyOS install.
+    const DESC: &str = "%NAME%\nbash\n\n%VERSION%\n5.3.20-1\n\n%DESC%\nThe GNU Bourne Again shell\n\n%SIZE%\n10055840\n\n%REASON%\n1\n\n%DEPENDS%\nreadline\nglibc\n";
+
+    #[test]
+    fn pacman_desc_fields_are_read_by_key() {
+        assert_eq!(pacman_desc_field(DESC, "NAME"), Some("bash"));
+        assert_eq!(pacman_desc_field(DESC, "SIZE"), Some("10055840"));
+        assert_eq!(pacman_desc_field(DESC, "REASON"), Some("1"));
+        // Absent means installed by name; it must not pick up a neighbour.
+        assert_eq!(pacman_desc_field("%NAME%\nnano\n\n%VERSION%\n9.2-1\n", "REASON"), None);
+        // A value that happens to equal a key's name is not that key.
+        assert_eq!(pacman_desc_field("%DESC%\nNAME\n\n%NAME%\nx\n", "NAME"), Some("x"));
+    }
 }

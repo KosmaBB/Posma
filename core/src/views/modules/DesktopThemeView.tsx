@@ -1,12 +1,7 @@
 import { useEffect, useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
-
-interface ApiResponse<T> {
-  ok: boolean
-  data: T
-  error: string
-}
+import { confirmAction } from '../../components/confirm'
+import { callModule } from '../../data/callModule'
 
 interface Current {
   gtk_theme: string
@@ -113,7 +108,7 @@ export function DesktopThemeView() {
     setLoading(true)
     setScanError(null)
     try {
-      const res = await invoke<ApiResponse<ScanData>>('scan_desktop_theme')
+      const res = await callModule<ScanData>('desktop-theme', { cmd: 'scan' })
       if (res.ok) {
         setScan(res.data)
         setDraft(res.data.current)
@@ -149,7 +144,7 @@ export function DesktopThemeView() {
     setSaving(true)
     setApplyResult(null)
     try {
-      const res = await invoke<ApiResponse<ApplyResult>>('apply_desktop_theme', { changes: pending })
+      const res = await callModule<ApplyResult>('desktop-theme', { cmd: 'apply', changes: pending })
       setApplyResult(res.ok ? res.data : { success: false, applied: [], failed: [res.error] })
       if (res.ok && res.data.success) loadScan()
     } catch (e) {
@@ -170,8 +165,9 @@ export function DesktopThemeView() {
     setInstallResult(null)
     setInstallError(null)
     try {
-      const res = await invoke<ApiResponse<InstallResult>>('install_desktop_theme', {
-        sourceDir: dir,
+      const res = await callModule<InstallResult>('desktop-theme', {
+        cmd: 'install_theme',
+        source_dir: dir,
         name: null,
       })
       if (res.ok) {
@@ -198,7 +194,7 @@ export function DesktopThemeView() {
     setInstallResult(null)
     setInstallError(null)
     try {
-      const res = await invoke<ApiResponse<InstallResult>>('install_desktop_font', { path: file })
+      const res = await callModule<InstallResult>('desktop-theme', { cmd: 'install_font', path: file })
       if (res.ok) {
         setInstallResult(res.data)
         loadScan()
@@ -217,7 +213,7 @@ export function DesktopThemeView() {
     if (!name) return
     setPresetBusy(name)
     try {
-      const res = await invoke<ApiResponse<string[]>>('save_desktop_preset', { name })
+      const res = await callModule<string[]>('desktop-theme', { cmd: 'save_preset', name })
       if (res.ok) {
         setPresetName('')
         loadScan()
@@ -230,11 +226,11 @@ export function DesktopThemeView() {
   }
 
   async function loadPreset(name: string) {
-    if (!window.confirm(`Wgrać zestaw „${name}"? Zmieni obecny wygląd pulpitu.`)) return
+    if (!(await confirmAction(`Wgrać zestaw „${name}"? Zmieni obecny wygląd pulpitu.`))) return
     setPresetBusy(name)
     setApplyResult(null)
     try {
-      const res = await invoke<ApiResponse<ApplyResult>>('load_desktop_preset', { name })
+      const res = await callModule<ApplyResult>('desktop-theme', { cmd: 'load_preset', name })
       setApplyResult(res.ok ? res.data : { success: false, applied: [], failed: [res.error] })
       if (res.ok) loadScan()
     } finally {
@@ -243,10 +239,10 @@ export function DesktopThemeView() {
   }
 
   async function deletePreset(name: string) {
-    if (!window.confirm(`Usunąć zestaw „${name}"?`)) return
+    if (!(await confirmAction(`Usunąć zestaw „${name}"?`))) return
     setPresetBusy(name)
     try {
-      await invoke<ApiResponse<string[]>>('delete_desktop_preset', { name })
+      await callModule<string[]>('desktop-theme', { cmd: 'delete_preset', name })
       loadScan()
     } finally {
       setPresetBusy(null)
@@ -293,8 +289,8 @@ export function DesktopThemeView() {
         )}
         {scan.desktop === 'plasma' && (
           <div className="form-warning">
-            Obsługa KDE Plasma nie została przetestowana na działającej sesji Plasmy — POSMA jest
-            rozwijany na GNOME. Zgłoś, jeśli coś tu nie działa.
+            Odczyt ustawień KDE Plasma sprawdzono na Plasmie 6, zapisu jeszcze nie. Zgłoś, jeśli coś
+            tu nie działa.
           </div>
         )}
       </div>

@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Preparing } from '../../components/Preparing'
 import { invoke } from '@tauri-apps/api/core'
 import { formatBytes } from './TempCleanView'
+import { confirmAction } from '../../components/confirm'
+import { callModule } from '../../data/callModule'
 
 interface KernelEntry {
   package: string
@@ -15,6 +17,8 @@ interface ScanData {
   running: string
   latest: string
   kernels: KernelEntry[]
+  /** Powód, dla którego na tym systemie nie usuwa się jąder — wtedy lista jest tylko do wglądu. */
+  removal_unavailable: string | null
 }
 
 interface ExecResult {
@@ -34,7 +38,7 @@ export function KernelMgrView() {
   async function loadScan() {
     setScanError(null)
     try {
-      const res = await invoke<ApiResponse<ScanData>>('scan_kernels')
+      const res = await callModule<ScanData>('kernel-mgr', { cmd: 'scan' })
       if (res.ok) setScan(res.data)
       else setScanError(res.error)
     } catch (e) {
@@ -48,9 +52,9 @@ export function KernelMgrView() {
 
   async function removeKernel(entry: KernelEntry) {
     if (
-      !window.confirm(
+      !(await confirmAction(
         `Usunąć jądro ${entry.version} (${formatBytes(entry.size_bytes)})? Tej operacji nie można cofnąć. Aktywne i najnowsze jądro są zawsze chronione, ale sprawdź, czy na pewno tego nie potrzebujesz.`,
-      )
+      ))
     ) {
       return
     }
@@ -103,12 +107,16 @@ export function KernelMgrView() {
       <div className="section-head" style={{ marginTop: 18 }}>
         <h2 style={{ fontSize: 14 }}>Zainstalowane jądra</h2>
       </div>
-      {removable.length === 0 && (
-        <div className="glass empty-state">Nie ma tu nic do usunięcia — zostały tylko aktywne i najnowsze jądro.</div>
+      {scan.removal_unavailable ? (
+        <div className="glass empty-state">{scan.removal_unavailable}</div>
+      ) : (
+        removable.length === 0 && (
+          <div className="glass empty-state">Nie ma tu nic do usunięcia — zostały tylko aktywne i najnowsze jądro.</div>
+        )
       )}
       <div className="clean-list">
         {scan.kernels.map((k) => {
-          const locked = k.is_running || k.is_latest
+          const locked = k.is_running || k.is_latest || scan.removal_unavailable !== null
           const result = results[k.package]
           return (
             <div key={k.package}>
@@ -120,7 +128,7 @@ export function KernelMgrView() {
                 <button
                   className="btn btn-ghost btn-mini"
                   disabled={locked || removing !== null}
-                  title={locked ? 'Chronione — nie można usunąć' : undefined}
+                  title={locked ? (scan.removal_unavailable ?? 'Chronione — nie można usunąć') : undefined}
                   style={locked ? { opacity: 0.4, cursor: 'not-allowed', color: 'var(--critical)' } : { color: 'var(--critical)' }}
                   onClick={() => removeKernel(k)}
                 >

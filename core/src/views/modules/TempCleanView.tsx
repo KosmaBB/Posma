@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { Icon } from '../../components/Icons'
+import { confirmAction } from '../../components/confirm'
+import { callModule } from '../../data/callModule'
 
 interface Entry {
   path: string
@@ -13,6 +15,8 @@ interface Category {
   name: string
   entries: Entry[]
   total_bytes: number
+  /** Outside the user's reach — cleaned through the broker. */
+  privileged: boolean
 }
 
 interface ScanData {
@@ -45,11 +49,11 @@ export function formatBytes(bytes: number): string {
 
 /**
  * Kategoria "appcache" wymaga świadomej decyzji (wyloguje z sesji web,
- * spowolni pierwsze uruchomienia); "syslog" idzie przez brokera i wywoła
- * prompt hasła administratora (pkexec) — obie domyślnie odznaczone, żeby
+ * spowolni pierwsze uruchomienia); kategorie systemowe idą przez brokera i
+ * system zapyta o zgodę administratora — obie domyślnie odznaczone, żeby
  * "zaznacz wszystko" nie robiło tego bez wyraźnej decyzji. Reszta bezpieczna.
  */
-const DEFAULT_UNCHECKED = new Set(['appcache', 'syslog'])
+const uncheckedByDefault = (c: Category) => c.privileged || c.id === 'appcache'
 
 export function TempCleanView() {
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' })
@@ -58,14 +62,14 @@ export function TempCleanView() {
   async function runScan() {
     setPhase({ kind: 'scanning' })
     try {
-      const res = await invoke<ApiResponse<ScanData>>('scan_temp')
+      const res = await callModule<ScanData>('temp-clean', { cmd: 'scan' })
       if (!res.ok) {
         setPhase({ kind: 'error', message: res.error })
         return
       }
       const preChecked = new Set<string>()
       res.data.categories.forEach((c) => {
-        if (!DEFAULT_UNCHECKED.has(c.id)) c.entries.forEach((e) => preChecked.add(e.path))
+        if (!uncheckedByDefault(c)) c.entries.forEach((e) => preChecked.add(e.path))
       })
       setChecked(preChecked)
       setPhase({ kind: 'scanned', scan: res.data })
@@ -78,25 +82,23 @@ export function TempCleanView() {
     const paths = [...checked]
     if (paths.length === 0) return
     const total = selectedBytes(scan)
-    if (!window.confirm(`Usunąć ${paths.length} pozycji (${formatBytes(total)})? Tej operacji nie można cofnąć.`)) {
+    if (!(await confirmAction(`Usunąć ${paths.length} pozycji (${formatBytes(total)})? Tej operacji nie można cofnąć.`))) {
       return
     }
     setPhase({ kind: 'cleaning', scan })
 
-    // Logi systemowe leżą poza katalogiem użytkownika — nieuprzywilejowany
-    // sidecar temp-clean nie ma do nich prawa zapisu, więc idą osobną drogą
-    // przez brokera (fs-system, Access_plan.md §6 krok 3), zamiast razem z
-    // resztą przez zwykłe clean_temp.
-    const categoryOf = new Map<string, string>()
-    scan.categories.forEach((c) => c.entries.forEach((e) => categoryOf.set(e.path, c.id)))
-    const syslogPaths = paths.filter((p) => categoryOf.get(p) === 'syslog')
-    const restPaths = paths.filter((p) => categoryOf.get(p) !== 'syslog')
+    // Kategorie systemowe leżą poza katalogiem użytkownika — nieuprzywilejowany
+    // moduł nie ma do nich prawa zapisu, więc idą osobną drogą przez brokera
+    // (fs-system, Access_plan.md §6 krok 3).
+    const systemPaths = new Set(scan.categories.filter((c) => c.privileged).flatMap((c) => c.entries.map((e) => e.path)))
+    const syslogPaths = paths.filter((p) => systemPaths.has(p))
+    const restPaths = paths.filter((p) => !systemPaths.has(p))
 
     const merged: CleanData = { freed_bytes: 0, removed: 0, errors: [] }
 
     if (restPaths.length > 0) {
       try {
-        const res = await invoke<ApiResponse<CleanData>>('clean_temp', { paths: restPaths })
+        const res = await callModule<CleanData>('temp-clean', { cmd: 'clean', paths: restPaths })
         if (res.ok) {
           merged.freed_bytes += res.data.freed_bytes
           merged.removed += res.data.removed
@@ -111,9 +113,8 @@ export function TempCleanView() {
 
     if (syslogPaths.length > 0) {
       try {
-        // Poprosi o hasło administratora przez pkexec przy każdym wywołaniu
-        // (tryb Wybiórczy) — tak jak zaplanowano, dopóki nie zainstalujemy
-        // polityki polkit dla trybu Pełnego.
+        // Linux pyta przez pkexec przy każdym wywołaniu (tryb Wybiórczy),
+        // Windows raz na uruchomienie POSMA.
         await invoke('request_permission', { capability: 'fs-system' })
         const res = await invoke<ApiResponse<CleanData>>('clean_system_paths', { paths: syslogPaths })
         if (res.ok) {
@@ -124,7 +125,7 @@ export function TempCleanView() {
           merged.errors.push(res.error)
         }
       } catch (e) {
-        merged.errors.push(`Logi systemowe: ${String(e)}`)
+        merged.errors.push(`Pliki systemowe: ${String(e)}`)
       }
     }
 

@@ -4,13 +4,9 @@
 //! adding a capability means adding a variant here plus an implementation
 //! in the OS brokers that can honour it, never widening an existing one.
 //!
-//! Every operation the 22-module catalog needs is listed here up front —
-//! including ones no OS implements yet — so that bringing a new module or
-//! a new OS online is "fill in a method that already exists in the trait",
-//! not "design a new protocol". Operations no broker implements yet still
-//! parse and still get a truthful `not_supported` answer, which is what
-//! lets the frontend show an honest "not available on this system" instead
-//! of an opaque protocol error.
+//! An operation is listed once some module calls it. On an OS whose broker
+//! does not implement it, it still parses and gets a truthful
+//! `not_supported` answer rather than an opaque protocol error.
 
 use serde::{Deserialize, Serialize};
 
@@ -26,18 +22,12 @@ pub enum PkgSource {
     Flatpak,
     Pacman,
     Dnf,
-    // macOS
-    Brew,
-    Mas,
+    Zypper,
     // Windows
     Winget,
-    Appx,
-    Msi,
 }
 
-/// Size- vs age-based trimming, shared by every log-trimming backend
-/// (journald `--vacuum-size`/`--vacuum-time`, macOS `log erase --ttl`,
-/// Windows event-log clearing).
+/// Size- vs age-based trimming (journald `--vacuum-size`/`--vacuum-time`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum TrimMode {
@@ -52,9 +42,6 @@ pub enum Request {
     /// Delete files that live outside the user's scope. Each OS broker
     /// applies its OWN whitelist — the caller never gets to widen it.
     CleanSystemPaths { paths: Vec<String> },
-    /// Read a root-only file (Linux: /boot/grub/grub.cfg; macOS: a system
-    /// plist; Windows: a protected config) and return its text.
-    ReadSystemFile { path: String },
     /// Backup-rotate-write-verify a root-owned config file. `keep_backups`
     /// is the retention count; the broker takes a timestamped copy first
     /// and rolls back if post-write verification fails.
@@ -90,14 +77,9 @@ pub enum Request {
     PkgUpgrade { source: PkgSource, id: Option<String> },
 
     // ----------------------------------------------------------- services
-    /// Enable/disable a system service (systemd, launchd daemon, Windows
-    /// service).
+    /// Switch a Windows service a profile lists off (disabled, stopped) or
+    /// back to its Windows default (`windows_services`).
     ServiceSetEnabled { name: String, enabled: bool },
-    /// Start/stop a system service without changing its boot behaviour.
-    ServiceSetRunning { name: String, running: bool },
-    /// Enable/disable a SYSTEM-scope autostart entry (user-scope autostart
-    /// never reaches a broker — the unprivileged module handles that).
-    AutostartSystemSetEnabled { id: String, enabled: bool },
 
     // --------------------------------------------------------- boot/kernel
     /// Remove an installed kernel package. Brokers re-derive the running
@@ -108,6 +90,11 @@ pub enum Request {
     TrimSystemLogs { mode: TrimMode, value: u64 },
     /// Enumerate bootloader menu entries (needs root to read the config).
     ReadBootEntries,
+    /// Set the default entry and the timeout of a loader that reads its
+    /// own config at boot (Limine, systemd-boot, rEFInd). The broker edits
+    /// those two lines itself, so no file content ever comes from the
+    /// caller. `None` leaves that setting as it is.
+    SetBootOptions { default_entry: Option<String>, timeout: Option<String>, keep_backups: u64 },
 
     // ---------------------------------------------------------- disk/SMART
     /// Read S.M.A.R.T. health for a device with the privileges raw
@@ -118,16 +105,15 @@ pub enum Request {
     /// Create a System Restore point before a risky operation
     /// (Access_plan.md makes this mandatory before critical Windows ops).
     CreateRestorePoint { description: String },
+    /// DISM's report on the component store: its size and whether a
+    /// cleanup is worth it (WinSxS module, the preview before cleaning).
+    AnalyzeComponentStore,
     /// DISM component-store cleanup (WinSxS module).
     ComponentStoreCleanup,
-    /// Remove a provisioned/installed AppX package (bloatware module).
-    RemoveAppxPackage { id: String, all_users: bool },
 
     // ---------------------------------------------------- macOS-specific
     /// Delete local Time Machine snapshots (tmutil).
     DeleteLocalSnapshots { keep_latest: bool },
-    /// Purge system-level caches macOS keeps outside the user scope.
-    PurgeSystemCaches,
 
     // ------------------------------------------------------------- meta
     /// Which operations this broker actually implements — lets the

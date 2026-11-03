@@ -30,7 +30,7 @@ export function FolderView({ app, folderId }: { app: AppState; folderId: string 
     )
   }
 
-  const items = applyOrder(modulesInFolder(folder.id, onboarding?.os), moduleOrder[folder.id])
+  const items = applyOrder(modulesInFolder(folder.id, onboarding?.os, app.linuxProfile), moduleOrder[folder.id])
   const installed = items.filter((m) => installedSet.has(m.id))
 
   /** Moves the dragged card into the slot it was dropped on and stores it. */

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
-import type { AppState } from '../state/appState'
+import { detectOs, type AppState } from '../state/appState'
 import { autoScale, type Accent, type SettingsState, type Theme, type UiScale } from '../state/settings'
+import { confirmAction } from '../components/confirm'
+import { SystemProfileFields, profileSummary } from '../components/SystemProfile'
 
 /** A label and its explanation, with whatever control it takes on the right. */
 function Row({
@@ -30,6 +32,53 @@ function Row({
   )
 }
 
+/**
+ * macOS grants Full Disk Access only by hand, in System Settings. This can
+ * open the right pane and check the result — never grant it — and it checks
+ * again whenever the window comes back to the front, which is when someone
+ * returns from flipping the switch.
+ */
+function FullDiskAccessRow() {
+  const [granted, setGranted] = useState<boolean | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const check = () => invoke<boolean>('full_disk_access').then(setGranted).catch(() => setGranted(null))
+    check()
+    window.addEventListener('focus', check)
+    return () => window.removeEventListener('focus', check)
+  }, [])
+
+  async function openSettings() {
+    setError(null)
+    try {
+      await invoke('open_full_disk_access_settings')
+    } catch (e) {
+      setError(String(e))
+    }
+  }
+
+  return (
+    <>
+      <Row
+        name="Pełny dostęp do dysku"
+        desc={
+          granted
+            ? 'Nadany — moduły widzą też katalogi, które macOS chroni (Poczta, Wiadomości, Safari).'
+            : 'Bez niego macOS ukrywa przed POSMA Pocztę, Wiadomości i Safari. Nadaje się go tylko w Ustawieniach systemowych: zaznacz tam POSMA, a ten wiersz sam to zauważy.'
+        }
+      >
+        {granted ? (
+          <span className="chip low">Nadany</span>
+        ) : (
+          <button className="btn btn-ghost" onClick={openSettings}>Otwórz Ustawienia</button>
+        )}
+      </Row>
+      {error && <div className="form-warning">{error}</div>}
+    </>
+  )
+}
+
 const SCALES: { value: UiScale; label: string }[] = [
   { value: 'auto', label: 'Automatyczne' },
   { value: '0.9', label: 'Mniejsze (90%)' },
@@ -40,7 +89,7 @@ const SCALES: { value: UiScale; label: string }[] = [
 ]
 
 export function Settings({ app, settings }: { app: AppState; settings: SettingsState }) {
-  const { onboarding, resetOnboarding } = app
+  const { onboarding, resetOnboarding, linuxProfile, saveLinuxProfile } = app
   const { settings: s, set, addToBlacklist, removeFromBlacklist } = settings
 
   const [accessLevel, setAccessLevel] = useState(onboarding?.accessLevel ?? 'selective')
@@ -86,6 +135,20 @@ export function Settings({ app, settings }: { app: AppState; settings: SettingsS
           </select>
         </Row>
         {accessError && <div className="form-warning">{accessError}</div>}
+
+        {detectOs() === 'macos' && <FullDiskAccessRow />}
+
+        {linuxProfile && (
+          <>
+            <Row
+              name={`System: ${linuxProfile.name}`}
+              desc={`${profileSummary(linuxProfile)}. Zmiana poniżej trafia do wszystkich modułów.`}
+            >
+              {null}
+            </Row>
+            <SystemProfileFields profile={linuxProfile} onSave={saveLinuxProfile} />
+          </>
+        )}
 
         <Row
           name="Motyw"
@@ -194,8 +257,8 @@ export function Settings({ app, settings }: { app: AppState; settings: SettingsS
           <button
             className="btn btn-ghost"
             style={{ borderColor: 'color-mix(in srgb, var(--critical) 50%, transparent)', color: 'var(--critical)' }}
-            onClick={() => {
-              if (window.confirm('Na pewno? To wyczyści stan aplikacji i uruchomi konfigurację od nowa.')) {
+            onClick={async () => {
+              if (await confirmAction('Na pewno? To wyczyści stan aplikacji i uruchomi konfigurację od nowa.')) {
                 resetOnboarding()
               }
             }}

@@ -12,17 +12,15 @@
 //! of a hash it just recomputes on the spot, so a stale/crafted request
 //! can never empty out a group entirely.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use scan_filter::Filter;
 use std::env;
 use std::fs::{self, File};
 use std::io::{self, BufRead, Read, Write};
 use std::path::{Path, PathBuf};
 
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::sync::OnceLock;
 use walkdir::WalkDir;
 
 /// Skip files smaller than this — tiny configs/icons aren't worth flagging.
@@ -98,7 +96,7 @@ fn ok<T: Serialize>(data: T) -> Response<T> {
 }
 
 fn home() -> PathBuf {
-    PathBuf::from(env::var("HOME").unwrap_or_else(|_| "/root".into()))
+    PathBuf::from(env::var("HOME").or_else(|_| env::var("USERPROFILE")).unwrap_or_else(|_| "/root".into()))
 }
 
 /// Common duplicate hotspots inside the user's own home — never system-wide.
@@ -132,8 +130,7 @@ fn scan(blacklist: Vec<String>) -> ScanResult {
 
     for root in scan_roots() {
         let walker = WalkDir::new(&root).follow_links(false).into_iter().filter_entry(|e| {
-            e.file_type().is_file()
-                || filter.allows(e.path())
+            e.file_type().is_file() || if e.depth() == 0 { filter.allows(e.path()) } else { filter.allows_child(e.path()) }
         });
         for entry in walker.flatten() {
             if !entry.file_type().is_file() {
@@ -203,8 +200,10 @@ fn clean(paths: Vec<String>) -> CleanResult {
         by_hash.entry(hash).or_insert_with(|| (meta.len(), Vec::new())).1.push(path);
     }
 
+    let sizes: HashSet<u64> = by_hash.values().map(|(size, _)| *size).collect();
+    let existing = copies_on_disk(&roots, &sizes);
     for (hash, (size, group_paths)) in by_hash {
-        let total_existing = count_with_hash(&roots, size, &hash);
+        let total_existing = existing.get(&(size, hash)).copied().unwrap_or(0);
         let will_delete_all = group_paths.len() as u64 >= total_existing;
 
         for (i, path) in group_paths.into_iter().enumerate() {
@@ -251,23 +250,26 @@ fn clean(paths: Vec<String>) -> CleanResult {
 /// (base name, version string). Requires either a dotted version ("2.2")
 /// or an explicit "v" prefix ("v3") to avoid false positives on ordinary
 /// names that merely end in a number (photo IDs, invoice numbers, ...).
+///
+/// Read from the end: an optional `)`, up to four dot-separated numbers, an
+/// optional `v`, then at least one of ` _-(` between it and the base.
 fn split_version(stem: &str) -> Option<(String, String)> {
-    static RE: OnceLock<Regex> = OnceLock::new();
-    let re = RE.get_or_init(|| {
-        Regex::new(r"(?i)^(?P<base>.+?)[ _\-\(]+(?P<vprefix>v)?(?P<ver>\d+(?:\.\d+){0,3})\)?$").unwrap()
-    });
-
-    let caps = re.captures(stem)?;
-    let base = caps.name("base")?.as_str().trim();
-    if base.is_empty() {
+    let s = stem.strip_suffix(')').unwrap_or(stem);
+    let rest = s.trim_end_matches(|c: char| c.is_ascii_digit() || c == '.');
+    let ver = &s[rest.len()..];
+    let parts = ver.split('.').count();
+    if parts > 4 || ver.split('.').any(str::is_empty) {
         return None;
     }
-    let ver = caps.name("ver")?.as_str();
-    let has_vprefix = caps.name("vprefix").is_some();
-    if !ver.contains('.') && !has_vprefix {
+    let (rest, has_vprefix) = match rest.strip_suffix(['v', 'V']) {
+        Some(before) => (before, true),
+        None => (rest, false),
+    };
+    let base = rest.trim_end_matches([' ', '_', '-', '(']);
+    if base.len() == rest.len() || base.trim().is_empty() || (!ver.contains('.') && !has_vprefix) {
         return None;
     }
-    Some((base.to_string(), ver.to_string()))
+    Some((base.trim().to_string(), ver.to_string()))
 }
 
 /// Parses a dotted version string into comparable numeric components.
@@ -303,11 +305,10 @@ fn scan_versions(blacklist: Vec<String>) -> VersionScanResult {
     let mut candidates: Vec<VersionCandidate> = Vec::new();
 
     for root in scan_roots() {
-        let walker = WalkDir::new(&root).follow_links(false).into_iter().filter_entry(|e| {
-            e.depth() == 0
-                || e.file_type().is_file()
-                || filter.allows(e.path())
-        });
+        let walker = WalkDir::new(&root)
+            .follow_links(false)
+            .into_iter()
+            .filter_entry(|e| e.depth() == 0 || e.file_type().is_file() || filter.allows_child(e.path()));
         for entry in walker.flatten() {
             if entry.depth() == 0 {
                 continue;
@@ -441,26 +442,27 @@ fn clean_paths(paths: Vec<String>) -> CleanResult {
     CleanResult { freed_bytes: freed, removed, errors }
 }
 
-/// Counts how many files across `roots` currently have exactly `size` bytes
-/// and hash to `hash` — used to verify a clean request wouldn't delete the
-/// last remaining copy of a file's content.
-fn count_with_hash(roots: &[PathBuf], size: u64, hash: &str) -> u64 {
-    let mut count = 0u64;
+/// How many files across `roots` currently hold each content of one of
+/// `sizes`, by size and hash — used to verify a clean request
+/// wouldn't delete the last remaining copy of a file's content. One walk
+/// for the whole request: one per group re-read the home once per group.
+fn copies_on_disk(roots: &[PathBuf], sizes: &HashSet<u64>) -> HashMap<(u64, String), u64> {
+    let mut copies: HashMap<(u64, String), u64> = HashMap::new();
     for root in roots {
         for entry in WalkDir::new(root).follow_links(false).into_iter().flatten() {
             if !entry.file_type().is_file() {
                 continue;
             }
             let Ok(meta) = entry.metadata() else { continue };
-            if meta.len() != size {
+            if !sizes.contains(&meta.len()) {
                 continue;
             }
-            if hash_file(entry.path()).map(|h| h == hash).unwrap_or(false) {
-                count += 1;
+            if let Ok(hash) = hash_file(entry.path()) {
+                *copies.entry((meta.len(), hash)).or_default() += 1;
             }
         }
     }
-    count
+    copies
 }
 
 fn main() {
@@ -487,4 +489,31 @@ fn main() {
     };
     println!("{}", output.expect("response must serialize"));
     io::stdout().flush().ok();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The cases the regex this replaced was written for, and where it said no.
+    #[test]
+    fn versions_are_split_off_the_name() {
+        let split = |s: &str| split_version(s).map(|(b, v)| format!("{b}|{v}"));
+        assert_eq!(split("AppName_2.2").as_deref(), Some("AppName|2.2"));
+        assert_eq!(split("Project v1.0").as_deref(), Some("Project|1.0"));
+        assert_eq!(split("App - V3").as_deref(), Some("App|3"));
+        assert_eq!(split("Setup (1.2.3.4)").as_deref(), Some("Setup|1.2.3.4"));
+        assert_eq!(split("a__b_1.0").as_deref(), Some("a__b|1.0"));
+        assert_eq!(split("Game (v1.0.2)").as_deref(), Some("Game|1.0.2"));
+        assert_eq!(split("a b - c_3.1)").as_deref(), Some("a b - c|3.1"));
+        assert_eq!(split("My_v_2.0").as_deref(), Some("My_v|2.0"));
+        // A plain trailing number is a photo or an invoice, not a version.
+        assert_eq!(split("IMG_2024"), None);
+        assert_eq!(split("Dev2.0"), None);
+        assert_eq!(split("v2.0"), None);
+        assert_eq!(split(" 2.0"), None);
+        assert_eq!(split("x 1.2.3.4.5"), None);
+        assert_eq!(split("file 2.0."), None);
+        assert_eq!(split("file .1"), None);
+    }
 }

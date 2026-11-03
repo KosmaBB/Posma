@@ -9,9 +9,9 @@ import { Icon } from '../components/Icons'
  * odinstalowanie. Custom modules ("Tworzenie modułu") come later.
  */
 export function ModuleManager({ app }: { app: AppState }) {
-  const { onboarding, installedSet, setModuleInstalled, moduleOrder } = app
+  const { onboarding, installedSet, setModuleInstalled, moduleOrder, linuxProfile } = app
   const os = onboarding?.os ?? 'linux'
-  const available = modulesForOs(os)
+  const available = modulesForOs(os, linuxProfile)
 
   /**
    * Spotlight position for the card under the pointer.

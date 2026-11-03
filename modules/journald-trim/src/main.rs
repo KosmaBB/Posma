@@ -31,6 +31,10 @@ struct UsageResult {
     /// group membership); the frontend shows an honest "unknown" instead
     /// of a misleading 0 B.
     readable: bool,
+    /// Set when there is no persistent journal to trim at all — a system
+    /// without systemd (MX Linux by default, Void, Alpine), or one keeping
+    /// its journal in memory only.
+    unavailable: Option<&'static str>,
 }
 
 #[derive(Serialize)]
@@ -68,11 +72,18 @@ fn measure(path: &Path) -> (u64, u64) {
 fn usage() -> UsageResult {
     let root = Path::new("/var/log/journal");
     if !root.exists() {
-        return UsageResult { total_bytes: 0, files: 0, readable: false };
+        // /run/systemd/system exists exactly when systemd is the running
+        // init — the check systemd's own sd_booted() makes.
+        let unavailable = if Path::new("/run/systemd/system").exists() {
+            "Dziennik systemd jest tu trzymany tylko w pamięci (brak /var/log/journal) — nie zajmuje dysku i znika przy restarcie."
+        } else {
+            "Ten system nie używa systemd, więc nie ma dziennika journald do przycięcia."
+        };
+        return UsageResult { total_bytes: 0, files: 0, readable: false, unavailable: Some(unavailable) };
     }
     let readable = fs::read_dir(root).is_ok();
     let (total_bytes, files) = if readable { measure(root) } else { (0, 0) };
-    UsageResult { total_bytes, files, readable }
+    UsageResult { total_bytes, files, readable, unavailable: None }
 }
 
 fn main() {

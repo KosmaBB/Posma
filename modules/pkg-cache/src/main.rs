@@ -1,25 +1,21 @@
-//! pkg-cache sidecar: read-only preview of apt's download cache and
-//! cleanup candidates (orphaned apt packages, disabled old snap
-//! revisions). Like journald-trim, the actual cleaning always needs root
-//! (writing to /var/cache/apt, removing installed packages) so there's no
-//! unprivileged "attempt it" path here at all — cleaning goes entirely
-//! through the privileged broker's `apt_clean`/`apt_autoremove`/
-//! `snap_remove_revision` ops.
+//! pkg-cache sidecar: read-only preview of the package manager's download
+//! cache and of what can be cleaned up (orphaned packages, disabled old
+//! snap revisions). Like journald-trim, the actual cleaning always needs
+//! root, so there's no unprivileged "attempt it" path here at all —
+//! cleaning goes entirely through the privileged broker's
+//! `pkg_cache_clean`/`pkg_autoremove`/`pkg_remove_revision` ops.
 //!
-//! v1 scope: apt + snap only. pacman isn't installed on the machine this
-//! was built and tested on — writing pacman support blind, with no way to
-//! verify the exact command output this parser depends on, risked shipping
-//! something subtly wrong on a real Arch system, so it's deliberately left
-//! out rather than guessed at. flatpak's "unused runtimes" concept has no
-//! clean unprivileged preview command either (unlike apt's
-//! `autoremove --dry-run` or snap's `list --all`) — also left for later.
+//! Which manager is native here — apt, pacman, dnf or zypper — and how each
+//! one is asked comes from the shared `distro` crate, which the broker uses
+//! too. flatpak's "unused runtimes" concept has no clean unprivileged
+//! preview command (unlike a dry-run autoremove or snap's `list --all`) —
+//! left for later.
 //!
 //! Protocol (one JSON line on stdin -> one JSON line on stdout):
 //!   {"cmd":"scan"}
 
 use std::fs;
 use std::io::{self, BufRead, Write};
-use std::path::Path;
 use std::process::Command;
 
 use serde::{Deserialize, Serialize};
@@ -39,10 +35,13 @@ struct SnapRevision {
 
 #[derive(Serialize)]
 struct ScanResult {
-    apt_available: bool,
-    apt_cache_bytes: u64,
-    apt_cache_files: u64,
-    apt_orphans: Vec<String>,
+    /// "apt" | "pacman" | "dnf" | "zypper" — absent where the system's
+    /// packages are not ours to manage, with `unsupported` saying why.
+    manager: Option<&'static str>,
+    unsupported: Option<String>,
+    cache_bytes: u64,
+    cache_files: u64,
+    orphans: Vec<String>,
     snap_available: bool,
     snap_old_revisions: Vec<SnapRevision>,
 }
@@ -60,56 +59,6 @@ fn ok<T: Serialize>(data: T) -> Response<T> {
 
 fn command_exists(program: &str) -> bool {
     Command::new(program).arg("--version").output().map(|o| o.status.success()).unwrap_or(false)
-}
-
-/// Only the flat `.deb` files directly inside archives/ — deliberately not
-/// recursive, so the root-owned `partial/` subdirectory (permission denied
-/// to read as this user, and not real cached packages anyway) is never
-/// touched, not even to fail loudly on.
-fn apt_cache_usage() -> (u64, u64) {
-    let dir = Path::new("/var/cache/apt/archives");
-    let Ok(read) = fs::read_dir(dir) else { return (0, 0) };
-    let mut bytes = 0u64;
-    let mut files = 0u64;
-    for entry in read.flatten() {
-        let path = entry.path();
-        if path.extension().and_then(|e| e.to_str()) != Some("deb") {
-            continue;
-        }
-        if let Ok(meta) = entry.metadata() {
-            bytes += meta.len();
-            files += 1;
-        }
-    }
-    (bytes, files)
-}
-
-/// Parses `apt-get autoremove --dry-run`'s own dependency-solver output —
-/// deliberately not reimplementing orphan detection in Rust, since getting
-/// that dependency-graph logic wrong could suggest removing something
-/// still needed. Runs fine unprivileged (apt just warns that locking is
-/// off and results might be stale by the time a real run happens).
-fn apt_orphans() -> Vec<String> {
-    let Ok(out) = Command::new("apt-get").args(["autoremove", "--dry-run"]).output() else {
-        return Vec::new();
-    };
-    let text = String::from_utf8_lossy(&out.stdout);
-    let mut collecting = false;
-    let mut names = Vec::new();
-    for line in text.lines() {
-        if line.starts_with("The following packages will be REMOVED:") {
-            collecting = true;
-            continue;
-        }
-        if collecting {
-            if line.starts_with(' ') {
-                names.extend(line.split_whitespace().map(|s| s.to_string()));
-            } else {
-                break;
-            }
-        }
-    }
-    names
 }
 
 /// `snap list --all` lists every retained revision, not just the active
@@ -144,18 +93,22 @@ fn snap_old_revisions() -> Vec<SnapRevision> {
 }
 
 fn scan() -> ScanResult {
-    let apt_available = command_exists("apt-get");
-    let (apt_cache_bytes, apt_cache_files) = if apt_available { apt_cache_usage() } else { (0, 0) };
-    let apt_orphans = if apt_available { apt_orphans() } else { Vec::new() };
+    let (manager, unsupported) = match distro::manager() {
+        Ok(m) => (Some(m), None),
+        Err(why) => (None, Some(why)),
+    };
+    let (cache_bytes, cache_files) = manager.map(|m| m.cache_usage()).unwrap_or((0, 0));
+    let orphans = manager.map(|m| m.orphans()).unwrap_or_default();
 
     let snap_available = command_exists("snap");
     let snap_old_revisions = if snap_available { snap_old_revisions() } else { Vec::new() };
 
     ScanResult {
-        apt_available,
-        apt_cache_bytes,
-        apt_cache_files,
-        apt_orphans,
+        manager: manager.map(|m| m.id()),
+        unsupported,
+        cache_bytes,
+        cache_files,
+        orphans,
         snap_available,
         snap_old_revisions,
     }

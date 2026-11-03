@@ -1,23 +1,14 @@
 import type { AppState } from '../state/appState'
-import { folders, modules, riskLabel } from '../data/modules'
+import { folders, moduleById, riskLabel } from '../data/modules'
+import { lazy, Suspense } from 'react'
 import { Icon } from '../components/Icons'
-import { TempCleanView } from './modules/TempCleanView'
-import { DuplicatesView } from './modules/DuplicatesView'
-import { BigFilesView } from './modules/BigFilesView'
-import { AutostartView } from './modules/AutostartView'
-import { ShredderView } from './modules/ShredderView'
-import { MetadataView } from './modules/MetadataView'
-import { DiskMapView } from './modules/DiskMapView'
-import { BrowserHygieneView } from './modules/BrowserHygieneView'
-import { HealthMonitorView } from './modules/HealthMonitorView'
-import { UninstallerView } from './modules/UninstallerView'
-import { VaultView } from './modules/VaultView'
-import { JournaldTrimView } from './modules/JournaldTrimView'
-import { PkgCacheView } from './modules/PkgCacheView'
-import { KernelMgrView } from './modules/KernelMgrView'
-import { GrubEditorView } from './modules/GrubEditorView'
-import { DesktopThemeView } from './modules/DesktopThemeView'
-import { XcodeCacheView } from './modules/XcodeCacheView'
+
+type ViewProps = { app: AppState }
+
+/** A module's code is loaded the first time it is opened, not with the window. */
+function lazyView<K extends string>(load: () => Promise<Record<K, React.ComponentType<ViewProps>>>, name: K) {
+  return lazy(() => load().then((m) => ({ default: m[name] })))
+}
 
 /**
  * Modules with a real UI — everything else falls back to the placeholder.
@@ -26,30 +17,35 @@ import { XcodeCacheView } from './modules/XcodeCacheView'
  * no use for it stays declared with no parameters, which TypeScript accepts
  * where more are passed.
  */
-const MODULE_VIEWS: Record<string, React.ComponentType<{ app: AppState }>> = {
-  'temp-clean': TempCleanView,
-  duplicates: DuplicatesView,
-  'big-files': BigFilesView,
-  autostart: AutostartView,
-  shredder: ShredderView,
-  metadata: MetadataView,
-  'disk-map': DiskMapView,
-  'browser-hygiene': BrowserHygieneView,
-  'health-monitor': HealthMonitorView,
-  uninstaller: UninstallerView,
-  vault: VaultView,
-  'journald-trim': JournaldTrimView,
-  'pkg-cache': PkgCacheView,
-  'kernel-mgr': KernelMgrView,
-  'grub-editor': GrubEditorView,
-  'desktop-theme': DesktopThemeView,
-  'xcode-cache': XcodeCacheView,
+const MODULE_VIEWS: Record<string, React.ComponentType<ViewProps>> = {
+  'temp-clean': lazyView(() => import('./modules/TempCleanView'), 'TempCleanView'),
+  duplicates: lazyView(() => import('./modules/DuplicatesView'), 'DuplicatesView'),
+  'big-files': lazyView(() => import('./modules/BigFilesView'), 'BigFilesView'),
+  autostart: lazyView(() => import('./modules/AutostartView'), 'AutostartView'),
+  shredder: lazyView(() => import('./modules/ShredderView'), 'ShredderView'),
+  metadata: lazyView(() => import('./modules/MetadataView'), 'MetadataView'),
+  'disk-map': lazyView(() => import('./modules/DiskMapView'), 'DiskMapView'),
+  'browser-hygiene': lazyView(() => import('./modules/BrowserHygieneView'), 'BrowserHygieneView'),
+  'health-monitor': lazyView(() => import('./modules/HealthMonitorView'), 'HealthMonitorView'),
+  uninstaller: lazyView(() => import('./modules/UninstallerView'), 'UninstallerView'),
+  vault: lazyView(() => import('./modules/VaultView'), 'VaultView'),
+  'journald-trim': lazyView(() => import('./modules/JournaldTrimView'), 'JournaldTrimView'),
+  'pkg-cache': lazyView(() => import('./modules/PkgCacheView'), 'PkgCacheView'),
+  'kernel-mgr': lazyView(() => import('./modules/KernelMgrView'), 'KernelMgrView'),
+  'grub-editor': lazyView(() => import('./modules/GrubEditorView'), 'GrubEditorView'),
+  'desktop-theme': lazyView(() => import('./modules/DesktopThemeView'), 'DesktopThemeView'),
+  'xcode-cache': lazyView(() => import('./modules/XcodeCacheView'), 'XcodeCacheView'),
+  'time-machine': lazyView(() => import('./modules/TimeMachineView'), 'TimeMachineView'),
+  bloatware: lazyView(() => import('./modules/BloatwareView'), 'BloatwareView'),
+  services: lazyView(() => import('./modules/ServicesView'), 'ServicesView'),
+  winsxs: lazyView(() => import('./modules/WinsxsView'), 'WinsxsView'),
+  'winget-ui': lazyView(() => import('./modules/WingetView'), 'WingetView'),
 }
 
 /** Generic placeholder page for an installed module — real module UIs replace this per-module. */
 export function ModuleView({ app, moduleId }: { app: AppState; moduleId: string }) {
   const { setView } = app
-  const mod = modules.find((m) => m.id === moduleId)
+  const mod = moduleById(moduleId, app.linuxProfile)
   if (!mod) {
     return (
       <div className="view-enter">
@@ -77,7 +73,9 @@ export function ModuleView({ app, moduleId }: { app: AppState; moduleId: string 
         <span className={`chip ${mod.risk}`} style={{ marginLeft: 'auto' }}>{riskLabel[mod.risk]}</span>
       </div>
       {ActiveModuleView ? (
-        <ActiveModuleView key={mod.id} app={app} />
+        <Suspense fallback={null}>
+          <ActiveModuleView key={mod.id} app={app} />
+        </Suspense>
       ) : (
         <div className="glass placeholder-body">
           Interfejs modułu „{mod.name}" powstanie w kolejnych etapach —

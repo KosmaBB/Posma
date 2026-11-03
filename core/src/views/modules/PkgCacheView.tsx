@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Preparing } from '../../components/Preparing'
 import { invoke } from '@tauri-apps/api/core'
 import { formatBytes } from './TempCleanView'
+import { confirmAction } from '../../components/confirm'
+import { callModule } from '../../data/callModule'
 
 interface SnapRevisionEntry {
   name: string
@@ -10,10 +12,12 @@ interface SnapRevisionEntry {
 }
 
 interface ScanData {
-  apt_available: boolean
-  apt_cache_bytes: number
-  apt_cache_files: number
-  apt_orphans: string[]
+  /** apt | pacman | dnf | zypper — null gdzie pakietami systemu nie zarządzamy */
+  manager: string | null
+  unsupported: string | null
+  cache_bytes: number
+  cache_files: number
+  orphans: string[]
   snap_available: boolean
   snap_old_revisions: SnapRevisionEntry[]
 }
@@ -62,7 +66,7 @@ export function PkgCacheView() {
   async function loadScan() {
     setScanError(null)
     try {
-      const res = await invoke<ApiResponse<ScanData>>('scan_pkg_cache')
+      const res = await callModule<ScanData>('pkg-cache', { cmd: 'scan' })
       if (res.ok) setScan(res.data)
       else setScanError(res.error)
     } catch (e) {
@@ -76,11 +80,15 @@ export function PkgCacheView() {
 
   async function cleanAptCache() {
     if (!scan) return
-    if (!window.confirm(`Usunąć ${formatBytes(scan.apt_cache_bytes)} cache apt? Pobrane pakiety trzeba będzie ściągnąć ponownie w razie potrzeby.`)) return
+    if (!scan.manager) return
+    // Na dystrybucji kroczącej cache to także droga powrotu do poprzedniej
+    // wersji pakietu po nieudanej aktualizacji.
+    const rollback = scan.manager === 'pacman' ? ' Znikną też poprzednie wersje, do których dałoby się wrócić po nieudanej aktualizacji.' : ''
+    if (!(await confirmAction(`Usunąć ${formatBytes(scan.cache_bytes)} cache ${scan.manager}? Pobrane pakiety trzeba będzie ściągnąć ponownie w razie potrzeby.${rollback}`))) return
     setAptCleaning(true)
     try {
       await invoke('request_permission', { capability: 'fs-system' })
-      const res = await invoke<ApiResponse<ExecResult>>('apt_clean')
+      const res = await invoke<ApiResponse<ExecResult>>('pkg_cache_clean', { source: scan.manager })
       const result = res.ok ? res.data : { success: false, output: '', error: res.error }
       setAptCleanResult(result)
       if (result.success) loadScan()
@@ -92,12 +100,12 @@ export function PkgCacheView() {
   }
 
   async function runAutoremove() {
-    if (!scan || scan.apt_orphans.length === 0) return
-    if (!window.confirm(`Usunąć ${scan.apt_orphans.length} nieużywanych pakietów (${scan.apt_orphans.join(', ')})?`)) return
+    if (!scan || !scan.manager || scan.orphans.length === 0) return
+    if (!(await confirmAction(`Usunąć ${scan.orphans.length} nieużywanych pakietów (${scan.orphans.join(', ')})?`))) return
     setAutoremoveRunning(true)
     try {
       await invoke('request_permission', { capability: 'pkg' })
-      const res = await invoke<ApiResponse<ExecResult>>('apt_autoremove')
+      const res = await invoke<ApiResponse<ExecResult>>('pkg_autoremove', { source: scan.manager })
       const result = res.ok ? res.data : { success: false, output: '', error: res.error }
       setAutoremoveResult(result)
       if (result.success) loadScan()
@@ -125,7 +133,7 @@ export function PkgCacheView() {
 
   async function removeSelectedSnaps() {
     if (checkedSnaps.size === 0) return
-    if (!window.confirm(`Usunąć ${checkedSnaps.size} starych rewizji snapów? Tej operacji nie można cofnąć.`)) return
+    if (!(await confirmAction(`Usunąć ${checkedSnaps.size} starych rewizji snapów? Tej operacji nie można cofnąć.`))) return
     setSnapRemoving(true)
     const errors: string[] = []
     try {
@@ -164,36 +172,36 @@ export function PkgCacheView() {
 
   return (
     <div>
-      {scan.apt_available && (
+      {scan.manager && (
         <>
           <div className="clean-summary glass">
             <div>
-              <div className="cs-label">Cache apt</div>
-              <div className="cs-value mono">{formatBytes(scan.apt_cache_bytes)}</div>
+              <div className="cs-label">Cache {scan.manager}</div>
+              <div className="cs-value mono">{formatBytes(scan.cache_bytes)}</div>
             </div>
             <div>
-              <div className="cs-label">Pliki .deb</div>
-              <div className="cs-value mono">{scan.apt_cache_files}</div>
+              <div className="cs-label">Pliki w cache</div>
+              <div className="cs-value mono">{scan.cache_files}</div>
             </div>
             <div style={{ marginLeft: 'auto' }}>
-              <button className="btn btn-primary" disabled={aptCleaning || scan.apt_cache_bytes === 0} onClick={cleanAptCache}>
-                {aptCleaning ? 'Czyszczenie...' : 'Wyczyść cache apt'}
+              <button className="btn btn-primary" disabled={aptCleaning || scan.cache_bytes === 0} onClick={cleanAptCache}>
+                {aptCleaning ? 'Czyszczenie...' : `Wyczyść cache ${scan.manager}`}
               </button>
             </div>
           </div>
           {aptCleanResult && <ResultBanner result={aptCleanResult} />}
 
           <div className="section-head" style={{ marginTop: 18 }}>
-            <h2 style={{ fontSize: 14 }}>Nieużywane pakiety (autoremove)</h2>
-            <button className="btn btn-primary btn-mini" disabled={autoremoveRunning || scan.apt_orphans.length === 0} onClick={runAutoremove}>
+            <h2 style={{ fontSize: 14 }}>Nieużywane pakiety (osierocone zależności)</h2>
+            <button className="btn btn-primary btn-mini" disabled={autoremoveRunning || scan.orphans.length === 0} onClick={runAutoremove}>
               {autoremoveRunning ? 'Usuwanie...' : 'Usuń nieużywane'}
             </button>
           </div>
-          {scan.apt_orphans.length === 0 ? (
+          {scan.orphans.length === 0 ? (
             <div className="glass empty-state">Brak osieroconych pakietów.</div>
           ) : (
             <div className="clean-list">
-              {scan.apt_orphans.map((name) => (
+              {scan.orphans.map((name) => (
                 <div key={name} className="glass clean-row" style={{ cursor: 'default', opacity: 1 }}>
                   <span className="cr-path mono">{name}</span>
                 </div>
@@ -243,9 +251,7 @@ export function PkgCacheView() {
         </>
       )}
 
-      {!scan.apt_available && !scan.snap_available && (
-        <div className="glass empty-state">Nie wykryto apt ani snap na tym systemie.</div>
-      )}
+      {scan.unsupported && <div className="glass empty-state">{scan.unsupported}</div>}
     </div>
   )
 }

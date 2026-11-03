@@ -4,9 +4,28 @@ import react from "@vitejs/plugin-react";
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
+/**
+ * Fontsource ships every subset of every weight, each as woff2 with a woff
+ * fallback. The interface is Polish — latin and latin-ext — and every
+ * webview Tauri runs on reads woff2, so the rest only made the binary
+ * bigger. Should fontsource change its format, nothing matches and the
+ * fonts are simply bundled whole again.
+ */
+const latinFontsOnly = {
+  name: "latin-fonts-only",
+  // Before Vite rewrites the url()s into asset references.
+  enforce: "pre" as const,
+  transform(code: string, id: string) {
+    if (!id.includes("@fontsource/") || !id.endsWith(".css")) return null;
+    return code
+      .replace(/\/\*[^*]*-(?:cyrillic|greek|vietnamese)[^*]*\*\/\s*@font-face\s*\{[^}]*\}/g, "")
+      .replace(/,\s*url\([^)]*\.woff\)\s*format\('woff'\)/g, "");
+  },
+};
+
 // https://vite.dev/config/
 export default defineConfig(async () => ({
-  plugins: [react()],
+  plugins: [react(), latinFontsOnly],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //

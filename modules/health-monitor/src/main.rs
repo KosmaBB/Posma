@@ -8,6 +8,7 @@
 //!   {"cmd":"snapshot"}
 //!   {"cmd":"list_disks"}
 //!   {"cmd":"smart","device":"/dev/sda"}
+//!   {"cmd":"smart_report","device":"/dev/sda","output":"<smartctl -j>","error":null}
 //!
 //! S.M.A.R.T. honesty note: raw ATA/NVMe passthrough commands typically
 //! need root, so `smart` is expected to often fail with a permission error
@@ -32,6 +33,8 @@ enum Request {
     Snapshot,
     ListDisks,
     Smart { device: String },
+    /// smartctl output the broker obtained as root, to be read here.
+    SmartReport { device: String, output: String, error: Option<String> },
     Kill { pid: u32 },
 }
 
@@ -173,9 +176,24 @@ fn list_block_devices() -> Vec<BlockDevice> {
     out
 }
 
-#[cfg(not(target_os = "linux"))]
+/// Whole disks — disk0, never its slices like disk0s1. APFS puts its
+/// synthesized containers here as well; smartctl answers that those have
+/// no SMART, which the view shows as it is. No size: that takes an ioctl.
+#[cfg(target_os = "macos")]
 fn list_block_devices() -> Vec<BlockDevice> {
-    // Windows/macOS device enumeration is unimplemented — untested territory,
+    let mut numbers: Vec<u32> = std::fs::read_dir("/dev")
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter_map(|e| e.file_name().to_str()?.strip_prefix("disk")?.parse().ok())
+        .collect();
+    numbers.sort_unstable();
+    numbers.into_iter().map(|n| BlockDevice { device: format!("/dev/disk{n}"), size_bytes: None }).collect()
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+fn list_block_devices() -> Vec<BlockDevice> {
+    // Windows device enumeration is unimplemented — untested territory,
     // same as this app's other OS-specific paths. Returns empty rather than guessing.
     Vec::new()
 }
@@ -205,19 +223,14 @@ fn extract_smart(v: &Value, info: &mut SmartInfo) {
         .or_else(|| get_path(v, &["nvme_smart_health_information_log", "power_on_hours"]).and_then(|x| x.as_u64()));
 }
 
-/// Display-only suggestion — never executed by this app. Picks a command
-/// based on whichever package manager binary is present; falls back to
-/// naming the package alone when none of the checked ones are found.
+/// Display-only suggestion — never executed by this app. Names the
+/// command for this system's own package manager; falls back to naming the
+/// package alone where that manager is not one POSMA drives.
 fn install_hint() -> String {
     if cfg!(target_os = "linux") {
-        if std::path::Path::new("/usr/bin/apt").exists() {
-            "sudo apt install smartmontools".into()
-        } else if std::path::Path::new("/usr/bin/dnf").exists() {
-            "sudo dnf install smartmontools".into()
-        } else if std::path::Path::new("/usr/bin/pacman").exists() {
-            "sudo pacman -S smartmontools".into()
-        } else {
-            "smartmontools (menedżer pakietów systemu)".into()
+        match distro::manager() {
+            Ok(manager) => manager.install_hint("smartmontools"),
+            Err(_) => "smartmontools (menedżer pakietów systemu)".into(),
         }
     } else if cfg!(target_os = "macos") {
         "brew install smartmontools".into()
@@ -241,22 +254,46 @@ fn smart(device: String) -> SmartInfo {
         return info;
     }
 
-    let output = match Command::new("smartctl").args(["-a", "-j", &device]).output() {
+    let smartctl = distro::find_program("smartctl").unwrap_or_else(|| "smartctl".into());
+    let output = match Command::new(smartctl).args(["-a", "-j", &device]).output() {
         Ok(o) => o,
-        Err(e) if e.kind() == io::ErrorKind::NotFound => {
-            info.error = Some("smartctl nie jest zainstalowany w systemie".into());
-            info.missing_tool = Some("smartctl (pakiet smartmontools)".into());
-            info.install_hint = Some(install_hint());
-            return info;
-        }
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return missing_smartctl(device),
         Err(e) => {
             info.error = Some(e.to_string());
             return info;
         }
     };
+    interpret_smart(device, &String::from_utf8_lossy(&output.stdout), &String::from_utf8_lossy(&output.stderr))
+}
 
-    let Ok(json) = serde_json::from_slice::<Value>(&output.stdout) else {
-        let stderr = String::from_utf8_lossy(&output.stderr);
+fn missing_smartctl(device: String) -> SmartInfo {
+    SmartInfo {
+        device,
+        error: Some("smartctl nie jest zainstalowany w systemie".into()),
+        missing_tool: Some("smartctl (pakiet smartmontools)".into()),
+        install_hint: Some(install_hint()),
+        ..Default::default()
+    }
+}
+
+/// What smartctl answered when the broker ran it as root. Its exit status
+/// is a bit mask that is non-zero for a disk reporting errors as well, so
+/// the text decides here, not the broker's success flag — a failing disk
+/// is the one answer that must not turn into "could not read".
+fn smart_report(device: String, output: String, error: Option<String>) -> SmartInfo {
+    let error = error.unwrap_or_default();
+    // How the broker reports a program that is not there at all.
+    if output.trim().is_empty() && error.contains("(os error 2)") {
+        return missing_smartctl(device);
+    }
+    interpret_smart(device, &output, &error)
+}
+
+/// smartctl's `-j` output turned into this module's answer, wherever it
+/// was run.
+fn interpret_smart(device: String, stdout: &str, stderr: &str) -> SmartInfo {
+    let mut info = SmartInfo { device, ..Default::default() };
+    let Ok(json) = serde_json::from_str::<Value>(stdout) else {
         info.error = Some(if stderr.trim().is_empty() { "brak odpowiedzi smartctl".into() } else { stderr.trim().to_string() });
         return info;
     };
@@ -315,8 +352,11 @@ fn kill(pid: u32) -> KillResult {
     };
     let name = process.name().to_string_lossy().into_owned();
 
-    match process.kill_with(Signal::Term) {
-        Some(true) => KillResult { success: true, message: format!("Wysłano SIGTERM do {name} ({pid})") },
+    // Windows has no SIGTERM to ask with: ending a process there is
+    // TerminateProcess, the only signal sysinfo offers on it.
+    let (signal, sent) = if cfg!(windows) { (Signal::Kill, "Zakończono") } else { (Signal::Term, "Wysłano SIGTERM do") };
+    match process.kill_with(signal) {
+        Some(true) => KillResult { success: true, message: format!("{sent} {name} ({pid})") },
         Some(false) => KillResult {
             success: false,
             message: format!("{name} ({pid}): odmowa — proces należy do innego użytkownika"),
@@ -339,6 +379,7 @@ fn main() {
             Ok(Request::Snapshot) => serde_json::to_string(&ok(snapshot())),
             Ok(Request::ListDisks) => serde_json::to_string(&ok(list_block_devices())),
             Ok(Request::Smart { device }) => serde_json::to_string(&ok(smart(device))),
+            Ok(Request::SmartReport { device, output, error }) => serde_json::to_string(&ok(smart_report(device, output, error))),
             Ok(Request::Kill { pid }) => serde_json::to_string(&ok(kill(pid))),
             Err(e) => serde_json::to_string(&Response::<()>::Err {
                 ok: false,
@@ -357,6 +398,25 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The broker reports smartctl's non-zero exit for a failing disk as a
+    /// failed command; the disk's verdict must still come through.
+    #[test]
+    fn a_failing_disk_reported_by_the_broker_reads_as_failing() {
+        let output = r#"{"model_name":"WDC WD10EZEX","smart_status":{"passed":false},"temperature":{"current":51}}"#;
+        let info = smart_report("/dev/sda".into(), output.into(), Some("polecenie zakończyło się błędem".into()));
+        assert!(info.available);
+        assert_eq!(info.passed, Some(false));
+        assert_eq!(info.temperature_c, Some(51));
+
+        let missing = smart_report("/dev/sda".into(), String::new(), Some("No such file or directory (os error 2)".into()));
+        assert!(!missing.available);
+        assert!(missing.missing_tool.is_some() && missing.install_hint.is_some());
+
+        let refused = smart_report("/dev/sda".into(), String::new(), Some("smart_read: operacja nieobsługiwana".into()));
+        assert_eq!(refused.error.as_deref(), Some("smart_read: operacja nieobsługiwana"));
+        assert!(refused.missing_tool.is_none());
+    }
 
     #[test]
     fn extracts_nvme_shape() {

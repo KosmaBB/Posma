@@ -5,7 +5,7 @@ import { applyOrder, folders, modulesInFolder } from '../../data/modules'
 import { Icon } from '../Icons'
 
 export function Sidebar({ app }: { app: AppState }) {
-  const { view, setView, installedSet, onboarding, moduleOrder } = app
+  const { view, setView, installedSet, onboarding, moduleOrder, linuxProfile } = app
   const [openFolders, setOpenFolders] = useState<Set<string>>(() => new Set(['data']))
 
   function toggleFolder(id: string) {
@@ -41,7 +41,7 @@ export function Sidebar({ app }: { app: AppState }) {
         // Same arrangement the folder view holds, so a card dragged there
         // moves here too — this list is a third window onto it, not a
         // separate one that happened to match.
-        const items = applyOrder(modulesInFolder(folder.id, os), moduleOrder[folder.id]).filter((m) =>
+        const items = applyOrder(modulesInFolder(folder.id, os, linuxProfile), moduleOrder[folder.id]).filter((m) =>
           installedSet.has(m.id),
         )
         const open = openFolders.has(folder.id)

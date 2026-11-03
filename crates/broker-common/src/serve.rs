@@ -8,24 +8,84 @@
 //!    `SO_PEERCRED`, checked before a single byte of the request is read —
 //!    NOT the socket file's permission bits.
 //!
-//! A Windows daemon (named pipe + `GetNamedPipeClientProcessId` for the
-//! equivalent peer check) is deliberately left unimplemented rather than
-//! guessed at — `run_once` works there today via UAC, and the shape of the
-//! peer-authentication step is the one part that must not be written blind.
+//!  - `--pipe <name>` (Windows): the session UAC starts once per run. The
+//!    core creates the pipe and serves only the process it started; the
+//!    broker answers every request on it until POSMA closes.
+//!
+//! An installed Windows helper that needs no prompt at all is not written:
+//! it would be a server any process could knock on, and the check on who
+//! knocks is the part that must not be written without a machine to test it.
 
 use crate::broker::{handle_line, Broker};
 use std::io::{self, BufRead, Write};
 
-/// One request on stdin, one response on stdout, then exit.
+/// One request on stdin, one response on stdout, then exit. Where the
+/// elevation prompt passes no stdin through — macOS's `do shell script` —
+/// the request comes as `--request <json>` instead.
 pub fn run_once<B: Broker + ?Sized>(broker: &B) {
+    let args: Vec<String> = std::env::args().collect();
+    #[cfg(windows)]
+    if let [_, flag, pipe] = &args[..] {
+        if flag == "--pipe" {
+            return serve_pipe(broker, pipe);
+        }
+    }
     let mut input = String::new();
-    let output = match io::stdin().lock().read_line(&mut input) {
+    let read = match &args[..] {
+        [_, flag, request] if flag == "--request" => {
+            input.push_str(request);
+            Ok(input.len())
+        }
+        _ => io::stdin().lock().read_line(&mut input),
+    };
+    let output = match read {
         Ok(0) => crate::result::line(&crate::result::err::<()>("no command received on stdin")),
-        Ok(_) => handle_line(broker, &input),
+        Ok(_) => {
+            let response = handle_line(broker, &input);
+            // pkexec names the account it elevated; the other prompts do not.
+            let caller = std::env::var("PKEXEC_UID")
+                .map(|uid| format!("uid {uid} (pkexec)"))
+                .unwrap_or_else(|_| "jednorazowe uruchomienie".into());
+            crate::audit::record(&caller, &input, &response);
+            response
+        }
         Err(e) => crate::result::line(&crate::result::err::<()>(format!("failed to read stdin: {e}"))),
     };
     println!("{output}");
     io::stdout().flush().ok();
+}
+
+/// The only name the broker opens: a pipe under POSMA's prefix, never a
+/// file — the name is all it is told, and an elevated process told a path
+/// would write its answers there.
+#[cfg(any(windows, test))]
+fn is_session_pipe(name: &str) -> bool {
+    name.strip_prefix(r"\\.\pipe\posma-broker-")
+        .is_some_and(|id| !id.is_empty() && id.chars().all(|c| c.is_ascii_hexdigit()))
+}
+
+#[cfg(windows)]
+fn serve_pipe<B: Broker + ?Sized>(broker: &B, name: &str) {
+    if !is_session_pipe(name) {
+        eprintln!("{name}: to nie jest potok sesji POSMA — odmowa");
+        return;
+    }
+    // Open, never create: the pipe exists because the core made it.
+    let pipe = match std::fs::OpenOptions::new().read(true).write(true).open(name) {
+        Ok(pipe) => pipe,
+        Err(e) => return eprintln!("nie udało się połączyć z {name}: {e}"),
+    };
+    let caller = format!("{} (UAC)", std::env::var("USERNAME").unwrap_or_default());
+    let (mut reader, mut writer) = (io::BufReader::new(&pipe), &pipe);
+    let mut input = String::new();
+    while matches!(reader.read_line(&mut input), Ok(n) if n > 0) {
+        let response = handle_line(broker, &input);
+        crate::audit::record(&caller, &input, &response);
+        if writeln!(writer, "{response}").is_err() {
+            return;
+        }
+        input.clear();
+    }
 }
 
 #[cfg(unix)]
@@ -107,6 +167,7 @@ mod unix_daemon {
             return;
         }
         let response = handle_line(broker, &input);
+        crate::audit::record(&format!("uid {owner_uid} (demon)"), &input, &response);
         let _ = writeln!(writer, "{response}");
     }
 
@@ -139,6 +200,19 @@ mod unix_daemon {
                 std::process::exit(1);
             }
         };
+        // Connecting to a socket takes write permission on it, and bind
+        // under root's usual umask leaves it writable by root alone: the
+        // owner could not reach the daemon installed for them, and every
+        // call fell back to pkexec without a word. The file goes to the
+        // owner and to nobody else — SO_PEERCRED below still decides who is
+        // served, this only lets the right account knock.
+        use std::os::unix::fs::PermissionsExt;
+        let handed_over = std::os::unix::fs::chown(socket_path, Some(owner_uid), None)
+            .and_then(|()| fs::set_permissions(socket_path, fs::Permissions::from_mode(0o600)));
+        if let Err(e) = handed_over {
+            eprintln!("nie udało się przekazać {socket_path} właścicielowi: {e}");
+            std::process::exit(1);
+        }
         eprintln!("posma broker: nasłuchuję na {socket_path}, właściciel uid={owner_uid}");
 
         std::thread::scope(|scope| {
@@ -151,5 +225,61 @@ mod unix_daemon {
                 }
             }
         });
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use std::os::unix::fs::PermissionsExt;
+
+        struct Nothing;
+        impl Broker for Nothing {
+            fn os_name(&self) -> &'static str {
+                "test"
+            }
+        }
+
+        /// A daemon started for an account has to answer that account. It
+        /// did not: the socket was left writable by root only, the owner's
+        /// connect was refused, and the app quietly used pkexec instead.
+        #[test]
+        fn the_owner_can_reach_the_daemon() {
+            let dir = std::env::temp_dir().join(format!("posma-daemon-test-{}", std::process::id()));
+            fs::create_dir_all(&dir).expect("scratch dir");
+            let socket = dir.join("broker.sock");
+            let uid_file = dir.join("owner-uid");
+            fs::write(&uid_file, unsafe { libc::getuid() }.to_string()).expect("uid file");
+
+            let (socket_path, uid_path) = (socket.to_string_lossy().into_owned(), uid_file.to_string_lossy().into_owned());
+            // Serves until the test process exits; there is nothing to join.
+            std::thread::spawn(move || run_daemon(&Nothing, &socket_path, &uid_path));
+
+            let mut stream = (0..200)
+                .find_map(|_| {
+                    std::thread::sleep(std::time::Duration::from_millis(10));
+                    UnixStream::connect(&socket).ok()
+                })
+                .expect("owner connects");
+            writeln!(stream, r#"{{"op":"capabilities"}}"#).expect("request");
+            let mut answer = String::new();
+            io::BufReader::new(stream).read_line(&mut answer).expect("response");
+
+            assert!(answer.contains(r#""os":"test""#), "{answer}");
+            assert_eq!(fs::metadata(&socket).expect("socket").permissions().mode() & 0o777, 0o600);
+            let _ = fs::remove_dir_all(&dir);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    /// The broker is told a name and nothing else, so nothing but a session
+    /// pipe may pass — above all no file path it would write answers into.
+    #[test]
+    fn only_a_session_pipe_is_opened() {
+        assert!(super::is_session_pipe(r"\\.\pipe\posma-broker-0a1b2c3d4e5f60718293a4b5c6d7e8f9"));
+        for name in [r"\\.\pipe\posma-broker-", r"\\.\pipe\posma-broker-..\\x", r"\\.\pipe\other-0a1b", r"C:\Windows\win.ini", r"\\.\pipe\posma-broker-0a 1b"] {
+            assert!(!super::is_session_pipe(name), "{name}");
+        }
     }
 }

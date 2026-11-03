@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { currentBlacklist } from '../../state/settings'
-import { invoke } from '@tauri-apps/api/core'
 import { Icon } from '../../components/Icons'
 import { formatBytes } from './TempCleanView'
+import { confirmAction } from '../../components/confirm'
+import { callModule } from '../../data/callModule'
 
 interface Group {
   hash: string
@@ -38,8 +39,6 @@ interface VersionScanData {
   groups: VersionGroup[]
   total_bytes: number
 }
-
-type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: string }
 
 type Phase =
   | { kind: 'idle' }
@@ -88,7 +87,7 @@ export function DuplicatesView() {
   async function runScan() {
     setPhase({ kind: 'scanning' })
     try {
-      const res = await invoke<ApiResponse<ScanData>>('scan_duplicates', { blacklist: currentBlacklist() })
+      const res = await callModule<ScanData>('duplicates', { cmd: 'scan', blacklist: currentBlacklist() })
       if (!res.ok) {
         setPhase({ kind: 'error', message: res.error })
         return
@@ -119,12 +118,12 @@ export function DuplicatesView() {
       const g = scan.groups.find((gr) => gr.paths.includes(p))
       return acc + (g?.size_bytes ?? 0)
     }, 0)
-    if (!window.confirm(`Usunąć ${paths.length} plików (${formatBytes(bytes)}), zachowując zaznaczone kopie z każdej grupy? Tej operacji nie można cofnąć.`)) {
+    if (!(await confirmAction(`Usunąć ${paths.length} plików (${formatBytes(bytes)}), zachowując zaznaczone kopie z każdej grupy? Tej operacji nie można cofnąć.`))) {
       return
     }
     setPhase({ kind: 'cleaning', scan })
     try {
-      const res = await invoke<ApiResponse<CleanData>>('clean_duplicates', { paths })
+      const res = await callModule<CleanData>('duplicates', { cmd: 'clean', paths })
       if (!res.ok) {
         setPhase({ kind: 'error', message: res.error })
         return
@@ -161,7 +160,7 @@ export function DuplicatesView() {
   async function runVerScan() {
     setVerPhase({ kind: 'scanning' })
     try {
-      const res = await invoke<ApiResponse<VersionScanData>>('scan_duplicate_versions', { blacklist: currentBlacklist() })
+      const res = await callModule<VersionScanData>('duplicates', { cmd: 'scan_versions', blacklist: currentBlacklist() })
       if (!res.ok) {
         setVerPhase({ kind: 'error', message: res.error })
         return
@@ -194,12 +193,12 @@ export function DuplicatesView() {
       const item = g?.items.find((i) => i.path === p)
       return acc + (item?.size_bytes ?? 0)
     }, 0)
-    if (!window.confirm(`Usunąć ${paths.length} starszych wersji (${formatBytes(bytes)}), zachowując zaznaczone wersje z każdej grupy? Tej operacji nie można cofnąć.`)) {
+    if (!(await confirmAction(`Usunąć ${paths.length} starszych wersji (${formatBytes(bytes)}), zachowując zaznaczone wersje z każdej grupy? Tej operacji nie można cofnąć.`))) {
       return
     }
     setVerPhase({ kind: 'cleaning', scan })
     try {
-      const res = await invoke<ApiResponse<CleanData>>('clean_duplicate_versions', { paths })
+      const res = await callModule<CleanData>('duplicates', { cmd: 'clean_versions', paths })
       if (!res.ok) {
         setVerPhase({ kind: 'error', message: res.error })
         return

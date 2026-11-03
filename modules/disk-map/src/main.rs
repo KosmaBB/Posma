@@ -85,7 +85,8 @@ fn dir_size(path: &Path, filter: &Filter) -> u64 {
     let mut total = 0u64;
     let Ok(read) = fs::read_dir(path) else { return 0 };
     for entry in read.flatten() {
-        if !filter.allows(&entry.path()) {
+        // `path` itself already passed — both callers check it first.
+        if !filter.allows_child(&entry.path()) {
             continue;
         }
         let Ok(meta) = entry.metadata() else { continue }; // lstat — does not follow symlinks

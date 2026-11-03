@@ -5,6 +5,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Os } from '../data/modules'
+import { loadLinuxProfile, saveLinuxProfile as storeLinuxProfile, type LinuxProfile, type ProfileOverrides } from '../data/linuxProfile'
 
 export type AccessLevel = 'full' | 'selective'
 
@@ -65,6 +66,22 @@ export function useAppState() {
   const [onboarding, setOnboarding] = useState<OnboardingResult | null>(loadOnboarding)
   const [view, setView] = useState<View>({ kind: 'dashboard' })
   const [moduleOrder, setModuleOrder] = useState<Record<string, string[]>>(loadOrder)
+  // Detected afresh each start rather than stored: a different session
+  // (GNOME today, Plasma tomorrow) has to show up without a reset.
+  const [linuxProfile, setLinuxProfile] = useState<LinuxProfile | null>(null)
+
+  useEffect(() => {
+    if (detectOs() !== 'linux') return
+    loadLinuxProfile()
+      .then(setLinuxProfile)
+      .catch(() => {
+        /* modules keep their generic names and still explain themselves */
+      })
+  }, [])
+
+  const saveLinuxProfile = useCallback(async (overrides: ProfileOverrides) => {
+    setLinuxProfile(await storeLinuxProfile(overrides))
+  }, [])
 
   useEffect(() => {
     localStorage.setItem(ORDER_KEY, JSON.stringify(moduleOrder))
@@ -114,6 +131,8 @@ export function useAppState() {
     installedSet,
     moduleOrder,
     setFolderOrder,
+    linuxProfile,
+    saveLinuxProfile,
   }
 }
 

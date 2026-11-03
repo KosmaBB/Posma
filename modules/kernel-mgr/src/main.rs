@@ -8,22 +8,16 @@
 //! operation in this project so far (Access_plan.md marks this module
 //! "critical" risk), so it gets the most defense-in-depth, not less.
 //!
-//! Only `linux-image-*` packages with a REAL corresponding
-//! /boot/vmlinuz-<version> file are considered at all. This matters in
-//! practice: a system typically carries far more `linux-image-*` dpkg
-//! records than actual kernels, the surplus being stale bookkeeping from
-//! past updates (no files, no disk space) plus meta-packages such as
-//! linux-image-generic-hwe-24.04 that don't correspond to one specific
-//! version. Both are silently excluded rather than shown as confusing,
-//! unactionable entries.
+//! How kernels are packaged differs by distribution, and so does whether
+//! old ones accumulate at all — the shared `distro` crate knows both, and
+//! the broker asks it the same questions as root. Where removal makes no
+//! sense (one version per package on Arch, automatic purging on openSUSE)
+//! the list is still shown, with the reason instead of a remove button.
 //!
 //! Protocol (one JSON line on stdin -> one JSON line on stdout):
 //!   {"cmd":"scan"}
 
-use std::fs;
 use std::io::{self, BufRead, Write};
-use std::path::Path;
-use std::process::Command;
 
 use serde::{Deserialize, Serialize};
 
@@ -47,6 +41,8 @@ struct ScanResult {
     running: String,
     latest: String,
     kernels: Vec<KernelEntry>,
+    /// Why nothing here can be removed, where that is the case.
+    removal_unavailable: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -60,94 +56,26 @@ fn ok<T: Serialize>(data: T) -> Response<T> {
     Response::Ok { ok: true, data }
 }
 
-fn running_version() -> String {
-    Command::new("uname")
-        .arg("-r")
-        .output()
-        .ok()
-        .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
-        .unwrap_or_default()
-}
-
-/// The `/boot/vmlinuz` symlink always points at the most recently
-/// installed kernel (Debian/Ubuntu convention; `vmlinuz.old` points at the
-/// previous one) — this is authoritative regardless of what GRUB's actual
-/// default boot entry is set to.
-fn latest_version() -> String {
-    fs::read_link("/boot/vmlinuz")
-        .ok()
-        .and_then(|p| p.file_name().map(|f| f.to_string_lossy().into_owned()))
-        .and_then(|name| name.strip_prefix("vmlinuz-").map(|s| s.to_string()))
-        .unwrap_or_default()
-}
-
-fn dir_size(path: &Path) -> u64 {
-    let mut size = 0u64;
-    let Ok(read) = fs::read_dir(path) else { return 0 };
-    for entry in read.flatten() {
-        let Ok(meta) = entry.metadata() else { continue };
-        if meta.is_dir() {
-            size += dir_size(&entry.path());
-        } else if meta.is_file() {
-            size += meta.len();
-        }
-    }
-    size
-}
-
-/// Same dpkg-status parsing style as modules/uninstaller's `dpkg_installed`,
-/// scoped down to just package name + install status since that's all
-/// this needs.
-fn installed_kernel_packages() -> Vec<String> {
-    let mut out = Vec::new();
-    let Ok(content) = fs::read_to_string("/var/lib/dpkg/status") else { return out };
-    for stanza in content.split("\n\n") {
-        let mut name = None;
-        let mut status = None;
-        for line in stanza.lines() {
-            if let Some(v) = line.strip_prefix("Package: ") {
-                name = Some(v.trim().to_string());
-            } else if let Some(v) = line.strip_prefix("Status: ") {
-                status = Some(v.trim().to_string());
-            }
-        }
-        let (Some(name), Some(status)) = (name, status) else { continue };
-        if !status.contains("install ok installed") {
-            continue;
-        }
-        if name.starts_with("linux-image-") {
-            out.push(name);
-        }
-    }
-    out
-}
-
 fn scan() -> ScanResult {
-    let running = running_version();
-    let latest = latest_version();
-    let mut kernels = Vec::new();
+    let running = distro::running_kernel().unwrap_or_default();
+    let (found, removal_unavailable) = match distro::manager() {
+        Ok(m) => (distro::kernels(m), m.kernel_removal().err().map(String::from)),
+        Err(why) => (Vec::new(), Some(why)),
+    };
+    // Sorted newest first, so the first one flagged is the highest version.
+    let latest = found.iter().find(|k| k.is_latest).map(|k| k.version.clone()).unwrap_or_default();
+    let kernels = found
+        .into_iter()
+        .map(|k| KernelEntry {
+            is_running: k.version == running,
+            is_latest: k.is_latest,
+            package: k.package,
+            version: k.version,
+            size_bytes: k.size_bytes,
+        })
+        .collect();
 
-    for package in installed_kernel_packages() {
-        let Some(version) = package.strip_prefix("linux-image-") else { continue };
-        let vmlinuz = Path::new("/boot").join(format!("vmlinuz-{version}"));
-        if !vmlinuz.is_file() {
-            continue;
-        }
-        let mut size_bytes = fs::metadata(&vmlinuz).map(|m| m.len()).unwrap_or(0);
-        size_bytes += fs::metadata(Path::new("/boot").join(format!("initrd.img-{version}"))).map(|m| m.len()).unwrap_or(0);
-        size_bytes += dir_size(&Path::new("/lib/modules").join(version));
-
-        kernels.push(KernelEntry {
-            package: package.clone(),
-            version: version.to_string(),
-            size_bytes,
-            is_running: version == running,
-            is_latest: version == latest,
-        });
-    }
-    kernels.sort_by_key(|e| std::cmp::Reverse(e.size_bytes));
-
-    ScanResult { running, latest, kernels }
+    ScanResult { running, latest, kernels, removal_unavailable }
 }
 
 fn main() {

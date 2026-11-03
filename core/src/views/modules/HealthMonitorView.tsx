@@ -4,6 +4,8 @@ import { Preparing } from '../../components/Preparing'
 import { invoke } from '@tauri-apps/api/core'
 import { formatBytes } from './TempCleanView'
 import { MissingDependency } from '../../components/MissingDependency'
+import { confirmAction } from '../../components/confirm'
+import { callModule } from '../../data/callModule'
 
 interface ProcessInfo {
   pid: number
@@ -296,8 +298,9 @@ export function HealthMonitorView({ app }: { app: AppState }) {
   const latest = samples.length > 0 ? samples[samples.length - 1] : undefined
 
   async function poll() {
+    if (document.hidden) return
     try {
-      const res = await invoke<ApiResponse<Snapshot>>('health_snapshot')
+      const res = await callModule<Snapshot>('health-monitor', { cmd: 'snapshot' })
       if (!res.ok) {
         setError(res.error)
         return
@@ -325,7 +328,7 @@ export function HealthMonitorView({ app }: { app: AppState }) {
   useEffect(() => {
     poll()
     timerRef.current = window.setInterval(poll, POLL_MS)
-    invoke<ApiResponse<BlockDevice[]>>('health_list_disks').then((res) => {
+    callModule<BlockDevice[]>('health-monitor', { cmd: 'list_disks' }).then((res) => {
       if (res.ok) setDisks(res.data)
     })
     return () => {
@@ -364,10 +367,10 @@ export function HealthMonitorView({ app }: { app: AppState }) {
   const pointed = hover !== null ? samples[hover] : null
 
   async function killProcess(pid: number, name: string) {
-    if (!window.confirm(`Zakończyć proces „${name}" (PID ${pid})? Niezapisane dane w nim przepadną.`)) return
+    if (!(await confirmAction(`Zakończyć proces „${name}" (PID ${pid})? Niezapisane dane w nim przepadną.`))) return
     setKillResult(null)
     try {
-      const res = await invoke<ApiResponse<{ success: boolean; message: string }>>('health_kill', { pid })
+      const res = await callModule<{ success: boolean; message: string }>('health-monitor', { cmd: 'kill', pid })
       setKillResult(res.ok ? res.data.message : res.error)
     } catch (e) {
       setKillResult(String(e))
@@ -504,7 +507,7 @@ export function HealthMonitorView({ app }: { app: AppState }) {
                     <span className="cr-size">sprawdzanie...</span>
                   ) : s && s.available ? (
                     <>
-                      <span className={`chip ${s.passed ? 'low' : 'critical'}`}>{s.passed ? 'Sprawne' : 'Błędy'}</span>
+                      {s.passed != null && <span className={`chip ${s.passed ? 'low' : 'critical'}`}>{s.passed ? 'Sprawne' : 'Błędy'}</span>}
                       {s.temperature_c != null && <span className="cr-size mono">{s.temperature_c}°C</span>}
                       {s.power_on_hours != null && <span className="cr-files">{s.power_on_hours} godz. pracy</span>}
                     </>

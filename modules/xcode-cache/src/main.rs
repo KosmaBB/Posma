@@ -210,7 +210,7 @@ fn scan() -> ScanResult {
                     size_bytes: size,
                 });
             }
-            entries.sort_by(|a, b| b.size_bytes.cmp(&a.size_bytes));
+            entries.sort_by_key(|e| std::cmp::Reverse(e.size_bytes));
         } else {
             entries.push(Entry {
                 name: loc.name.into(),

@@ -59,6 +59,8 @@ const NOISE_NAMES: &[&str] = &[
     "node_modules", "target", ".cache", "__pycache__", ".venv", "venv",
     "build", "dist", "out", ".gradle", ".idea", ".next", ".nuxt", ".cxx",
     "Pods", "DerivedData", "vendor", ".dart_tool",
+    // every Windows program's own data, as ~/.cache and ~/.local are elsewhere
+    "AppData",
     // games — large, replaceable, and never what someone means by "my files"
     "steamapps", "SteamLibrary", "Steam", "compatdata", "shadercache",
     "Epic Games", "GOG Galaxy", "Battle.net", "Riot Games", "Origin Games",
@@ -96,6 +98,19 @@ impl Filter {
             return Verdict::Noise;
         }
         Verdict::Allowed
+    }
+
+    /// `allows` for a path whose parent this filter already allowed — what a
+    /// walk that skips refused directories asks of every entry below its
+    /// root. Every rule holds for all that lies below what it matches, so
+    /// only the last component can change the answer; checking just that
+    /// keeps a walk of a large home from comparing every ancestor again.
+    pub fn allows_child(&self, path: &Path) -> bool {
+        let named = |names: &[&str]| name_of(path).is_some_and(|n| names.iter().any(|b| b.eq_ignore_ascii_case(n)));
+        if self.is_blacklisted(path) || BLOCKED_PREFIXES.iter().any(|p| path == Path::new(p)) || named(BLOCKED_NAMES) {
+            return false;
+        }
+        self.include_noise || !named(NOISE_NAMES)
     }
 
     /// Whether a scan should descend into, or report, this path.
@@ -153,6 +168,30 @@ mod tests {
 
     fn f() -> Filter {
         Filter::new(vec!["/home/k/Zdjęcia firmowe".into()])
+    }
+
+    /// Below a directory `allows` let through, the shortcut a walk takes
+    /// must answer exactly as the full check does.
+    #[test]
+    fn a_child_is_judged_as_the_whole_path_would_be() {
+        for filter in [f(), Filter::including_noise(vec!["/home/k/Zdjęcia firmowe".into()])] {
+            for path in [
+                "/home/k/Dokumenty/list.odt",
+                "/home/k/Zdjęcia firmowe",
+                "/home/k/projekt/node_modules",
+                "/home/k/projekt/Node_Modules",
+                "/home/k/gry/steamapps",
+                "/mnt/win/Windows",
+                "/home/k/boot",
+                "/proc",
+                "/home/k/.cache",
+            ] {
+                let path = Path::new(path);
+                if path.parent().is_some_and(|parent| filter.allows(parent)) {
+                    assert_eq!(filter.allows_child(path), filter.allows(path), "{}", path.display());
+                }
+            }
+        }
     }
 
     #[test]

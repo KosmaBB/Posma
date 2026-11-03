@@ -18,11 +18,31 @@
 //!    itself, so a check written without an inequality lets a request
 //!    naming a whitelist root take the entire tree instead of one entry
 //!    inside it.
+//!  - `windows_dir` — `%SystemRoot%` and `%ProgramData%` are the asking
+//!    account's to set, so a root process that read them would go where
+//!    that account pointed it.
 
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+/// The Windows directory as the system reports it, never from the
+/// environment. None off Windows, where CI still builds every broker.
+#[cfg(windows)]
+pub fn windows_dir() -> Option<PathBuf> {
+    use std::os::windows::ffi::OsStringExt;
+    use windows_sys::Win32::System::SystemInformation::GetSystemWindowsDirectoryW;
+    let mut buf = [0u16; 260];
+    // SAFETY: the length passed is the buffer's own.
+    let n = unsafe { GetSystemWindowsDirectoryW(buf.as_mut_ptr(), buf.len() as u32) } as usize;
+    (n > 0 && n < buf.len()).then(|| PathBuf::from(std::ffi::OsString::from_wide(&buf[..n])))
+}
+
+#[cfg(not(windows))]
+pub fn windows_dir() -> Option<PathBuf> {
+    None
+}
 
 /// Package/app identifier charset accepted by every backend's own naming
 /// rules. Crucially rejects a leading `-` (flag smuggling) and anything

@@ -1,0 +1,9 @@
+{
+  "id": "winget-ui",
+  "name": "Winget",
+  "description": "Lists the applications winget can update (winget upgrade, unprivileged) and updates the picked ones through the broker, elevated, so a machine-wide installer does not ask for consent again. Reads winget's own table; an id winget shortened to fit it cannot be updated from here and says so.",
+  "version": "0.1.0",
+  "platforms": ["windows"],
+  "binary": "winget-ui",
+  "capabilities": ["pkg"]
+}

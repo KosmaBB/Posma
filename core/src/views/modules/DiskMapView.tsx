@@ -3,11 +3,12 @@ import { revealItemInDir } from '@tauri-apps/plugin-opener'
 import type { AppState } from '../../state/appState'
 import { currentBlacklist } from '../../state/settings'
 import { Preparing } from '../../components/Preparing'
-import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { Icon } from '../../components/Icons'
 import { formatBytes } from './TempCleanView'
 import { squarify, type TreemapRect } from './diskmapTreemap'
+import { confirmAction } from '../../components/confirm'
+import { callModule } from '../../data/callModule'
 
 interface Entry {
   name: string
@@ -24,7 +25,6 @@ interface ScanData {
   errors: string[]
 }
 
-type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: string }
 type ViewMode = 'bars' | 'treemap' | 'rings'
 
 const VIEW_MODE_KEY = 'posma.diskmap.viewMode'
@@ -51,7 +51,7 @@ export function DiskMapView({ app }: { app: AppState }) {
     setLoading(true)
     setError(null)
     try {
-      const res = await invoke<ApiResponse<ScanData>>('scan_disk_map', { path: path ?? null, blacklist: currentBlacklist() })
+      const res = await callModule<ScanData>('disk-map', { cmd: 'scan', path: path ?? null, blacklist: currentBlacklist() })
       if (!res.ok) {
         setError(res.error)
         return
@@ -98,18 +98,19 @@ export function DiskMapView({ app }: { app: AppState }) {
 
   async function deleteEntry(path: string, name: string) {
     if (
-      !window.confirm(
+      !(await confirmAction(
         `Usunąć „${name}" bezpowrotnie?\n\n${path}\n\nTo nie trafia do kosza — folderu nie da się odzyskać.`,
-      )
+      ))
     ) {
       return
     }
     setActionResult(null)
     try {
-      const res = await invoke<ApiResponse<{ success: boolean; message: string; freed_bytes: number }>>(
-        'delete_disk_map_entry',
-        { path, blacklist: currentBlacklist() },
-      )
+      const res = await callModule<{ success: boolean; message: string; freed_bytes: number }>('disk-map', {
+        cmd: 'delete',
+        path,
+        blacklist: currentBlacklist(),
+      })
       if (res.ok) {
         setActionResult(
           res.data.success

@@ -1,0 +1,9 @@
+{
+  "id": "time-machine",
+  "name": "Time Machine",
+  "description": "Lists the local Time Machine snapshots macOS keeps on the startup disk between backups (tmutil, unprivileged). Deleting them goes through the broker, which lists them again as root and is told only whether to keep the newest.",
+  "version": "0.1.0",
+  "platforms": ["macos"],
+  "binary": "time-machine",
+  "capabilities": ["fs-system"]
+}

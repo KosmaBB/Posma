@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { Icon } from '../../components/Icons'
 import { formatBytes } from './TempCleanView'
+import { callModule } from '../../data/callModule'
 
 interface MetaField {
   id: string
@@ -33,8 +33,6 @@ interface CleanResult {
   total_freed: number
 }
 
-type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: string }
-
 type Phase =
   | { kind: 'idle' }
   | { kind: 'inspecting' }
@@ -57,7 +55,7 @@ export function MetadataView() {
   async function inspectPaths(paths: string[]) {
     setPhase({ kind: 'inspecting' })
     try {
-      const res = await invoke<ApiResponse<FileInfo[]>>('inspect_metadata', { paths })
+      const res = await callModule<FileInfo[]>('metadata', { cmd: 'inspect', paths })
       if (!res.ok) {
         setPhase({ kind: 'error', message: res.error })
         return
@@ -137,7 +135,7 @@ export function MetadataView() {
     setPhase({ kind: 'cleaning' })
     try {
       const cleanItems = targets.map((f) => ({ path: f.path, keep_fields: Array.from(keepFields.get(f.path) ?? []) }))
-      const res = await invoke<ApiResponse<CleanResult>>('clean_metadata', { items: cleanItems })
+      const res = await callModule<CleanResult>('metadata', { cmd: 'clean', items: cleanItems })
       if (!res.ok) {
         setPhase({ kind: 'error', message: res.error })
         return

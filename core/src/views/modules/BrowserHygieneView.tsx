@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
 import { Icon } from '../../components/Icons'
 import { formatBytes } from './TempCleanView'
+import { confirmAction } from '../../components/confirm'
+import { callModule } from '../../data/callModule'
 
 interface Entry {
   label: string
@@ -29,8 +30,6 @@ interface CleanData {
   errors: string[]
 }
 
-type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: string }
-
 type Phase =
   | { kind: 'idle' }
   | { kind: 'scanning' }
@@ -53,7 +52,7 @@ export function BrowserHygieneView() {
   async function runScan() {
     setPhase({ kind: 'scanning' })
     try {
-      const res = await invoke<ApiResponse<ScanData>>('scan_browser_hygiene')
+      const res = await callModule<ScanData>('browser-hygiene', { cmd: 'scan' })
       if (!res.ok) {
         setPhase({ kind: 'error', message: res.error })
         return
@@ -73,12 +72,12 @@ export function BrowserHygieneView() {
     const paths = [...checked]
     if (paths.length === 0) return
     const total = selectedBytes(scan)
-    if (!window.confirm(`Usunąć ${paths.length} pozycji (${formatBytes(total)})? Tej operacji nie można cofnąć.`)) {
+    if (!(await confirmAction(`Usunąć ${paths.length} pozycji (${formatBytes(total)})? Tej operacji nie można cofnąć.`))) {
       return
     }
     setPhase({ kind: 'cleaning', scan })
     try {
-      const res = await invoke<ApiResponse<CleanData>>('clean_browser_hygiene', { paths })
+      const res = await callModule<CleanData>('browser-hygiene', { cmd: 'clean', paths })
       if (!res.ok) {
         setPhase({ kind: 'error', message: res.error })
         return

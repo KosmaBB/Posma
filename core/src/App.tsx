@@ -8,7 +8,13 @@ function App() {
   const settings = useSettings()
 
   if (!app.onboarding) {
-    return <Onboarding onDone={app.completeOnboarding} />
+    return (
+      <Onboarding
+        onDone={app.completeOnboarding}
+        linuxProfile={app.linuxProfile}
+        onProfileChange={app.saveLinuxProfile}
+      />
+    )
   }
 
   return <Shell app={app} settings={settings} />

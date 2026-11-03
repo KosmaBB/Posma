@@ -5,9 +5,38 @@
 - [Rust toolchain](https://rustup.rs) (stable)
 - Node.js 20+
 - [Tauri system dependencies](https://tauri.app/start/prerequisites/) for
-  your OS — on Debian/Ubuntu that's `libwebkit2gtk-4.1-dev`,
-  `libgtk-3-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`,
-  `build-essential`, `curl`, `wget`, `file`, `libssl-dev`
+  your OS. On Linux the package names differ by family:
+
+  ```bash
+  # Debian, Ubuntu, Mint, Pop!_OS, Zorin, elementary, Kali, MX
+  sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev \
+      librsvg2-dev build-essential curl wget file libssl-dev libxdo-dev
+
+  # Arch, CachyOS, Manjaro, EndeavourOS, Garuda
+  sudo pacman -S --needed webkit2gtk-4.1 base-devel curl wget file openssl \
+      appmenu-gtk-module libappindicator-gtk3 librsvg xdotool
+
+  # Fedora, Nobara
+  sudo dnf install webkit2gtk4.1-devel openssl-devel curl wget file \
+      libappindicator-gtk3-devel librsvg2-devel gcc gcc-c++ make
+
+  # RHEL 10, AlmaLinux 10, Rocky 10: the same, after enabling EPEL,
+  # which is where WebKitGTK lives there
+  sudo dnf install epel-release && sudo dnf config-manager --set-enabled crb
+
+  # openSUSE — by capability, because the package has been renamed
+  # (webkit2gtk3-devel, now webkitgtk3-devel)
+  sudo zypper install 'pkgconfig(webkit2gtk-4.1)' libopenssl-devel curl wget file \
+      libappindicator3-1 librsvg-devel gcc gcc-c++ make
+  ```
+
+  RHEL 9 and its rebuilds cannot build the app at all: they package only
+  the older WebKitGTK 4.0, and Tauri needs 4.1.
+
+  These lists are checked, not remembered: `scripts/distro-check.sh --build`
+  installs exactly them in a container of each family and compiles the
+  workspace there. [Linux distributions](distributions.md) has the result
+  per distribution.
 
 ## First build
 
@@ -54,11 +83,13 @@ core/
   src-tauri/      Rust backend, tauri.conf.json, capabilities/
 crates/
   broker-common/  Shared privileged-operation catalog, guards, dispatch
+  distro/         Which Linux this is — package manager, kernels, GRUB layout
 modules/
   <feature>/      One crate per module
   *-broker/       Per-OS privileged brokers
 scripts/
   sync-sidecars.sh
+  distro-check.sh
 ```
 
 ## Common tasks
@@ -136,6 +167,22 @@ one carries no Time Machine module. Which sidecars the bundle expects comes
 from `tauri.<platform>.conf.json`, which replaces the base list rather than
 adding to it.
 
+A release build (`sync-sidecars.sh release`, `tauri build`) uses the
+workspace's `[profile.release]`: whole-program optimisation and stripped
+symbols make every binary about a third smaller. The price is a slower
+build, and a panic that names no functions in its backtrace — reproduce
+those with a debug build.
+
+### Another Linux distribution
+
+The source builds on each supported family with that family's own
+packages — see [Requirements](#requirements). A *binary* is less portable
+than the source: built on Ubuntu 24.04 it needs glibc 2.39 and will not
+start on Debian 12, Ubuntu 22.04 or RHEL 9. A build travels to newer
+systems, never to older ones, so anything meant to be handed out is built
+on the oldest system it has to support. [Linux distributions](distributions.md)
+has the details.
+
 ### Both Mac architectures
 
 A plain sync builds for the host architecture only, which is what `tauri
@@ -175,6 +222,16 @@ Its limit is worth knowing: it verifies our Rust, not crates that compile C.
 needs a macOS C toolchain. That is a cross-compilation limit, not a
 portability defect — it builds on a real Mac.
 
+The same works for Windows with `rustup target add x86_64-pc-windows-msvc`;
+the Linux and macOS brokers are a Unix-socket daemon at heart and are never
+built for it. `cargo check --target x86_64-pc-windows-msvc -p core` works
+too, once `core/src-tauri/binaries/` holds a file for each Windows sidecar —
+an empty one will do, the build only checks that it exists. What a type
+check cannot catch, CI does: it builds and tests every module on Apple
+silicon, on Intel and on Windows — on Windows also the elevated broker
+session, end to end — and on request makes the universal macOS bundle
+described above.
+
 ## Testing rules
 
 Test rejection paths against real binaries: malformed requests, paths outside
@@ -184,6 +241,20 @@ whitelists, names that could be read as flags.
 package, vacuuming logs, writing boot configuration — verify those by reading
 the code and by testing the refusals, or use a disposable VM. This is a
 project rule, not a suggestion; ignoring it has already cost real data once.
+
+For package and kernel operations the disposable machine exists:
+`scripts/distro-check.sh` starts a container of each supported distribution
+and runs the success paths there — a package removed, orphans swept, a
+cache emptied, an old kernel taken out — against that distribution's real
+package manager. Run it after changing anything that calls one:
+
+```bash
+rustup target add x86_64-unknown-linux-musl   # once
+bash scripts/distro-check.sh --kernels --grub
+```
+
+What it cannot reach is listed in [Linux distributions](distributions.md):
+a real boot through a rebuilt GRUB menu still needs a VM.
 
 ## Environment notes
 
@@ -198,3 +269,17 @@ a normal terminal outside the editor.
 Also: a dev-profile build honours `devUrl` from `tauri.conf.json`, so running
 the compiled binary directly without the Vite dev server shows
 "Could not connect to localhost". Use `npm --prefix core run tauri dev`.
+
+**"Could not create GBM EGL display: EGL_NOT_INITIALIZED. Aborting..."**
+is WebKitGTK's DMA-BUF renderer failing to reach the GPU, and it takes the
+whole process down. It happened on this project's own machine: an NVIDIA
+driver update had installed new libraries while the old kernel module was
+still loaded, and `nvidia-smi` reported a version mismatch until a reboot.
+The same failure is common under NVIDIA generally and in virtual machines.
+
+The app now sets `WEBKIT_DISABLE_DMABUF_RENDERER=1` for itself on Linux
+before anything starts, which takes the rendering path that always works.
+An explicit value is respected — `WEBKIT_DISABLE_DMABUF_RENDERER=0` turns
+the DMA-BUF renderer back on. If a driver update is waiting for a reboot,
+the reboot is still worth doing: other programs using the GPU are affected
+too.

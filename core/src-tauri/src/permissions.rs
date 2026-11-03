@@ -2,9 +2,11 @@
 //! capability, persisted to `permissions.json` in the app's data dir.
 //!
 //! `Elevation::None` is granted on request — there is nothing to ask. The
-//! pkexec prompt and any real failure happen when the operation runs, not
-//! at grant time. Platforms without a broker return "not implemented"
-//! rather than reaching for a per-module shortcut.
+//! system's own prompt (pkexec, macOS's administrator prompt) and any real
+//! failure happen when the operation runs, not at grant time; so does the
+//! refusal of a system whose broker cannot be raised yet (Windows). Full
+//! Disk Access is the exception: macOS alone grants it, so it is asked of
+//! macOS rather than recorded here.
 //!
 //! Whether a capability is *needed* is not tracked here: that depends on
 //! which modules are installed, which the interface knows and Rust does
@@ -18,6 +20,13 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 
 use crate::capabilities::{self, CapabilityId, Elevation};
+
+/// Whether macOS has given this app Full Disk Access. The system's own
+/// permission database opens only with it, which makes opening it the test.
+/// Nothing else has such a grant, so elsewhere it is simply there.
+pub fn full_disk_access() -> bool {
+    !cfg!(target_os = "macos") || fs::File::open("/Library/Application Support/com.apple.TCC/TCC.db").is_ok()
+}
 
 /// Which bargain the user struck at onboarding (Access_plan.md §5).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -41,14 +50,6 @@ pub enum PermissionStatus {
     Granted,
     GrantedSession,
     Denied,
-}
-
-#[derive(Serialize)]
-pub struct PermissionEntry {
-    pub id: CapabilityId,
-    pub elevation: Elevation,
-    pub manual_only: bool,
-    pub status: Option<PermissionStatus>,
 }
 
 /// Only `Granted`/`Denied` are ever written here — `GrantedSession` is a
@@ -96,24 +97,22 @@ impl PermissionRegistry {
         }
     }
 
-    pub async fn snapshot(&self) -> Vec<PermissionEntry> {
-        let state = self.state.lock().await;
-        capabilities::capabilities()
-            .iter()
-            .map(|def| PermissionEntry {
-                id: def.id,
-                elevation: def.elevation,
-                manual_only: def.manual_only,
-                status: state.get(&def.id).copied(),
-            })
-            .collect()
-    }
-
     /// Grants `capability` if it needs no elevation, or if a broker
     /// already granted it (not possible yet — see module doc comment).
     /// Returns the resulting status, or an error naming exactly what's
     /// missing rather than silently doing nothing.
     pub async fn request(&self, capability: CapabilityId) -> Result<PermissionStatus, String> {
+        // Granted by the user in System Settings and by nothing else, so
+        // consent here would change nothing: the answer is what macOS says.
+        if capability == CapabilityId::Fda {
+            return if full_disk_access() {
+                Ok(PermissionStatus::Granted)
+            } else {
+                Err("Pełny dostęp do dysku nadaje się w Ustawieniach systemowych → Prywatność i ochrona → \
+                     Pełny dostęp do dysku, zaznaczając POSMA. Żaden program nie może zrobić tego sam."
+                    .into())
+            };
+        }
         let level = *self.access_level.lock().await;
         let mut state = self.state.lock().await;
         if let Some(status @ (PermissionStatus::Granted | PermissionStatus::GrantedSession)) =
@@ -133,12 +132,6 @@ impl PermissionRegistry {
             return Ok(PermissionStatus::Granted);
         }
 
-        if !cfg!(target_os = "linux") {
-            return Err(format!(
-                "{capability:?} wymaga podniesienia uprawnień — broker jest na razie zaimplementowany tylko dla Linuksa (Access_plan.md §6 krok 3)"
-            ));
-        }
-
         // Where the two access levels actually differ. Full access was
         // consented to in bulk with the whole list visible, so it is
         // recorded and survives a restart. Selective consent was given for
@@ -150,13 +143,6 @@ impl PermissionRegistry {
         state.insert(capability, status);
         self.persist_with(&state, level);
         Ok(status)
-    }
-
-    pub async fn deny(&self, capability: CapabilityId) {
-        let level = *self.access_level.lock().await;
-        let mut state = self.state.lock().await;
-        state.insert(capability, PermissionStatus::Denied);
-        self.persist_with(&state, level);
     }
 
     pub async fn access_level(&self) -> AccessLevel {

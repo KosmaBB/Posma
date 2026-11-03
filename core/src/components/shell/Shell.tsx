@@ -1,6 +1,6 @@
 import type { AppState } from '../../state/appState'
 import { FolderView } from '../../views/FolderView'
-import { folders, modules } from '../../data/modules'
+import { folders, moduleById } from '../../data/modules'
 import { Sidebar } from './Sidebar'
 import { Dashboard } from '../../views/Dashboard'
 import { ModuleManager } from '../../views/ModuleManager'
@@ -21,7 +21,7 @@ function viewTitle(app: AppState): { title: string; crumb: string } {
     case 'links':
       return { title: 'Linki', crumb: 'posma://links' }
     case 'module': {
-      const mod = modules.find((m) => m.id === view.moduleId)
+      const mod = moduleById(view.moduleId, app.linuxProfile)
       return { title: mod?.name ?? 'Moduł', crumb: `posma://module/${view.moduleId}` }
     }
     case 'folder': {

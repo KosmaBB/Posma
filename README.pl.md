@@ -14,8 +14,9 @@ Ty powinieneś móc *sprawdzić*, co narzędzie, które to robi, faktycznie robi
 Większość programów do konserwacji każe wybrać jedno albo drugie.
 
 > **Status: w budowie.** Linux jest kompletny względem zaplanowanego katalogu
-> modułów; macOS i Windows mają przygotowane szkielety, ale nie są jeszcze
-> zweryfikowane na prawdziwym sprzęcie. Instalatory powstaną później — na
+> modułów. Aplikacja uruchamia się na prawdziwym Macu i na Archu, ale jej
+> moduły nie zostały tam jeszcze sprawdzone po kolei; Windows nie działał
+> jeszcze na prawdziwym sprzęcie. Instalatory powstaną później — na
 > razie jest to repozytorium źródeł.
 >
 > Celowo brak zrzutów ekranu: interfejs wciąż się kształtuje, a pokazanie
@@ -76,11 +77,12 @@ kompiluje: **✅ zbudowany i działa** · **🧪 zbudowany, niezweryfikowany na 
 
 Napisane raz i działające na Windowsie, macOS-ie i Linuksie. Wszystkie są
 zbudowane i zweryfikowane na Linuksie; na macOS-ie i Windowsie mają status
-🧪, dopóki nie zostaną sprawdzone na prawdziwym sprzęcie.
+🧪, dopóki nie zostaną sprawdzone na prawdziwym sprzęcie. Na Macu sama
+aplikacja się uruchamia, co nie mówi jeszcze nic o żadnym module.
 
 | Moduł | Co robi | Status |
 |---|---|---|
-| **Czyszczenie temp** | Skanuje i usuwa foldery tymczasowe systemu oraz aplikacji, pokazując zawartość do usunięcia, zanim cokolwiek zniknie | ✅ Linux · 🧪 macOS/Windows |
+| **Czyszczenie temp** | Skanuje i usuwa foldery tymczasowe systemu oraz aplikacji, pokazując zawartość do usunięcia, zanim cokolwiek zniknie; na Windowsie także systemowy folder Temp i pobrane aktualizacje Windows Update, przez brokera | ✅ Linux · 🧪 macOS/Windows |
 | **Duże pliki** | Przeszukuje katalog domowy i porządkuje pliki od największych, żeby łatwo było odzyskać miejsce | ✅ Linux · 🧪 macOS/Windows |
 | **Duplikaty** | Znajduje pliki identyczne co do bajtu (SHA-256), a osobno wykrywa starsze kopie wersjonowane (`app_1.2` obok `app_1.5`) | ✅ Linux · 🧪 macOS/Windows |
 | **Niszczarka plików** | Kasuje wskazane pliki bezpowrotnie — wielokrotne nadpisanie, zmiana nazwy, usunięcie — i uczciwie informuje o ograniczeniach na dyskach SSD | ✅ Linux · 🧪 macOS/Windows |
@@ -94,13 +96,46 @@ zbudowane i zweryfikowane na Linuksie; na macOS-ie i Windowsie mają status
 
 | Moduł | Co robi | Status |
 |---|---|---|
-| **Cache pakietów** | Czyści cache pobranych pakietów apt, usuwa pakiety osierocone i odzyskuje miejsce po starych rewizjach snapów | ✅ |
+| **Cache pakietów** | Czyści cache pobranych pakietów menedżera systemu (apt, pacman, dnf lub zypper), usuwa pakiety osierocone i odzyskuje miejsce po starych rewizjach snapów | ✅ |
 | **Logi systemd** | Przycina dziennik do zadanego rozmiaru lub wieku, na gotowych ustawieniach zamiast pamiętania flag `journalctl` | ✅ |
-| **Menedżer autostartu** | Pokazuje i przełącza programy startujące z sesją; wpisy dodane samodzielnie można edytować i usuwać, wpisów założonych przez inne aplikacje moduł nigdy nie rusza | ✅ |
-| **Wersje jądra** | Usuwa stare jądra, blokując aktywne i najnowsze — część uprzywilejowana sama je ustala i odmawia, jeśli nie potrafi tego stwierdzić | ✅ |
+| **Menedżer autostartu** | Pokazuje i przełącza programy startujące z sesją; wpisy dodane samodzielnie można edytować i usuwać, wpisów założonych przez inne aplikacje moduł nigdy nie rusza. Na Windowsie: klucz Run i folder Autostart, przełączane tak jak w Menedżerze zadań | ✅ Linux · 🧪 Windows |
+| **Wersje jądra** | Usuwa stare jądra, blokując aktywne i najnowsze — część uprzywilejowana sama je ustala i odmawia, jeśli nie potrafi tego stwierdzić. Tam, gdzie stare jądra się nie odkładają (systemy oparte na Archu, openSUSE), pokazuje listę i wyjaśnia, dlaczego nie ma czego usuwać | ✅ |
 | **Personalizacja pulpitu** | Motywy GTK, ikony, kursory i czcionki interfejsu; instalacja motywu lub czcionki przez wskazanie folderu, z automatycznym rozpoznaniem, co to jest | ✅ GNOME · 🧪 KDE Plasma |
-| **Wizualny edytor GRUB** | Czas oczekiwania, domyślny system i motywy instalowane przez wskazanie folderu, z podglądem oraz automatyczną kopią zapasową i wycofaniem zmian | ✅ |
-| **Uninstaller** | Wyświetla aplikacje apt, snap i flatpak, odinstalowuje wybraną, a potem znajduje pozostawione przez nią pliki konfiguracji, cache i dane sandboksa | ✅ |
+| **Edytor rozruchu** | GRUB: czas oczekiwania, domyślny system i motywy instalowane przez wskazanie folderu, z podglądem oraz automatyczną kopią zapasową i wycofaniem zmian. Limine, systemd-boot i rEFInd: domyślny wpis i czas oczekiwania, z tymi samymi kopiami | ✅ GRUB · 🧪 Limine, systemd-boot, rEFInd |
+| **Uninstaller** | Wyświetla aplikacje z menedżera pakietów systemu, snap i flatpak, odinstalowuje wybraną, a potem znajduje pozostawione przez nią pliki konfiguracji, cache i dane sandboksa | ✅ |
+
+✅ w tej tabeli oznacza Ubuntu na prawdziwym sprzęcie. Pozostałe dystrybucje —
+dwadzieścia domowych i trzy serwerowe — są sprawdzane w kontenerach każdej z
+nich, co dowodzi mniej; na Archu aplikacja uruchomiła się też na prawdziwej
+maszynie, choć jej modułów nie sprawdzono tam jeszcze po kolei.
+[Co uruchomiono gdzie, a czego nie](docs/distributions.md) jest spisane
+osobno dla każdej dystrybucji.
+
+### Obsługiwane dystrybucje Linuksa
+
+| Rodzina | Dystrybucje | Co działa |
+|---|---|---|
+| apt | Ubuntu 22.04 / 24.04 / 26.04, Debian 12 / 13, Linux Mint, Pop!_OS, Zorin OS, elementary OS, KDE neon, MX Linux, Kali | Wszystko |
+| pacman | CachyOS, Arch Linux, Manjaro, EndeavourOS, Garuda | Wszystko — jądra są pokazywane, nie usuwane: aktualizacja je podmienia, zamiast zostawiać stare |
+| dnf | Fedora, Nobara, RHEL 10 i jego przebudowy (AlmaLinux 10, Rocky 10) | Wszystko — na RHEL 10 WebKitGTK pochodzi z EPEL |
+| zypper | openSUSE Tumbleweed | Wszystko — jądra są pokazywane, nie usuwane: openSUSE samo czyści stare |
+| oparte na obrazie | Bazzite, SteamOS, Fedora Silverblue | Wszystko poza pakietami, jądrami i GRUB-em, które należą do obrazu systemu |
+| pozostałe | NixOS, Void, Alpine, Gentoo | Wszystko, co nie przechodzi przez menedżer pakietów |
+
+Na każdej z nich edytor rozruchu wymaga GRUB, Limine, systemd-boot albo
+rEFInd, a moduł dziennika — systemd; gdzie czegoś brakuje, moduł mówi o tym
+wprost.
+
+Przy pierwszym uruchomieniu POSMA pokazuje, co wykryła — dystrybucję i to, od
+czego pochodzi, menedżer pakietów, pulpit (GNOME, KDE Plasma, Cinnamon, MATE,
+Xfce, Budgie, Pantheon…) i program rozruchowy — i pyta, czy się zgadza.
+Poprawka, wtedy albo później w Ustawieniach, trafia do każdego modułu:
+personalizacja pulpitu zmienia ustawienia właściwego środowiska, a edytor
+rozruchu otwiera się dla programu, który faktycznie uruchamia system.
+
+**Nieobsługiwane:** RHEL 9 i jego przebudowy (AlmaLinux 9, Rocky Linux 9).
+Moduły działają, ale okna nie da się zbudować: jest tam tylko WebKitGTK 4.0,
+a aplikacja potrzebuje 4.1.
 
 ### macOS — 3 moduły
 
@@ -108,20 +143,24 @@ zbudowane i zweryfikowane na Linuksie; na macOS-ie i Windowsie mają status
 |---|---|---|
 | **Cache Xcode** | Wylicza, co Xcode zostawił — wyniki kompilacji, symbole urządzeń, cache symulatorów — z zaznaczeniem, co odbuduje się samo, a czego nie da się odzyskać | 🧪 |
 | **Odchudzanie Mail i Messages** | Usuwa zapisane w cache załączniki, nie ruszając samych wiadomości | 📋 |
-| **Migawki Time Machine** | Kasuje lokalne migawki zajmujące dysk pomiędzy właściwymi kopiami zapasowymi | 📋 |
+| **Migawki Time Machine** | Pokazuje lokalne migawki zajmujące dysk pomiędzy właściwymi kopiami zapasowymi i usuwa wszystkie albo wszystkie poza najnowszą | 🧪 |
 
-Operacje uprzywilejowane, których te moduły potrzebują — Homebrew,
-`launchctl`, `tmutil`, przycinanie logów — są już napisane w brokerze macOS,
-ale nigdy nie zostały uruchomione na Macu. Ich weryfikacja to najbliższy etap.
+Operacje uprzywilejowane, których te moduły potrzebują — `launchctl` i
+`tmutil` — są napisane w brokerze macOS, który przy każdej akcji prosi o hasło
+administratora tak, jak robi to sam macOS. Aplikacja uruchamia się na
+prawdziwym Macu, ale żadnej z tych operacji jeszcze tam nie sprawdzono.
+Homebrew, SMART i przycinania logów celowo w nim nie ma: Homebrew nie
+działa jako root, a jego katalog należy do użytkownika, SMART macOS czyta bez
+roota, a `log erase` nie przyjmuje wieku, według którego miałby przycinać.
 
 ### Windows — 4 moduły
 
 | Moduł | Co robi | Status |
 |---|---|---|
-| **Czyszczenie WinSxS** | Czyszczenie magazynu komponentów przez DISM, usuwające zastąpione pliki Windows Update | 📋 |
-| **Menedżer usług** | Usługi zarządzane przez gotowe profile zamiast listy setek pozycji | 📋 |
-| **Usuwanie bloatware** | Odinstalowuje fabrycznie zainstalowane aplikacje UWP | 📋 |
-| **Interfejs winget** | Lista zainstalowanych programów i zbiorcze aktualizacje przez systemowy menedżer pakietów | 📋 |
+| **Czyszczenie WinSxS** | Najpierw raport DISM o magazynie komponentów, potem czyszczenie usuwające zastąpione pliki Windows Update, po utworzeniu punktu przywracania | 🧪 |
+| **Menedżer usług** | Usługi w gotowych profilach — telemetria, Xbox, drukowanie, mapy offline — zamiast listy setek pozycji; każdy mówi, co przestanie działać, a powrót przywraca typy uruchamiania nadane przez Windows | 🧪 |
+| **Usuwanie bloatware** | Pokazuje aplikacje Sklepu, które Windows pozwala usunąć z konta, oznacza fabryczne i usuwa wybrane po utworzeniu punktu przywracania | 🧪 |
+| **Interfejs winget** | Aplikacje z czekającą aktualizacją, aktualizowane razem przez systemowy menedżer pakietów | 🧪 |
 
 Każda krytyczna operacja na Windowsie najpierw tworzy punkt przywracania
 systemu — to wymóg projektowy, nie opcja.
@@ -138,12 +177,11 @@ do powyższych 23:
 | **Cache narzędzi programistycznych** | Osobne, bezpieczne czyszczenie cache npm, cargo, pip, gradle, go i Mavena — na maszynie używanej do programowania rutynowo kilkadziesiąt gigabajtów, w całości odtwarzalnych | Wszystkie systemy |
 | **Harmonogram konserwacji** | Uruchamia wybrane moduły cyklicznie. Domyślnie wyłącznie skanowanie: zaplanowane zadanie pokazuje, co znalazło, i czeka, a działa bezobsługowo tylko tam, gdzie zostanie to wprost włączone, moduł po module | Wszystkie systemy |
 | **Menedżer czcionek** | Duplikaty, uszkodzone czcionki i przebudowa cache — zdublowane rodziny po cichu rozstrajają listy wyboru czcionek i spowalniają start programów | Wszystkie systemy |
-| **Cache Windows Update** | Czyści `SoftwareDistribution` po nieudanych lub zaległych aktualizacjach; naturalna para dla czyszczenia WinSxS | Windows |
 
-Dwa istniejące moduły również mają docelowo działać wieloplatformowo, zamiast
-zostać wyłącznie linuksowe: **menedżer autostartu** (klucze Run w rejestrze
-Windows, elementy logowania macOS) oraz **uninstaller** (pozostałości w
-rejestrze Windows, `/Applications` i porozrzucane pliki wsparcia na macOS).
+Dwa istniejące moduły mają też docelowo sięgać dalej niż teraz: **menedżer
+autostartu** do elementów logowania macOS (klucz Run i folder Autostart
+Windows już obsługuje) oraz **uninstaller** (pozostałości w rejestrze
+Windows, `/Applications` i porozrzucane pliki wsparcia na macOS).
 
 ### Czego skanery nigdy nie pokażą
 
@@ -214,6 +252,9 @@ na tyle mały i łatwy w odczycie, że realnie da się go przejrzeć. Dlatego:
 - **Zmiany destrukcyjne są odwracalne:** modyfikacje konfiguracji systemowej
   przechodzą przez kopię zapasową → rotację → zapis atomowy → weryfikację →
   automatyczne cofnięcie, jeśli weryfikacja się nie powiedzie.
+- **Każda operacja uprzywilejowana jest zapisywana** w
+  `/var/log/posma/broker.log`: kiedy, dla którego konta, o co poproszono i czy
+  się udało.
 - **Sposób podnoszenia uprawnień wybierasz Ty:** pytanie przy każdej akcji
   albo zainstalowany pomocnik działający bez pytań, gdzie dostęp przyznawany
   jest na podstawie zweryfikowanego identyfikatora użytkownika, a nie
@@ -243,32 +284,56 @@ przeglądarek, sejf, uninstaller. Broker z zamkniętym katalogiem operacji jest
 tutaj kompletny, w obu trybach — pytania przy akcji i zainstalowanego
 pomocnika.
 
+„Linux" oznaczał na początku Ubuntu. Moduły zależne od dystrybucji — cache
+pakietów, uninstaller, wersje jądra, edytor GRUB — działają teraz na czterech
+rodzinach menedżerów pakietów (apt, pacman, dnf, zypper) i mówią wprost, gdy
+system nie daje im nic do zrobienia, jak na dystrybucjach opartych na obrazie.
+Sprawdzane jest to w kontenerze każdej dystrybucji, a nie na zainstalowanych
+systemach — na Archu na prawdziwej maszynie widać było na razie tylko
+uruchomienie aplikacji; strona [Linux distributions](docs/distributions.md) rozdziela te
+dwie rzeczy.
+
 ### Następny — macOS
 
 Drugi system, który da się testować na żywo, więc idzie jako kolejny.
 
-- Weryfikacja przygotowanego brokera macOS na prawdziwym sprzęcie —
-  Homebrew, `launchctl`, przycinanie logów, migawki Time Machine i SMART są
-  napisane, ale nigdy nie uruchomione na Macu.
-- Moduły wyłącznie dla macOS: czyszczenie DerivedData Xcode, odchudzanie
-  cache Mail i Messages, lokalne migawki Time Machine.
-- Kreator prowadzący przez nadanie Full Disk Access — macOS celowo pozwala
-  zrobić to
-  wyłącznie ręcznie w Ustawieniach systemowych, więc POSMA może otworzyć
-  właściwy panel i potwierdzić wynik, ale nigdy nie nada tego po cichu.
+- Aplikacja uruchamia się na prawdziwym Macu. Następne są tam kolejne moduły
+  i broker — prośba o hasło administratora, `launchctl` i migawki Time
+  Machine są napisane, ale nigdy nie uruchomione na Macu. Każdy moduł
+  buduje się na Apple silicon i Intela.
+- Moduły wyłącznie dla macOS: czyszczenie DerivedData Xcode i lokalne
+  migawki Time Machine są napisane; odchudzanie Mail i Messages czeka na
+  Maca — załączniki Wiadomości to treść, nie cache, a granicę między nimi
+  trzeba zobaczyć na prawdziwym systemie.
+- Pełny dostęp do dysku: Ustawienia pokazują, czy macOS go nadał, i otwierają
+  jedyny panel, w którym się go nadaje. POSMA nigdy nie nadaje go sama —
+  macOS celowo to uniemożliwia.
+- CI buduje i testuje każdy moduł macOS na Apple silicon i na Intelu, a na
+  żądanie składa jedną paczkę dla obu.
 
 ### Potem — Windows
 
 Budowany przy najmniejszym dostępie do sprzętu, więc celowo najostrożniej.
 
-- Pomocnik na named pipe z prawidłowym uwierzytelnianiem wywołującego. Po
-  stronie Uniksa używamy zweryfikowanego identyfikatora użytkownika;
-  windowsowy odpowiednik to dokładnie ten rodzaj kodu krytycznego dla
-  bezpieczeństwa, którego nie powinno się pisać na ślepo — dlatego celowo
-  wciąż go nie ma, zamiast zgadywać jego kształt.
-- Moduły wyłącznie dla Windows: czyszczenie WinSxS/DISM, profile usług,
-  usuwanie bloatware, interfejs dla winget.
-- Automatyczny punkt przywracania przed każdą operacją krytyczną.
+- Jedna zgoda UAC na uruchomienie. Pierwsza operacja wymagająca
+  administratora uruchamia brokera przez UAC; zostaje on połączony potokiem,
+  który utworzyła POSMA i który obsługuje tylko ten proces, aż do zamknięcia
+  POSMA. Co nie wymaga administratora, obywa się bez niego — aplikacje
+  Sklepu znikają z konta, do którego należą, winget listuje jako
+  użytkownik.
+- Zainstalowanego pomocnika, który nie potrzebuje żadnej zgody, wciąż nie
+  ma: byłby serwerem, do którego może zapukać cokolwiek, a sprawdzenie, kto
+  puka, to właśnie kod, którego nie pisze się na ślepo.
+- Moduły wyłącznie dla Windows: usuwanie bloatware, czyszczenie WinSxS/DISM,
+  profile usług i interfejs winget są napisane. Czyszczenie temp, duże
+  pliki, duplikaty, przeglądarki, monitor zdrowia i menedżer autostartu
+  znają windowsowe lokalizacje.
+- Automatyczny punkt przywracania przed każdą operacją krytyczną — usuwanie
+  bloatware, profile usług i czyszczenie WinSxS najpierw go tworzą i bez
+  niego niczego nie zmieniają.
+- CI buduje i testuje wszystko pod Windows, łącznie z sesją uprzywilejowaną
+  od początku do końca. Nic z tego nie działało jeszcze na windowsowym
+  pulpicie.
 
 ### 1.0 — dystrybucja modułów
 
@@ -357,10 +422,12 @@ core/            Aplikacja Tauri — backend w Rust (src-tauri) + interfejs Reac
 access/          catalog.json — jedyne źródło prawdy o uprawnieniach
 crates/
   broker-common/ Wspólny katalog operacji uprzywilejowanych, zabezpieczenia, dyspozytor
+  distro/        Jaki to Linux — menedżer pakietów, jądra, układ GRUB
   scan-filter/   Jedna lista wykluczeń dla wszystkich skanerów dysku
   sysmetrics/    Odczyt czujników, temperatur i kart graficznych — bez uprawnień
 modules/         Po jednym crate na moduł, plus brokery per system
 scripts/         sync-sidecars.sh — buduje moduły dla tego systemu i wgrywa je do aplikacji
+                 distro-check.sh — uruchamia moduły w kontenerze każdej dystrybucji
 ```
 ## Budowanie ze źródeł
 
@@ -369,7 +436,8 @@ tych, którzy wolą sami zbudować to, co zaudytowali.
 
 Wymagane: [Rust](https://rustup.rs), Node.js 20+ oraz
 [zależności systemowe Tauri](https://tauri.app/start/prerequisites/) dla
-Twojego systemu.
+Twojego systemu — [nazwy pakietów dla każdej rodziny Linuksa](docs/building.md#requirements)
+są spisane przy opisie budowania.
 
 ```bash
 npm --prefix core install
@@ -464,6 +532,7 @@ dokumentacja i odnośnik z powrotem tutaj.
 | [Model bezpieczeństwa](https://kosmabb.github.io/Posma/security-model.html) | Co może sięgnąć do roota, co go przed tym powstrzymuje i jawna lista tego, co **nie** jest chronione |
 | [Pisanie modułu](https://kosmabb.github.io/Posma/writing-a-module.html) | Kontrakt modułu — protokół, manifest, uprawnienia, logika per system, zasady bezpieczeństwa |
 | [Budowanie i praca z kodem](https://kosmabb.github.io/Posma/building.html) | Wymagania, kolejność budowania, krok synchronizacji modułów, testowanie |
+| [Dystrybucje Linuksa](https://kosmabb.github.io/Posma/distributions.html) | Na których dystrybucjach POSMA działa, co każdy moduł tam robi i co faktycznie uruchomiono, żeby to ustalić |
 | [`Access_plan.md`](Access_plan.md) | Pierwotny projekt systemu uprawnień (po polsku) |
 
 | | |

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { invoke } from '@tauri-apps/api/core'
 import type { AppState } from '../state/appState'
 import type { SettingsState } from '../state/settings'
 import { folders, modulesInFolder, orderedModules } from '../data/modules'
 import { Icon } from '../components/Icons'
+import { callModule } from '../data/callModule'
 
 interface DiskInfo {
   name: string
@@ -36,8 +36,6 @@ interface SystemInfo {
   metrics: Metric[]
   disks: DiskInfo[]
 }
-
-type SystemInfoResponse = { ok: true; data: SystemInfo } | { ok: false; error: string }
 
 /** Samples kept per plotted metric. How long that covers depends on the
  * chosen refresh rate, which is the point: the graph holds the same number
@@ -119,8 +117,10 @@ export function Dashboard({ app, settings }: { app: AppState; settings: Settings
   useEffect(() => {
     let cancelled = false
     async function refresh() {
+      // A hidden window needs no fresh numbers; the next tick after it shows catches up.
+      if (document.hidden) return
       try {
-        const res = await invoke<SystemInfoResponse>('get_system_info')
+        const res = await callModule<SystemInfo>('system-info', { cmd: 'get_info' })
         if (cancelled) return
         if (res.ok) {
           setInfo(res.data)
@@ -147,7 +147,7 @@ export function Dashboard({ app, settings }: { app: AppState; settings: Settings
 
   // Same ordering the folder view arranges, so dragging a card in a folder
   // moves it here too rather than the two lists drifting apart.
-  const quickActions = orderedModules(onboarding?.os, moduleOrder).filter(
+  const quickActions = orderedModules(onboarding?.os, moduleOrder, app.linuxProfile).filter(
     (m) => installedSet.has(m.id) && m.quickAction,
   )
   const disks = info?.disks ?? []
@@ -290,7 +290,7 @@ export function Dashboard({ app, settings }: { app: AppState; settings: Settings
       </div>
       <div className="folder-tiles">
         {folders.map((folder) => {
-          const items = modulesInFolder(folder.id, onboarding?.os)
+          const items = modulesInFolder(folder.id, onboarding?.os, app.linuxProfile)
           const on = items.filter((m) => installedSet.has(m.id)).length
           const off = items.length - on
           return (

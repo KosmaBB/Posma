@@ -72,7 +72,7 @@ All three share `crates/broker-common`, which holds:
 
 ### The other shared crates
 
-Two more crates exist for the same reason: a rule that lives in one module
+Three more crates exist for the same reason: a rule that lives in one module
 is not a rule.
 
 - **`scan-filter`** — what a disk scanner may show. Three modules walk the
@@ -86,6 +86,12 @@ is not a rule.
   a source is one function returning a list; the dashboard and the health
   monitor both pick it up without being edited. Anything needing root stays
   out of it — that is what the broker is for, and why S.M.A.R.T. is not here.
+- **`distro`** — what kind of Linux this is: the native package manager,
+  how kernels are packaged, where GRUB keeps its files, and whether the
+  system is image-based and not to be touched. The unprivileged modules use
+  it to show a list and the broker uses it again, as root, before acting on
+  one — so the two cannot disagree about what the machine is. See
+  [Linux distributions](distributions.md).
 
 - **the closed operation catalog** (`ops.rs`) — a Rust enum of every
   permitted privileged operation across all OSes. There is no
@@ -104,23 +110,26 @@ is not a rule.
 
 Each per-OS broker implements only what it can genuinely do on that platform
 and reports the rest as unsupported. `capabilities` is itself an operation,
-so the UI can ask what's available rather than discovering it by failing.
+so a broker can be asked what it implements rather than found out by failing.
 
 ### Two ways the broker is reached
 
 | Mode | How | Trade-off |
 |---|---|---|
-| One-shot | Core spawns the broker binary through the OS elevation prompt (`pkexec` on Linux) per action | No installation, prompts every time |
-| Daemon | An installed helper holds a Unix socket; core connects to it | One installation, then no prompts |
+| One-shot | Core spawns the broker binary through the OS elevation prompt (`pkexec` on Linux, the administrator prompt on macOS) per action | No installation, prompts every time |
+| Session (Windows) | Core starts the broker through UAC at the first privileged action and keeps it connected over a pipe it serves only to that process | No installation, one prompt per run |
+| Daemon (Linux, macOS) | An installed helper holds a Unix socket; core connects to it | One installation, then no prompts |
 
 The daemon's access control is the connecting process's **verified user ID**
 (`SO_PEERCRED`), checked before a single byte of the request is read — not
 socket file permissions. If it can't identify its owner it refuses to start.
 
-Windows has no daemon mode: the equivalent (named pipe plus
-`GetNamedPipeClientProcessId`) is security-critical code that hasn't been
-written on a machine where it can be tested, so it's deliberately absent
-rather than guessed at.
+The Windows session turns the daemon's question around: the elevated broker
+is the pipe's client, not its server, so nothing can knock on it. The core
+creates the pipe and accepts only the process UAC started
+(`GetNamedPipeClientProcessId`). An installed Windows helper — a server any
+process could knock on — is not written, because the check on who knocks has
+to be tested on a machine before it ships.
 
 ## Why this shape
 

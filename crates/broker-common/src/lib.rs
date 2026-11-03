@@ -11,15 +11,17 @@
 //! compiles and behaves correctly before a single operation is written,
 //! and each one lands by overriding one method.
 
+pub mod audit;
 pub mod broker;
 pub mod guards;
 pub mod ops;
 pub mod result;
 pub mod serve;
+pub mod windows_services;
 
-pub use broker::{handle_line, run_capture, run_verify, write_system_file_guarded, Broker};
+pub use broker::{clean_within, handle_line, run_capture, run_capture_as, run_verify, write_system_file_guarded, Broker};
 pub use ops::{PkgSource, Request, TrimMode};
-pub use result::{BootEntries, CapabilityReport, CleanResult, ExecResult, Response, TextResult};
+pub use result::{BootEntries, BootOptions, CapabilityReport, CleanResult, ExecResult, Response};
 pub use serve::run_once;
 
 #[cfg(unix)]

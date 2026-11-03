@@ -18,9 +18,21 @@
 //!    by the broker) so the restore list doesn't need its own privileged
 //!    round-trip just to display.
 //!
-//! Actually writing /etc/default/grub, installing a theme into
-//! /boot/grub/themes, reading /boot/grub/grub.cfg (600, root-only) for the
-//! boot-entry list, and restoring a backup all need root — those go
+//! Where GRUB keeps its files and how its menu is rebuilt differs between
+//! distributions (/boot/grub and `update-grub` on Debian's family,
+//! /boot/grub2 and `grub2-mkconfig` on Fedora's and openSUSE's), and some
+//! systems do not boot through GRUB at all. The shared `distro` crate
+//! answers both; `scan` passes the answer on so the interface can say so
+//! instead of offering an editor for a file nothing reads.
+//!
+//! Limine, systemd-boot and rEFInd have no file outside the ESP to read, so
+//! for them `scan` only names the loader and lists its backups; the broker
+//! reads and sets their default entry and timeout (`read_boot_entries`,
+//! `set_boot_options`).
+//!
+//! Actually writing /etc/default/grub, installing a theme into the themes
+//! directory, reading grub.cfg (600, root-only) for the boot-entry list,
+//! and restoring a backup all need root — those go
 //! through modules/linux-broker's write_grub_config/install_grub_theme/
 //! read_boot_entries/restore_grub_backup, never through this binary.
 
@@ -66,6 +78,14 @@ struct ScanResult {
     raw_content: String,
     fields: GrubFields,
     backups: Vec<BackupEntry>,
+    /// Where an installed theme ends up on this system.
+    themes_dir: String,
+    /// Why there is nothing to edit here, where that is the case.
+    unavailable: Option<String>,
+    /// The loader this system boots through. Limine, systemd-boot and
+    /// rEFInd get their own editor, through the broker: their config sits
+    /// on the ESP, which only root can read.
+    bootloader: Option<&'static str>,
 }
 
 #[derive(Serialize)]
@@ -130,7 +150,23 @@ fn unquote(s: &str) -> String {
     let s = s.trim();
     if s.len() >= 2 {
         let bytes = s.as_bytes();
-        if (bytes[0] == b'"' && bytes[s.len() - 1] == b'"') || (bytes[0] == b'\'' && bytes[s.len() - 1] == b'\'') {
+        if bytes[0] == b'"' && bytes[s.len() - 1] == b'"' {
+            // Undoes the two escapes the editor writes, `\"` and `\\`, so a
+            // value read and saved again does not gain a backslash each time.
+            let mut out = String::new();
+            let mut chars = s[1..s.len() - 1].chars().peekable();
+            while let Some(c) = chars.next() {
+                match (c, chars.peek()) {
+                    ('\\', Some(&next @ ('"' | '\\'))) => {
+                        out.push(next);
+                        chars.next();
+                    }
+                    _ => out.push(c),
+                }
+            }
+            return out;
+        }
+        if bytes[0] == b'\'' && bytes[s.len() - 1] == b'\'' {
             return s[1..s.len() - 1].to_string();
         }
     }
@@ -165,9 +201,14 @@ fn parse_grub_fields(content: &str) -> GrubFields {
 /// rename (/var/backups/posam-grub/grub.<ts>, old spelling on purpose —
 /// that is the directory that exists on disk),
 /// so backups taken before that refactor stay visible and restorable.
-fn list_backups() -> Vec<BackupEntry> {
+/// Another loader's config is backed up under its own file name.
+fn list_backups(bootloader: Option<&str>) -> Vec<BackupEntry> {
+    let dirs = match bootloader.and_then(distro::loader_config_name) {
+        Some(name) => vec![(format!("/var/backups/posma/{name}"), "backup.")],
+        None => vec![("/var/backups/posma/grub".into(), "backup."), ("/var/backups/posam-grub".into(), "grub.")],
+    };
     let mut out = Vec::new();
-    for (dir, prefix) in [("/var/backups/posma/grub", "backup."), ("/var/backups/posam-grub", "grub.")] {
+    for (dir, prefix) in dirs {
         let Ok(read) = fs::read_dir(dir) else { continue };
         for entry in read.flatten() {
             let name = entry.file_name().to_string_lossy().into_owned();
@@ -181,9 +222,14 @@ fn list_backups() -> Vec<BackupEntry> {
 }
 
 fn scan() -> ScanResult {
-    let raw_content = fs::read_to_string("/etc/default/grub").unwrap_or_default();
+    let raw_content = fs::read_to_string(distro::GRUB_DEFAULTS).unwrap_or_default();
     let fields = parse_grub_fields(&raw_content);
-    ScanResult { raw_content, fields, backups: list_backups() }
+    let (themes_dir, unavailable) = match distro::grub() {
+        Ok(grub) => (grub.themes_dir.to_string_lossy().into_owned(), None),
+        Err(why) => (String::new(), Some(why)),
+    };
+    let bootloader = distro::bootloader();
+    ScanResult { raw_content, fields, backups: list_backups(bootloader), themes_dir, unavailable, bootloader }
 }
 
 fn presets_dir() -> PathBuf {
@@ -368,4 +414,21 @@ fn main() {
     };
     println!("{output}");
     io::stdout().flush().ok();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// What the editor writes for GRUB_DEFAULT has to read back as the
+    /// title it started from, or every save adds a backslash.
+    #[test]
+    fn escaped_values_read_back_unchanged() {
+        assert_eq!(unquote(r#""Say \"hi\" to C:\\boot""#), r#"Say "hi" to C:\boot"#);
+        assert_eq!(unquote(r#""Advanced options for Ubuntu>Ubuntu, with Linux 6.8.0-40-generic""#), "Advanced options for Ubuntu>Ubuntu, with Linux 6.8.0-40-generic");
+        // Any other backslash stays, as the shell keeps it.
+        assert_eq!(unquote(r#""a\nb""#), r"a\nb");
+        assert_eq!(unquote("'single \\\" kept'"), "single \\\" kept");
+        assert_eq!(unquote("saved"), "saved");
+    }
 }

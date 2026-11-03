@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { Preparing } from '../../components/Preparing'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
+import { confirmAction } from '../../components/confirm'
+import { EDITED_LOADERS } from '../../data/linuxProfile'
+import { BootLoaderEditor, type BackupEntry } from './BootLoaderEditor'
+import { callModule } from '../../data/callModule'
 
 interface GrubFields {
   grub_default: string
@@ -11,15 +15,15 @@ interface GrubFields {
   grub_disable_os_prober: boolean
 }
 
-interface BackupEntry {
-  filename: string
-  created_unix: number
-}
-
 interface ScanData {
   raw_content: string
   fields: GrubFields
   backups: BackupEntry[]
+  /** /boot/grub/themes albo /boot/grub2/themes — zależnie od dystrybucji */
+  themes_dir: string
+  /** Powód, dla którego nie ma tu czego edytować (inny program rozruchowy, system niemutowalny). */
+  unavailable: string | null
+  bootloader: string | null
 }
 
 interface PresetInfo {
@@ -91,13 +95,22 @@ function removeGrubLine(raw: string, key: string): string {
 }
 
 function quote(value: string): string {
-  return `"${value.replace(/"/g, '\\"')}"`
+  return `"${value.replace(/["\\]/g, '\\$&')}"`
+}
+
+/// Fedora's family ships GRUB_TERMINAL_OUTPUT="console", and a console
+/// never draws a theme. Switched to the graphical terminal only where that
+/// line is what stands in the way.
+function enableGraphicalTerminal(raw: string): string {
+  const console = /^\s*GRUB_TERMINAL_OUTPUT=(["']?)console\1\s*$/m
+  return console.test(raw) ? setGrubLine(raw, 'GRUB_TERMINAL_OUTPUT', '"gfxterm"') : raw
 }
 
 /// Where a theme installed under `name` ends up, in the form GRUB expects
-/// in GRUB_THEME. Must agree with the broker's GRUB_THEMES_DIR.
-function themeConfigPath(name: string): string {
-  return `/boot/grub/themes/${name}/theme.txt`
+/// in GRUB_THEME. `themesDir` comes from the scan, which asks the same
+/// code the broker uses — the two cannot name different directories.
+function themeConfigPath(themesDir: string, name: string): string {
+  return `${themesDir}/${name}/theme.txt`
 }
 
 function formatDate(unixSeconds: number): string {
@@ -210,7 +223,7 @@ export function GrubEditorView() {
   async function loadScan() {
     setScanError(null)
     try {
-      const res = await invoke<ApiResponse<ScanData>>('scan_grub')
+      const res = await callModule<ScanData>('grub-editor', { cmd: 'scan' })
       if (!res.ok) {
         setScanError(res.error)
         return
@@ -222,7 +235,7 @@ export function GrubEditorView() {
       setDisableOsProber(res.data.fields.grub_disable_os_prober)
       if (res.data.fields.grub_theme) {
         try {
-          const preview = await invoke<ApiResponse<ThemePreview>>('preview_grub_theme', { themeDir: res.data.fields.grub_theme })
+          const preview = await callModule<ThemePreview>('grub-editor', { cmd: 'preview_theme', theme_dir: res.data.fields.grub_theme })
           setActivePreview(preview.ok ? preview.data : null)
         } catch {
           setActivePreview(null)
@@ -237,7 +250,7 @@ export function GrubEditorView() {
 
   async function loadPresets() {
     try {
-      const res = await invoke<ApiResponse<PresetInfo[]>>('list_grub_presets')
+      const res = await callModule<PresetInfo[]>('grub-editor', { cmd: 'list_presets' })
       if (res.ok) setPresets(res.data)
     } catch {
       // presets are a convenience layer — a failure here shouldn't block the rest of the page
@@ -272,7 +285,8 @@ export function GrubEditorView() {
     if (theme === null) {
       next = removeGrubLine(next, 'GRUB_THEME')
     } else if (theme !== undefined) {
-      next = setGrubLine(next, 'GRUB_THEME', theme)
+      // Quoted: a theme folder's name may hold spaces.
+      next = enableGraphicalTerminal(setGrubLine(next, 'GRUB_THEME', quote(theme)))
     }
     return next
   }
@@ -291,7 +305,7 @@ export function GrubEditorView() {
   }
 
   async function saveSettings() {
-    if (!window.confirm('Zapisać ustawienia GRUB? Zostanie utworzona kopia zapasowa poprzedniej konfiguracji, a grub.cfg zostanie odświeżony.')) return
+    if (!(await confirmAction('Zapisać ustawienia GRUB? Zostanie utworzona kopia zapasowa poprzedniej konfiguracji, a grub.cfg zostanie odświeżony.'))) return
     setSaving(true)
     setSaveResult(null)
     try {
@@ -314,12 +328,12 @@ export function GrubEditorView() {
     setThemeResult(null)
     setPickedPreview(null)
     try {
-      const res = await invoke<ApiResponse<ThemeInspection>>('inspect_grub_theme', { path: dir })
+      const res = await callModule<ThemeInspection>('grub-editor', { cmd: 'inspect_theme', path: dir })
       if (res.ok) {
         setThemeInspection(res.data)
         setThemeName(res.data.valid ? res.data.name : '')
         if (res.data.valid) {
-          const preview = await invoke<ApiResponse<ThemePreview>>('preview_grub_theme', { themeDir: dir })
+          const preview = await callModule<ThemePreview>('grub-editor', { cmd: 'preview_theme', theme_dir: dir })
           setPickedPreview(preview.ok ? preview.data : null)
         }
       }
@@ -331,18 +345,18 @@ export function GrubEditorView() {
 
   async function installTheme() {
     if (!scan || !themePath || !themeInspection?.valid || !themeName.trim()) return
-    if (!window.confirm(`Zainstalować i włączyć motyw „${themeName}"? Zostanie skopiowany do /boot/grub/themes i ustawiony jako aktywny.`)) return
+    if (!(await confirmAction(`Zainstalować i włączyć motyw „${themeName}"? Zostanie skopiowany do ${scan.themes_dir} i ustawiony jako aktywny.`))) return
     setInstallingTheme(true)
     setThemeResult(null)
     try {
       await invoke('request_permission', { capability: 'boot' })
       // The config written alongside the copy has to name the theme being
-      // installed, otherwise the files land in /boot/grub/themes and GRUB
+      // installed, otherwise the files land in the themes directory and GRUB
       // is never told to use them.
       const res = await invoke<ApiResponse<ExecResult>>('install_grub_theme', {
         sourceDir: themePath,
         name: themeName.trim(),
-        content: buildContent(themeConfigPath(themeName.trim())),
+        content: buildContent(themeConfigPath(scan.themes_dir, themeName.trim())),
         keepBackups,
       })
       const result = res.ok ? res.data : { success: false, output: '', error: res.error }
@@ -365,7 +379,7 @@ export function GrubEditorView() {
    */
   async function disableTheme() {
     if (!scan?.fields.grub_theme) return
-    if (!window.confirm('Wyłączyć motyw i wrócić do domyślnego wyglądu GRUB? Pliki motywu zostaną na dysku.')) return
+    if (!(await confirmAction('Wyłączyć motyw i wrócić do domyślnego wyglądu GRUB? Pliki motywu zostaną na dysku.'))) return
     setInstallingTheme(true)
     setThemeResult(null)
     try {
@@ -392,7 +406,7 @@ export function GrubEditorView() {
     if (!name || !name.trim()) return
     setPresetBusy(name)
     try {
-      const res = await invoke<ApiResponse<null>>('save_grub_preset', { name: name.trim(), content: buildContent() })
+      const res = await callModule<null>('grub-editor', { cmd: 'save_preset', name: name.trim(), content: buildContent() })
       if (res.ok) loadPresets()
       else setScanError(res.error)
     } catch (e) {
@@ -403,10 +417,10 @@ export function GrubEditorView() {
   }
 
   async function applyPreset(name: string) {
-    if (!window.confirm(`Wgrać preset „${name}"? Nadpisze bieżące ustawienia GRUB (z kopią zapasową).`)) return
+    if (!(await confirmAction(`Wgrać preset „${name}"? Nadpisze bieżące ustawienia GRUB (z kopią zapasową).`))) return
     setPresetBusy(name)
     try {
-      const loaded = await invoke<ApiResponse<{ content: string }>>('load_grub_preset', { name })
+      const loaded = await callModule<{ content: string }>('grub-editor', { cmd: 'load_preset', name })
       if (!loaded.ok) {
         setScanError(loaded.error)
         return
@@ -424,10 +438,10 @@ export function GrubEditorView() {
   }
 
   async function deletePreset(name: string) {
-    if (!window.confirm(`Usunąć preset „${name}"?`)) return
+    if (!(await confirmAction(`Usunąć preset „${name}"?`))) return
     setPresetBusy(name)
     try {
-      const res = await invoke<ApiResponse<null>>('delete_grub_preset', { name })
+      const res = await callModule<null>('grub-editor', { cmd: 'delete_preset', name })
       if (res.ok) loadPresets()
     } finally {
       setPresetBusy(null)
@@ -435,7 +449,7 @@ export function GrubEditorView() {
   }
 
   async function restoreBackup(filename: string) {
-    if (!window.confirm(`Przywrócić tę kopię zapasową? Bieżąca konfiguracja też zostanie zapisana jako kopia przed przywróceniem.`)) return
+    if (!(await confirmAction(`Przywrócić tę kopię zapasową? Bieżąca konfiguracja też zostanie zapisana jako kopia przed przywróceniem.`))) return
     setRestoring(filename)
     try {
       await invoke('request_permission', { capability: 'boot' })
@@ -466,7 +480,13 @@ export function GrubEditorView() {
     )
   }
   if (!scan) {
-    return <Preparing title="Wczytuję konfigurację GRUB" note="Odczytuję ustawienia rozruchu i listę zapisanych kopii zapasowych." />
+    return <Preparing title="Wczytuję konfigurację rozruchu" note="Odczytuję ustawienia rozruchu i listę zapisanych kopii zapasowych." />
+  }
+  if (scan.bootloader && EDITED_LOADERS.includes(scan.bootloader)) {
+    return <BootLoaderEditor loader={scan.bootloader} backups={scan.backups} keepBackups={keepBackups} onChanged={loadScan} />
+  }
+  if (scan.unavailable) {
+    return <div className="glass empty-state">{scan.unavailable}</div>
   }
 
   return (
@@ -582,7 +602,7 @@ export function GrubEditorView() {
               </div>
             )}
             <label className="form-field">
-              <span>Nazwa (folder docelowy w /boot/grub/themes)</span>
+              <span>Nazwa (folder docelowy w {scan.themes_dir})</span>
               <input
                 type="text"
                 value={themeName}

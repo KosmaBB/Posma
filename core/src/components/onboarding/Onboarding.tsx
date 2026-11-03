@@ -5,7 +5,9 @@ import type { AccessLevel, OnboardingResult } from '../../state/appState'
 import { detectOs } from '../../state/appState'
 import type { Os } from '../../data/modules'
 import { folders, modulesForOs } from '../../data/modules'
+import type { LinuxProfile, ProfileOverrides } from '../../data/linuxProfile'
 import { Icon } from '../Icons'
+import { SystemProfileFields, profileSummary } from '../SystemProfile'
 
 const OS_LABEL: Record<Os, string> = { windows: 'Windows', linux: 'Linux', macos: 'macOS' }
 
@@ -64,14 +66,22 @@ function OnboardingMesh() {
 type Step = 'consent' | 'os' | 'access' | 'modules' | 'tutorial'
 const STEPS: Step[] = ['consent', 'os', 'access', 'modules', 'tutorial']
 
-export function Onboarding({ onDone }: { onDone: (result: OnboardingResult) => void }) {
+interface OnboardingProps {
+  onDone: (result: OnboardingResult) => void
+  /** Null until detection answers, and always off Linux. */
+  linuxProfile: LinuxProfile | null
+  onProfileChange: (overrides: ProfileOverrides) => Promise<void>
+}
+
+export function Onboarding({ onDone, linuxProfile, onProfileChange }: OnboardingProps) {
   const [step, setStep] = useState<Step>('consent')
   const [os] = useState<Os>(detectOs)
   const [accessLevel, setAccessLevel] = useState<AccessLevel | null>(null)
   const [picked, setPicked] = useState<Set<string>>(() => new Set())
+  const [correcting, setCorrecting] = useState(false)
 
   const stepIndex = STEPS.indexOf(step)
-  const available = useMemo(() => modulesForOs(os), [os])
+  const available = useMemo(() => modulesForOs(os, linuxProfile), [os, linuxProfile])
   const generalModules = available.filter((m) => m.os.length === 3)
   const osModules = available.filter((m) => m.os.length < 3)
 
@@ -148,19 +158,39 @@ export function Onboarding({ onDone }: { onDone: (result: OnboardingResult) => v
         {step === 'os' && (
           <>
             <h2>Potwierdź swój system</h2>
-            <p className="lead">Wykryliśmy system operacyjny — od tego zależy, które moduły będą dostępne.</p>
+            <p className="lead">
+              {linuxProfile
+                ? 'Wykryliśmy dystrybucję. Od niej zależy, jak działają moduły: polecenia pakietów, wygląd pulpitu, rozruch. Czy to Twój system?'
+                : 'Wykryliśmy system operacyjny — od tego zależy, które moduły będą dostępne.'}
+            </p>
             <div className="os-row">
               <div className="ico-badge" style={{ '--g1': 'var(--g-blue-1)', '--g2': 'var(--g-blue-2)' } as React.CSSProperties}>
                 <Icon name={os} />
               </div>
               <div>
-                <div className="os-name">{OS_LABEL[os]}</div>
-                <div className="os-sub">Moduły ogólne + moduły dostępne tylko dla {OS_LABEL[os]}</div>
+                <div className="os-name">{linuxProfile?.name ?? OS_LABEL[os]}</div>
+                <div className="os-sub">
+                  {linuxProfile
+                    ? `${OS_LABEL[os]} · ${profileSummary(linuxProfile)}`
+                    : `Moduły ogólne + moduły dostępne tylko dla ${OS_LABEL[os]}`}
+                </div>
               </div>
             </div>
+            {linuxProfile && correcting && (
+              <div className="profile-fields">
+                <SystemProfileFields profile={linuxProfile} onSave={onProfileChange} />
+              </div>
+            )}
             <div className="onboarding-actions">
               <button className="btn btn-ghost" onClick={() => setStep('consent')}>Wstecz</button>
-              <button className="btn btn-primary" onClick={() => setStep('access')}>To mój system</button>
+              <div className="onboarding-actions-end">
+                {linuxProfile && !correcting && (
+                  <button className="btn btn-ghost" onClick={() => setCorrecting(true)}>Coś się nie zgadza</button>
+                )}
+                <button className="btn btn-primary" onClick={() => setStep('access')}>
+                  {correcting ? 'Gotowe' : 'To mój system'}
+                </button>
+              </div>
             </div>
           </>
         )}

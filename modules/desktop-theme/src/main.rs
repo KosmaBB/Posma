@@ -185,41 +185,99 @@ fn run(cmd: &str, args: &[&str]) -> Result<String, String> {
     }
 }
 
-// -------------------------------------------------------------- GNOME
+// ---------------------------------------------------------- gsettings
 
-struct Gnome;
+/// Where one setting lives: schema and key. `None` where the desktop has no
+/// such setting at all.
+type Key = Option<(&'static str, &'static str)>;
 
-impl Gnome {
-    const IFACE: &'static str = "org.gnome.desktop.interface";
+const GNOME_IFACE: &str = "org.gnome.desktop.interface";
 
-    /// gsettings quotes its string values; the quotes are not part of them.
-    fn get(key: &str) -> String {
-        run("gsettings", &["get", Self::IFACE, key])
-            .map(|v| v.trim_matches('\'').trim_matches('"').to_string())
-            .unwrap_or_default()
+/// GNOME and the desktops built on its settings stack. Budgie and Pantheon
+/// read GNOME's own keys; Cinnamon and MATE forked the schema, so each
+/// desktop names where its keys are.
+struct Gsettings {
+    id: &'static str,
+    name: &'static str,
+    gtk_theme: Key,
+    icon_theme: Key,
+    cursor_theme: Key,
+    font: Key,
+    monospace_font: Key,
+    color_scheme: Key,
+}
+
+impl Gsettings {
+    fn gnome(id: &'static str, name: &'static str) -> Self {
+        Gsettings {
+            id,
+            name,
+            gtk_theme: Some((GNOME_IFACE, "gtk-theme")),
+            icon_theme: Some((GNOME_IFACE, "icon-theme")),
+            cursor_theme: Some((GNOME_IFACE, "cursor-theme")),
+            font: Some((GNOME_IFACE, "font-name")),
+            monospace_font: Some((GNOME_IFACE, "monospace-font-name")),
+            color_scheme: Some((GNOME_IFACE, "color-scheme")),
+        }
     }
 
-    fn set(key: &str, value: &str) -> Result<(), String> {
-        run("gsettings", &["set", Self::IFACE, key, value]).map(|_| ())
+    /// Cinnamon's settings module writes its own schema; the monospace font
+    /// it still takes from GNOME's, and Mint's light/dark switch is the
+    /// X-Apps portal's.
+    fn cinnamon() -> Self {
+        const IFACE: &str = "org.cinnamon.desktop.interface";
+        Gsettings {
+            id: "cinnamon",
+            name: "Cinnamon",
+            gtk_theme: Some((IFACE, "gtk-theme")),
+            icon_theme: Some((IFACE, "icon-theme")),
+            cursor_theme: Some((IFACE, "cursor-theme")),
+            font: Some((IFACE, "font-name")),
+            monospace_font: Some((GNOME_IFACE, "monospace-font-name")),
+            color_scheme: Some(("org.x.apps.portal", "color-scheme")),
+        }
+    }
+
+    fn mate() -> Self {
+        const IFACE: &str = "org.mate.interface";
+        Gsettings {
+            id: "mate",
+            name: "MATE",
+            gtk_theme: Some((IFACE, "gtk-theme")),
+            icon_theme: Some((IFACE, "icon-theme")),
+            cursor_theme: Some(("org.mate.peripherals-mouse", "cursor-theme")),
+            font: Some((IFACE, "font-name")),
+            monospace_font: Some((IFACE, "monospace-font-name")),
+            color_scheme: None,
+        }
+    }
+
+    /// gsettings quotes its string values; the quotes are not part of them.
+    fn get(key: Key) -> String {
+        let Some((schema, key)) = key else { return String::new() };
+        run("gsettings", &["get", schema, key])
+            .map(|v| v.trim_matches('\'').trim_matches('"').to_string())
+            .unwrap_or_default()
     }
 
     /// Exact-match against the schema's key list. A substring test would
     /// accept the deprecated `gtk-color-scheme` as if it were the modern
     /// `color-scheme`, which reads as supported and then fails on write.
-    fn has_key(key: &str) -> bool {
-        run("gsettings", &["list-keys", Self::IFACE])
+    fn has_key(key: Key) -> bool {
+        let Some((schema, key)) = key else { return false };
+        run("gsettings", &["list-keys", schema])
             .map(|out| out.lines().any(|k| k.trim() == key))
             .unwrap_or(false)
     }
 }
 
-impl Desktop for Gnome {
+impl Desktop for Gsettings {
     fn id(&self) -> &'static str {
-        "gnome"
+        self.id
     }
 
     fn name(&self) -> String {
-        "GNOME".into()
+        self.name.into()
     }
 
     fn available(&self) -> bool {
@@ -227,17 +285,17 @@ impl Desktop for Gnome {
     }
 
     fn supports_color_scheme(&self) -> bool {
-        Self::has_key("color-scheme")
+        Self::has_key(self.color_scheme)
     }
 
     fn read(&self) -> Current {
         Current {
-            gtk_theme: Self::get("gtk-theme"),
-            icon_theme: Self::get("icon-theme"),
-            cursor_theme: Self::get("cursor-theme"),
-            font: Self::get("font-name"),
-            monospace_font: Self::get("monospace-font-name"),
-            color_scheme: Self::get("color-scheme"),
+            gtk_theme: Self::get(self.gtk_theme),
+            icon_theme: Self::get(self.icon_theme),
+            cursor_theme: Self::get(self.cursor_theme),
+            font: Self::get(self.font),
+            monospace_font: Self::get(self.monospace_font),
+            color_scheme: Self::get(self.color_scheme),
         }
     }
 
@@ -245,23 +303,23 @@ impl Desktop for Gnome {
         let mut applied = Vec::new();
         let mut failed = Vec::new();
 
-        let jobs: [(&str, &Option<String>, &str); 6] = [
-            ("gtk-theme", &changes.gtk_theme, "Motyw GTK"),
-            ("icon-theme", &changes.icon_theme, "Ikony"),
-            ("cursor-theme", &changes.cursor_theme, "Kursor"),
-            ("font-name", &changes.font, "Czcionka interfejsu"),
-            ("monospace-font-name", &changes.monospace_font, "Czcionka o stałej szerokości"),
-            ("color-scheme", &changes.color_scheme, "Tryb jasny/ciemny"),
+        let jobs: [(Key, &Option<String>, &str); 6] = [
+            (self.gtk_theme, &changes.gtk_theme, "Motyw GTK"),
+            (self.icon_theme, &changes.icon_theme, "Ikony"),
+            (self.cursor_theme, &changes.cursor_theme, "Kursor"),
+            (self.font, &changes.font, "Czcionka interfejsu"),
+            (self.monospace_font, &changes.monospace_font, "Czcionka o stałej szerokości"),
+            (self.color_scheme, &changes.color_scheme, "Tryb jasny/ciemny"),
         ];
 
         for (key, value, label) in jobs {
             let Some(v) = value else { continue };
-            if key == "color-scheme" && !Self::has_key(key) {
-                failed.push(format!("{label}: ta wersja GNOME nie obsługuje tego ustawienia"));
+            let Some((schema, name)) = key.filter(|_| Self::has_key(key)) else {
+                failed.push(format!("{label}: ta wersja {} nie obsługuje tego ustawienia", self.name));
                 continue;
-            }
-            match Self::set(key, v) {
-                Ok(()) => applied.push(label.to_string()),
+            };
+            match run("gsettings", &["set", schema, name, v]) {
+                Ok(_) => applied.push(label.to_string()),
                 Err(e) => failed.push(format!("{label}: {e}")),
             }
         }
@@ -270,14 +328,74 @@ impl Desktop for Gnome {
     }
 }
 
+// --------------------------------------------------------------- Xfce
+
+/// Xfce keeps the same settings in its own store, behind xfconf-query; its
+/// settings daemon hands them on to running GTK applications. It has no
+/// light/dark switch of its own.
+struct Xfce;
+
+impl Xfce {
+    const PROPS: [(&'static str, &'static str); 5] = [
+        ("/Net/ThemeName", "Motyw GTK"),
+        ("/Net/IconThemeName", "Ikony"),
+        ("/Gtk/CursorThemeName", "Kursor"),
+        ("/Gtk/FontName", "Czcionka interfejsu"),
+        ("/Gtk/MonospaceFontName", "Czcionka o stałej szerokości"),
+    ];
+
+    fn get(prop: &str) -> String {
+        run("xfconf-query", &["-c", "xsettings", "-p", prop]).unwrap_or_default()
+    }
+}
+
+impl Desktop for Xfce {
+    fn id(&self) -> &'static str {
+        "xfce"
+    }
+
+    fn name(&self) -> String {
+        "Xfce".into()
+    }
+
+    fn available(&self) -> bool {
+        have("xfconf-query")
+    }
+
+    fn supports_color_scheme(&self) -> bool {
+        false
+    }
+
+    fn read(&self) -> Current {
+        let [gtk, icons, cursor, font, mono] = Self::PROPS.map(|(prop, _)| Self::get(prop));
+        Current { gtk_theme: gtk, icon_theme: icons, cursor_theme: cursor, font, monospace_font: mono, color_scheme: String::new() }
+    }
+
+    fn apply(&self, changes: &Changes) -> ApplyResult {
+        let mut applied = Vec::new();
+        let mut failed = Vec::new();
+        let values = [&changes.gtk_theme, &changes.icon_theme, &changes.cursor_theme, &changes.font, &changes.monospace_font];
+        for ((prop, label), value) in Self::PROPS.into_iter().zip(values) {
+            let Some(v) = value else { continue };
+            // -n creates the property where the session never set it.
+            match run("xfconf-query", &["-c", "xsettings", "-p", prop, "-n", "-t", "string", "-s", v]) {
+                Ok(_) => applied.push(label.to_string()),
+                Err(e) => failed.push(format!("{label}: {e}")),
+            }
+        }
+        if changes.color_scheme.is_some() {
+            failed.push("Tryb jasny/ciemny: Xfce nie ma tego ustawienia".into());
+        }
+        ApplyResult { success: failed.is_empty(), applied, failed }
+    }
+}
+
 // ------------------------------------------------------------- Plasma
 
-/// KDE Plasma support is written against the documented behaviour of
-/// `kwriteconfig`/`kreadconfig` and the `plasma-apply-*` helpers, but it has
-/// never been run on a Plasma session — this project is developed on GNOME.
-/// It is wired up rather than stubbed so that a Plasma user gets something
-/// that can work, and `available()` reports honestly when the tools are
-/// missing instead of failing halfway through.
+/// KDE Plasma, through `kwriteconfig`/`kreadconfig` and the `plasma-apply-*`
+/// helpers. Reading was checked on a Plasma 6 session (CachyOS); applying
+/// has not been run there yet. `available()` reports honestly when the
+/// tools are missing instead of failing halfway through.
 struct Plasma {
     /// Plasma 6 renamed the binaries with a version suffix; whichever is
     /// present is used, and neither being present means unsupported.
@@ -297,7 +415,11 @@ impl Plasma {
     }
 
     fn get(&self, group: &str, key: &str) -> String {
-        run(self.read, &["--file", "kdeglobals", "--group", group, "--key", key]).unwrap_or_default()
+        self.get_in("kdeglobals", group, key)
+    }
+
+    fn get_in(&self, file: &str, group: &str, key: &str) -> String {
+        run(self.read, &["--file", file, "--group", group, "--key", key]).unwrap_or_default()
     }
 
     fn set(&self, group: &str, key: &str, value: &str) -> Result<(), String> {
@@ -326,7 +448,8 @@ impl Desktop for Plasma {
         Current {
             gtk_theme: self.get("KDE", "widgetStyle"),
             icon_theme: self.get("Icons", "Theme"),
-            cursor_theme: self.get("General", "cursorTheme"),
+            // The cursor is the mouse settings' own, not kdeglobals'.
+            cursor_theme: self.get_in("kcminputrc", "Mouse", "cursorTheme"),
             font: self.get("General", "font"),
             monospace_font: self.get("General", "fixed"),
             color_scheme: self.get("General", "ColorScheme"),
@@ -337,10 +460,9 @@ impl Desktop for Plasma {
         let mut applied = Vec::new();
         let mut failed = Vec::new();
 
-        let jobs: [(&str, &str, &Option<String>, &str); 5] = [
+        let jobs: [(&str, &str, &Option<String>, &str); 4] = [
             ("KDE", "widgetStyle", &changes.gtk_theme, "Styl widgetów"),
             ("Icons", "Theme", &changes.icon_theme, "Ikony"),
-            ("General", "cursorTheme", &changes.cursor_theme, "Kursor"),
             ("General", "font", &changes.font, "Czcionka interfejsu"),
             ("General", "fixed", &changes.monospace_font, "Czcionka o stałej szerokości"),
         ];
@@ -350,6 +472,20 @@ impl Desktop for Plasma {
             match self.set(group, key, v) {
                 Ok(()) => applied.push(label.to_string()),
                 Err(e) => failed.push(format!("{label}: {e}")),
+            }
+        }
+
+        // The helper also switches the running session; the key alone
+        // waits for the next login.
+        if let Some(cursor) = &changes.cursor_theme {
+            let done = if have("plasma-apply-cursortheme") {
+                run("plasma-apply-cursortheme", &[cursor]).map(|_| ())
+            } else {
+                run(self.write, &["--file", "kcminputrc", "--group", "Mouse", "--key", "cursorTheme", cursor]).map(|_| ())
+            };
+            match done {
+                Ok(()) => applied.push("Kursor".into()),
+                Err(e) => failed.push(format!("Kursor: {e}")),
             }
         }
 
@@ -405,26 +541,30 @@ impl Desktop for Unknown {
     }
 }
 
-/// Picks an implementation from the session's own advertisement of itself.
-/// XDG_CURRENT_DESKTOP is colon-separated and often prefixed by the distro
-/// ("ubuntu:GNOME"), so it is matched case-insensitively on substrings.
+/// Picks an implementation for the desktop the profile names: the session's
+/// own advertisement of itself, unless the user corrected it at onboarding.
 fn detect_desktop() -> Box<dyn Desktop> {
-    let raw = env::var("XDG_CURRENT_DESKTOP")
-        .or_else(|_| env::var("DESKTOP_SESSION"))
-        .unwrap_or_default();
-    let lower = raw.to_lowercase();
+    desktop_for(distro::desktop())
+}
 
-    if lower.contains("gnome") || lower.contains("unity") || lower.contains("cinnamon") {
-        Box::new(Gnome)
-    } else if lower.contains("kde") || lower.contains("plasma") {
-        match Plasma::detect() {
+fn desktop_for(id: Option<&str>) -> Box<dyn Desktop> {
+    match id {
+        Some("gnome") => Box::new(Gsettings::gnome("gnome", "GNOME")),
+        Some("budgie") => Box::new(Gsettings::gnome("budgie", "Budgie")),
+        // elementary's light/dark switch is its settings daemon's, not
+        // GNOME's key — writing that key would report a change nobody sees.
+        Some("pantheon") => Box::new(Gsettings { color_scheme: None, ..Gsettings::gnome("pantheon", "Pantheon") }),
+        Some("cinnamon") => Box::new(Gsettings::cinnamon()),
+        Some("mate") => Box::new(Gsettings::mate()),
+        Some("xfce") => Box::new(Xfce),
+        Some("plasma") => match Plasma::detect() {
             Some(p) => Box::new(p),
             None => Box::new(Unknown("KDE Plasma (brak narzędzi kwriteconfig)".into())),
-        }
-    } else if lower.is_empty() {
-        Box::new(Unknown("nie wykryto środowiska graficznego".into()))
-    } else {
-        Box::new(Unknown(raw))
+        },
+        Some("lxqt") => Box::new(Unknown("LXQt".into())),
+        Some("cosmic") => Box::new(Unknown("COSMIC".into())),
+        Some(_) => Box::new(Unknown(env::var("XDG_CURRENT_DESKTOP").unwrap_or_else(|_| "nieznane środowisko".into()))),
+        None => Box::new(Unknown("nie wykryto środowiska graficznego".into())),
     }
 }
 
@@ -438,18 +578,18 @@ fn home() -> PathBuf {
 /// ones first so a local override shadows the system copy in the listing.
 fn theme_dirs(kind: &str) -> Vec<(PathBuf, bool)> {
     let h = home();
-    match kind {
-        "icons" => vec![
-            (h.join(".icons"), true),
-            (h.join(".local/share/icons"), true),
-            (PathBuf::from("/usr/share/icons"), false),
-        ],
-        _ => vec![
-            (h.join(".themes"), true),
-            (h.join(".local/share/themes"), true),
-            (PathBuf::from("/usr/share/themes"), false),
-        ],
+    let (legacy, name) = if kind == "icons" { (".icons", "icons") } else { (".themes", "themes") };
+    let mut dirs = vec![
+        (h.join(legacy), true),
+        (h.join(".local/share").join(name), true),
+        (PathBuf::from("/usr/share").join(name), false),
+    ];
+    // The system's other data directories. On most distributions these
+    // repeat /usr/share; on NixOS they are the only place themes are.
+    if let Some(data_dirs) = env::var_os("XDG_DATA_DIRS") {
+        dirs.extend(env::split_paths(&data_dirs).map(|d| (d.join(name), false)));
     }
+    dirs
 }
 
 /// A GTK theme directory is one that actually contains a gtk-* subfolder;
@@ -791,4 +931,30 @@ fn main() {
     let mut stdout = io::stdout();
     let _ = writeln!(stdout, "{response}");
     let _ = stdout.flush();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Each desktop the profile can name gets the implementation written
+    /// for it, and the ones without one say what they are.
+    #[test]
+    fn each_desktop_gets_its_own_settings() {
+        let cases = [
+            (Some("gnome"), "gnome", "GNOME"),
+            (Some("budgie"), "budgie", "Budgie"),
+            (Some("cinnamon"), "cinnamon", "Cinnamon"),
+            (Some("mate"), "mate", "MATE"),
+            (Some("xfce"), "xfce", "Xfce"),
+            (Some("lxqt"), "unknown", "LXQt"),
+            (None, "unknown", "nie wykryto środowiska graficznego"),
+        ];
+        for (profile, id, name) in cases {
+            let desktop = desktop_for(profile);
+            assert_eq!((desktop.id(), desktop.name().as_str()), (id, name), "{profile:?}");
+        }
+        assert!(Gsettings::cinnamon().gtk_theme.is_some_and(|(schema, _)| schema.starts_with("org.cinnamon")));
+        assert!(Gsettings::mate().color_scheme.is_none());
+    }
 }

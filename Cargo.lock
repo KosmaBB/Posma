@@ -416,6 +416,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "bloatware"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "block-buffer"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -471,6 +479,7 @@ dependencies = [
  "libc",
  "serde",
  "serde_json",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -718,6 +727,7 @@ dependencies = [
 name = "core"
 version = "0.2.1"
 dependencies = [
+ "distro",
  "serde",
  "serde_json",
  "tauri",
@@ -726,6 +736,7 @@ dependencies = [
  "tauri-plugin-opener",
  "tauri-plugin-shell",
  "tokio",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -978,6 +989,7 @@ dependencies = [
 name = "desktop-theme"
 version = "0.1.0"
 dependencies = [
+ "distro",
  "serde",
  "serde_json",
 ]
@@ -1056,6 +1068,10 @@ dependencies = [
  "quote",
  "syn 2.0.118",
 ]
+
+[[package]]
+name = "distro"
+version = "0.1.0"
 
 [[package]]
 name = "dlopen2"
@@ -1144,7 +1160,6 @@ checksum = "92773504d58c093f6de2459af4af33faa518c13451eb8f2b5698ed3d36e7c813"
 name = "duplicates"
 version = "0.1.0"
 dependencies = [
- "regex",
  "scan-filter",
  "serde",
  "serde_json",
@@ -1742,6 +1757,7 @@ name = "grub-editor"
 version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
+ "distro",
  "serde",
  "serde_json",
 ]
@@ -1832,6 +1848,7 @@ dependencies = [
 name = "health-monitor"
 version = "0.1.0"
 dependencies = [
+ "distro",
  "serde",
  "serde_json",
  "sysinfo",
@@ -2335,6 +2352,7 @@ dependencies = [
 name = "kernel-mgr"
 version = "0.1.0"
 dependencies = [
+ "distro",
  "serde",
  "serde_json",
 ]
@@ -2444,6 +2462,7 @@ name = "linux-broker"
 version = "0.1.0"
 dependencies = [
  "broker-common",
+ "distro",
  "serde",
  "serde_json",
 ]
@@ -3160,6 +3179,7 @@ dependencies = [
 name = "pkg-cache"
 version = "0.1.0"
 dependencies = [
+ "distro",
  "serde",
  "serde_json",
 ]
@@ -3905,6 +3925,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "services"
+version = "0.1.0"
+dependencies = [
+ "broker-common",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "servo_arc"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4246,6 +4275,7 @@ dependencies = [
 name = "system-info"
 version = "0.1.0"
 dependencies = [
+ "distro",
  "serde",
  "serde_json",
  "sysinfo",
@@ -4717,6 +4747,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1c906769ad99c88eaa54e728060edef082f8e358ff32030cb7c7d315e81109"
 
 [[package]]
+name = "time-machine"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "time-macros"
 version = "0.2.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5095,6 +5133,7 @@ checksum = "c6f5d3c3b1bf09027a88a6bc961fc00497d651009560b5463668dc81b0fa87a8"
 name = "uninstaller"
 version = "0.1.0"
 dependencies = [
+ "distro",
  "serde",
  "serde_json",
 ]
@@ -5499,6 +5538,7 @@ dependencies = [
  "broker-common",
  "serde",
  "serde_json",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -5980,6 +6020,14 @@ name = "windows_x86_64_msvc"
 version = "0.53.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6bbff5f0aada427a1e5a6da5f1f98158182f26556f345ac9e04d36d0ebed650"
+
+[[package]]
+name = "winget-ui"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "winnow"

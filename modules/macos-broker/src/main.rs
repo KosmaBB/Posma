@@ -11,31 +11,36 @@
 //!  - `install_directory`, `remove_kernel`, `read_boot_entries` — macOS has
 //!    no GRUB; the equivalents (bless/NVRAM/startup disk) are a different
 //!    model entirely and need their own design, not a Linux port.
-//!  - `create_restore_point`, `component_store_cleanup`,
-//!    `remove_appx_package` — Windows-only concepts.
+//!  - `create_restore_point`, `component_store_cleanup` — Windows-only
+//!    concepts.
 //!
 //! Implemented here because their command shape is unambiguous and
-//! independently validated before running:
-//!  - `pkg_remove` / `pkg_cache_clean` / `pkg_autoremove` (Homebrew)
-//!  - `trim_system_logs` (`log erase`)
+//! independently validated before running, and because a module calls them:
 //!  - `delete_local_snapshots` (`tmutil`)
-//!  - `purge_system_caches`
-//!  - `smart_read` (smartctl, same as Linux)
-//!  - `service_set_enabled` / `service_set_running` (launchctl)
-//!  - `clean_system_paths` / `read_system_file` / `write_system_file`
-//!    against a closed macOS path whitelist
+//!  - `clean_system_paths` against a closed macOS path whitelist
 //!
-//! Elevation: `run_once` under `osascript -e 'do shell script ... with
-//! administrator privileges'` or an SMAppService helper is the intended
-//! transport (see Access_plan.md §4); the daemon mode from broker-common
-//! works as-is on macOS since it's a Unix socket with SO_PEERCRED.
+//! Left out on purpose:
+//!  - Homebrew. It refuses to run as root, and its prefix — /opt/homebrew
+//!    on Apple silicon, /usr/local on Intel — belongs to the user, so
+//!    anything a root process ran from there would be the user's to swap.
+//!    Package work on macOS is unprivileged.
+//!  - `smart_read`, for the same reason: smartctl comes from Homebrew, and
+//!    macOS hands SMART to an ordinary user anyway, so health-monitor reads
+//!    it itself.
+//!  - `trim_system_logs`. `log erase` takes no age — `--ttl` means the
+//!    time-to-live entries, not "older than" — so there is nothing honest
+//!    to map a request for N days onto.
+//!
+//! Elevation: per call, the core runs this binary through `osascript`'s
+//! `do shell script ... with administrator privileges`, passing the request
+//! as `--request` since that prompt forwards no stdin. An installed
+//! SMAppService helper is the "Pełny" path still to come (Access_plan.md
+//! §4); the daemon mode from broker-common works as-is here, its peer check
+//! being `getpeereid`.
 
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use broker_common::guards::{is_safe_name, is_safe_package_id};
-use broker_common::ops::{PkgSource, TrimMode};
-use broker_common::result::{CleanResult, ExecResult, TextResult};
+use broker_common::result::{CleanResult, ExecResult};
 use broker_common::{run_capture, Broker};
 
 const DEFAULT_SOCKET_PATH: &str = "/var/run/posma-broker.sock";
@@ -45,23 +50,8 @@ struct MacosBroker;
 
 /// System-scope caches/logs this broker may delete from. Mirrors the
 /// unprivileged macOS module's own whitelist; kept deliberately narrow.
-const ALLOWED_CLEAN_ROOTS: &[&str] = &["/Library/Caches", "/System/Library/Caches", "/private/var/log"];
+const ALLOWED_CLEAN_ROOTS: [&str; 3] = ["/Library/Caches", "/System/Library/Caches", "/private/var/log"];
 
-/// Config files this broker is willing to read/write. Empty until a real
-/// macOS module needs one — an empty closed list is the safe default.
-const MANAGED_SYSTEM_FILES: &[&str] = &[];
-
-fn within_allowed_roots(path: &Path, roots: &[&str]) -> bool {
-    let Some(parent) = path.parent().and_then(|p| p.canonicalize().ok()) else { return false };
-    let full = parent.join(path.file_name().unwrap_or_default());
-    roots.iter().any(|root| {
-        Path::new(root)
-            .canonicalize()
-            // `full != r` — never the root itself, only entries inside it.
-            .map(|r| full.starts_with(&r) && full != r)
-            .unwrap_or(false)
-    })
-}
 
 impl Broker for MacosBroker {
     fn os_name(&self) -> &'static str {
@@ -69,117 +59,11 @@ impl Broker for MacosBroker {
     }
 
     fn implemented_ops(&self) -> Vec<&'static str> {
-        vec![
-            "clean_system_paths",
-            "pkg_remove",
-            "pkg_cache_clean",
-            "pkg_autoremove",
-            "service_set_enabled",
-            "service_set_running",
-            "trim_system_logs",
-            "smart_read",
-            "delete_local_snapshots",
-            "purge_system_caches",
-        ]
+        vec!["clean_system_paths", "delete_local_snapshots"]
     }
 
     fn clean_system_paths(&self, paths: Vec<String>) -> CleanResult {
-        let mut result = CleanResult::default();
-        for raw in paths {
-            let path = PathBuf::from(&raw);
-            if !within_allowed_roots(&path, ALLOWED_CLEAN_ROOTS) {
-                result.errors.push(format!("{raw}: poza dozwolonymi lokalizacjami — pominięto"));
-                continue;
-            }
-            let size = fs::metadata(&path).map(|m| m.len()).unwrap_or(0);
-            let outcome = if path.is_dir() && !path.is_symlink() {
-                fs::remove_dir_all(&path)
-            } else {
-                fs::remove_file(&path)
-            };
-            match outcome {
-                Ok(()) => {
-                    result.freed_bytes += size;
-                    result.removed += 1;
-                }
-                Err(e) => result.errors.push(format!("{raw}: {e}")),
-            }
-        }
-        result
-    }
-
-    fn read_system_file(&self, path: String) -> Result<TextResult, String> {
-        if !MANAGED_SYSTEM_FILES.contains(&path.as_str()) {
-            return Err(format!("{path}: plik spoza listy dozwolonych"));
-        }
-        fs::read_to_string(&path).map(|content| TextResult { content }).map_err(|e| e.to_string())
-    }
-
-    fn pkg_remove(&self, source: PkgSource, id: String) -> ExecResult {
-        if !is_safe_package_id(&id) {
-            return ExecResult::failed(format!("{id}: nieprawidłowa nazwa pakietu — pominięto"));
-        }
-        match source {
-            PkgSource::Brew => run_capture("brew", &["uninstall".into(), id]),
-            other => ExecResult::failed(format!("{other:?}: nieobsługiwane źródło pakietu na macOS")),
-        }
-    }
-
-    fn pkg_cache_clean(&self, source: PkgSource) -> ExecResult {
-        match source {
-            PkgSource::Brew => run_capture("brew", &["cleanup".into(), "--prune=all".into()]),
-            other => ExecResult::failed(format!("{other:?}: nieobsługiwane źródło pakietu na macOS")),
-        }
-    }
-
-    fn pkg_autoremove(&self, source: PkgSource) -> ExecResult {
-        match source {
-            PkgSource::Brew => run_capture("brew", &["autoremove".into()]),
-            other => ExecResult::failed(format!("{other:?}: nieobsługiwane źródło pakietu na macOS")),
-        }
-    }
-
-    fn service_set_enabled(&self, name: String, enabled: bool) -> ExecResult {
-        if !is_safe_name(&name) {
-            return ExecResult::failed(format!("{name}: nieprawidłowa nazwa usługi"));
-        }
-        let verb = if enabled { "enable" } else { "disable" };
-        run_capture("launchctl", &[verb.into(), format!("system/{name}")])
-    }
-
-    fn service_set_running(&self, name: String, running: bool) -> ExecResult {
-        if !is_safe_name(&name) {
-            return ExecResult::failed(format!("{name}: nieprawidłowa nazwa usługi"));
-        }
-        let verb = if running { "kickstart" } else { "kill" };
-        if running {
-            run_capture("launchctl", &[verb.into(), format!("system/{name}")])
-        } else {
-            run_capture("launchctl", &[verb.into(), "SIGTERM".into(), format!("system/{name}")])
-        }
-    }
-
-    /// macOS's unified log only supports age-based trimming (`--ttl`), so a
-    /// size-based request is refused rather than silently reinterpreted.
-    fn trim_system_logs(&self, mode: TrimMode, value: u64) -> ExecResult {
-        if value == 0 || value > 100_000 {
-            return ExecResult::failed(format!("{value}: nieprawidłowa wartość"));
-        }
-        match mode {
-            TrimMode::Time => run_capture("log", &["erase".into(), format!("--ttl={value}d")]),
-            TrimMode::Size => {
-                ExecResult::failed("macOS obsługuje przycinanie logów tylko według wieku, nie rozmiaru")
-            }
-        }
-    }
-
-    fn smart_read(&self, device: String) -> ExecResult {
-        let valid = device.starts_with("/dev/")
-            && device["/dev/".len()..].chars().all(|c| c.is_ascii_alphanumeric() || c == '/');
-        if !valid {
-            return ExecResult::failed(format!("{device}: nieprawidłowa nazwa urządzenia"));
-        }
-        run_capture("smartctl", &["-a".into(), "-j".into(), device])
+        broker_common::clean_within(paths, &ALLOWED_CLEAN_ROOTS.map(PathBuf::from))
     }
 
     fn delete_local_snapshots(&self, keep_latest: bool) -> ExecResult {
@@ -193,7 +77,8 @@ impl Broker for MacosBroker {
         let mut names: Vec<String> = listing
             .output
             .lines()
-            .filter_map(|l| l.trim().strip_prefix("com.apple.TimeMachine.").map(|s| s.to_string()))
+            // "com.apple.TimeMachine.2026-10-19-101500.local" — deletelocalsnapshots takes the date alone.
+            .filter_map(|l| l.trim().strip_prefix("com.apple.TimeMachine.").map(|s| s.trim_end_matches(".local").to_string()))
             .collect();
         names.sort();
         if keep_latest {
@@ -217,10 +102,6 @@ impl Broker for MacosBroker {
         } else {
             ExecResult::failed(errors.join("\n"))
         }
-    }
-
-    fn purge_system_caches(&self) -> ExecResult {
-        run_capture("purge", &[])
     }
 }
 
