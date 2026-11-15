@@ -64,7 +64,7 @@ Wymagania i kolejność budowania opisuje
 
 ```bash
 npm --prefix core install
-bash scripts/sync-sidecars.sh   # wymagane przed pierwszym budowaniem
+node scripts/sync-sidecars.mjs   # wymagane przed pierwszym budowaniem
 npm --prefix core run tauri dev
 ```
 

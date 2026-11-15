@@ -4,7 +4,7 @@
 /target/
 **/target/
 
-# Compiled sidecar binaries copied here by scripts/sync-sidecars.sh.
+# Compiled sidecar binaries copied here by scripts/sync-sidecars.mjs.
 # Regenerate with that script — never commit binaries to the repo.
 /core/src-tauri/binaries/
 /core/src-tauri/gen/schemas/

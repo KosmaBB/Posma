@@ -72,8 +72,8 @@ function ThemeSelect({
   const missing = value && !entries.some((e) => e.name === value)
 
   return (
-    <div className="form-field">
-      <label>{label}</label>
+    <label className="form-field">
+      <span>{label}</span>
       <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
         {missing && <option value={value}>{value} — nie znaleziono na dysku</option>}
         {entries.map((e) => (
@@ -83,7 +83,7 @@ function ThemeSelect({
           </option>
         ))}
       </select>
-    </div>
+    </label>
   )
 }
 
@@ -255,7 +255,7 @@ export function DesktopThemeView() {
     return (
       <div className="glass empty-state">
         <p>Nie udało się odczytać ustawień pulpitu.</p>
-        <p className="mono" style={{ fontSize: 12 }}>{scanError}</p>
+        <p className="mono" style={{ fontSize: 13 }}>{scanError}</p>
         <button className="btn btn-ghost" onClick={loadScan}>Spróbuj ponownie</button>
       </div>
     )
@@ -324,8 +324,8 @@ export function DesktopThemeView() {
         {/* Hidden rather than disabled when the session has no such key —
             a greyed-out control invites the question "why not?". */}
         {scan.color_scheme_supported && (
-          <div className="form-field">
-            <label>Tryb</label>
+          <label className="form-field">
+            <span>Tryb</span>
             <select
               value={draft.color_scheme}
               disabled={locked}
@@ -335,11 +335,11 @@ export function DesktopThemeView() {
               <option value="prefer-light">Jasny</option>
               <option value="prefer-dark">Ciemny</option>
             </select>
-          </div>
+          </label>
         )}
 
-        <div className="form-field">
-          <label>Czcionka interfejsu</label>
+        <label className="form-field">
+          <span>Czcionka interfejsu</span>
           <input
             type="text"
             value={draft.font}
@@ -347,9 +347,9 @@ export function DesktopThemeView() {
             onChange={(e) => setDraft({ ...draft, font: e.target.value })}
             list="posma-fonts"
           />
-        </div>
-        <div className="form-field">
-          <label>Czcionka o stałej szerokości</label>
+        </label>
+        <label className="form-field">
+          <span>Czcionka o stałej szerokości</span>
           <input
             type="text"
             value={draft.monospace_font}
@@ -357,7 +357,7 @@ export function DesktopThemeView() {
             onChange={(e) => setDraft({ ...draft, monospace_font: e.target.value })}
             list="posma-fonts"
           />
-        </div>
+        </label>
 
         {/* Fontconfig gives family names only; the size and weight suffix
             stays hand-typed, which is why these are text inputs. */}
@@ -396,7 +396,7 @@ export function DesktopThemeView() {
         <h2 style={{ fontSize: 14 }}>Instalacja z folderu</h2>
       </div>
       <div className="glass" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+        <div style={{ fontSize: 13, color: 'var(--muted)' }}>
           Rozpoznaje samo, czy wskazany folder jest motywem GTK, zestawem ikon czy kursorem, i kopiuje
           go do Twojego katalogu domowego.
         </div>
@@ -423,7 +423,7 @@ export function DesktopThemeView() {
         <h2 style={{ fontSize: 14 }}>Zestawy</h2>
       </div>
       <div className="glass" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+        <div style={{ fontSize: 13, color: 'var(--muted)' }}>
           Zapisuje obecny wygląd pod nazwą, żeby móc do niego wrócić jednym kliknięciem.
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -443,7 +443,7 @@ export function DesktopThemeView() {
           </button>
         </div>
         {scan.presets.length === 0 ? (
-          <div style={{ fontSize: 12, color: 'var(--muted)' }}>Brak zapisanych zestawów.</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)' }}>Brak zapisanych zestawów.</div>
         ) : (
           <div className="clean-list">
             {scan.presets.map((name) => (

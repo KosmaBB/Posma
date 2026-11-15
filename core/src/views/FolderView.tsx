@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { AppState } from '../state/appState'
-import { applyOrder, folders, modulesInFolder, riskLabel } from '../data/modules'
+import { applyOrder, catalogNumbers, folderNumber, folders, modulesInFolder, riskLabel } from '../data/modules'
 import { Icon } from '../components/Icons'
 
 /**
@@ -17,6 +17,8 @@ export function FolderView({ app, folderId }: { app: AppState; folderId: string 
   const [over, setOver] = useState<number | null>(null)
   /** Card that has just landed, so it can play its settle animation once. */
   const [settling, setSettling] = useState<string | null>(null)
+  const os = onboarding?.os
+  const numbers = useMemo(() => catalogNumbers(os, app.linuxProfile), [os, app.linuxProfile])
 
   if (!folder) {
     return (
@@ -48,13 +50,10 @@ export function FolderView({ app, folderId }: { app: AppState; folderId: string 
     window.setTimeout(() => setSettling((cur) => (cur === moved.id ? null : cur)), 500)
   }
 
-  const gradientVars = {
-    '--g1': folder.gradient.g1,
-    '--g2': folder.gradient.g2,
-  } as React.CSSProperties
+  const codeVar = { '--code': folder.gradient.g1 } as React.CSSProperties
 
   return (
-    <div className="view-enter">
+    <div className="view-enter" style={codeVar}>
       <button className="back-link" onClick={() => setView({ kind: 'dashboard' })}>
         <span className="back-link__arrow" aria-hidden="true">
           <Icon name="chevron" />
@@ -62,15 +61,15 @@ export function FolderView({ app, folderId }: { app: AppState; folderId: string 
         Pulpit
       </button>
 
-      <header className="folder-head glass" style={gradientVars}>
-        <span className="folder-head__ico" style={gradientVars}>
-          <Icon name={folder.icon} />
-        </span>
+      <header className="folder-head glass">
+        <span className="folder-head__no">{folderNumber(folder.id)}</span>
         <div>
-          <h1 className="folder-head__name">{folder.name}</h1>
+          <h1 className="folder-head__name">
+            <span className="code" />
+            {folder.name}
+          </h1>
           <p className="folder-head__count">
-            {installed.length} z {items.length}{' '}
-            {items.length === 1 ? 'modułu włączony' : 'modułów włączonych'}
+            Włączone: {installed.length} z {items.length}
           </p>
         </div>
       </header>
@@ -80,13 +79,13 @@ export function FolderView({ app, folderId }: { app: AppState; folderId: string 
           W tym folderze nie ma jeszcze modułów dla Twojego systemu.
         </div>
       ) : (
-        <div className="module-grid">
+        <div className="cat-list" data-tour="folder-list">
           {items.map((m, i) => {
             const on = installedSet.has(m.id)
             return (
               <article
                 key={m.id}
-                className="glass folder-card"
+                className="cat-row folder-card"
                 data-on={on}
                 data-dragging={dragging === i}
                 data-over={over === i && dragging !== i}
@@ -112,28 +111,19 @@ export function FolderView({ app, folderId }: { app: AppState; folderId: string 
                   e.preventDefault()
                   drop(i)
                 }}
-                // Whole card opens the module. Only when it is switched on:
+                // Whole row opens the module. Only when it is switched on:
                 // enabling is a change to the user's setup and should not
-                // happen from a stray click on the body of a card.
+                // happen from a stray click on the body of a row.
                 onClick={on ? () => setView({ kind: 'module', moduleId: m.id }) : undefined}
               >
-                <span className="folder-card__grip" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność">
-                  ⠿
-                </span>
-                <div className="folder-card__top">
-                  <span className="ico-badge" style={gradientVars}>
-                    <Icon name={m.icon} />
-                  </span>
-                  <span className={`chip ${m.risk}`}>
-                    {m.risk === 'critical' ? '⚠ ' : ''}
-                    {riskLabel[m.risk]}
-                  </span>
+                <span className="folder-card__grip" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność" />
+                <span className="cat-row__no">{numbers.get(m.id)}</span>
+                <div>
+                  <h2 className="cat-row__name">{m.name}</h2>
+                  <p className="cat-row__desc">{m.desc}</p>
                 </div>
-
-                <h2 className="folder-card__name">{m.name}</h2>
-                <p className="folder-card__desc">{m.desc}</p>
-
-                <div className="folder-card__foot">
+                <span className={`chip ${m.risk}`}>{riskLabel[m.risk]}</span>
+                <div className="cat-row__actions">
                   {on ? (
                     <button
                       className="btn btn-primary btn-mini"
@@ -155,7 +145,6 @@ export function FolderView({ app, folderId }: { app: AppState; folderId: string 
                       Włącz moduł
                     </button>
                   )}
-
                   {on && (
                     <button
                       className="btn btn-ghost btn-mini"
@@ -169,6 +158,7 @@ export function FolderView({ app, folderId }: { app: AppState; folderId: string 
                     </button>
                   )}
                 </div>
+                <span className="code" />
               </article>
             )
           })}

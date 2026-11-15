@@ -1,0 +1,81 @@
+/* ============================================================
+   Wygląd „Konsola” — monitor systemu w terminalu: wszystko w mono,
+   kolory terminala, panele w ramkach z tytułem w krawędzi, przyciski
+   w nawiasach.
+   ============================================================ */
+[data-look='konsola'] {
+  --sans: 'JetBrains Mono Variable', ui-monospace, monospace;
+  --mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+  --head-weight: 700; --head-stretch: 100%;
+  --lbl-size: 13px; --lbl-weight: 700; --lbl-stretch: 100%; --lbl-tracking: 0em; --lbl-transform: lowercase;
+  --lbl-color: var(--term-blue);
+  --btn-size: 13px; --btn-weight: 700; --btn-stretch: 100%;
+  --folder-size: 13px; --folder-weight: 700;
+  --brand-stretch: 100%; --brand-tracking: 0.1em; --brand-color: var(--term-green);
+  --hero-size: 54px; --hero-weight: 800; --hero-stretch: 100%; --hero-tracking: -0.03em; --hero-fg: var(--term-green);
+
+  --btn-bg: transparent; --btn-fg: var(--accent); --btn-border: var(--accent); --btn-strip: 0px;
+  --chip-border: transparent;
+  --nav-no-bg: var(--term-green); --nav-no-fg: var(--bg);
+  --meter-fill: var(--term-blue);
+
+  --chart-mean: var(--term-green); --chart-w: 1.5;
+  --chart-peak: var(--accent); --chart-peak-opacity: 0.85;
+  --bar-fill: var(--term-green);
+}
+
+[data-look='konsola'][data-theme='dark'] {
+  --bg: #111111; --bg-2: #151515; --bg-3: #222222;
+  --ink: #dcd8cc; --muted: #aaa69a; --dim: #8f8b80;
+  --accent: #e5c07b; --on-accent: #111111;
+  --term-green: #98c379; --term-blue: #61afef;
+  --border: #2e2e2e; --border-strong: #4f4f4f;
+  --good: #98c379; --warn: #e5c07b; --critical: #ef7b84; --on-critical: #111111;
+  --g-teal-1: #98c379; --g-teal-2: #98c379;
+  --g-blue-1: #61afef; --g-blue-2: #61afef;
+  --g-green-1: #c678dd; --g-green-2: #c678dd;
+  --g-red-1: #ef7b84; --g-red-2: #ef7b84;
+  --g-violet-1: #8f8b80; --g-violet-2: #8f8b80;
+  --g-amber-1: #e5c07b; --g-amber-2: #e5c07b;
+  --g-indigo-1: #61afef; --g-indigo-2: #61afef;
+  --side-bg: #0c0c0c; --panel-bg: #151515; --panel-shadow: none;
+  --nav-active-bg: #262626;
+  color-scheme: dark;
+}
+
+[data-look='konsola'][data-theme='light'] {
+  --bg: #fafaf6; --bg-2: #f2f1eb; --bg-3: #e6e4da;
+  --ink: #262626; --muted: #52524c; --dim: #66665f;
+  --accent: #8a6100; --on-accent: #ffffff;
+  --term-green: #3a7420; --term-blue: #1d5bb8;
+  --border: #dad8cf; --border-strong: #b3b0a4;
+  --good: #3a7420; --warn: #8a6100; --critical: #b8352b; --on-critical: #ffffff;
+  --g-teal-1: #3a7420; --g-teal-2: #3a7420;
+  --g-blue-1: #1d5bb8; --g-blue-2: #1d5bb8;
+  --g-green-1: #8e3fa8; --g-green-2: #8e3fa8;
+  --g-red-1: #b8352b; --g-red-2: #b8352b;
+  --g-violet-1: #66665f; --g-violet-2: #66665f;
+  --g-amber-1: #8a6100; --g-amber-2: #8a6100;
+  --g-indigo-1: #1d5bb8; --g-indigo-2: #1d5bb8;
+  --side-bg: #f2f1eb; --panel-bg: #f2f1eb; --panel-shadow: none;
+  --nav-active-bg: #e6e4da;
+  color-scheme: light;
+}
+
+/* Panele pulpitu w ramkach z odstępem, jak okna btop. */
+[data-look='konsola'] .dash, [data-look='konsola'] .dash-index { gap: 8px; }
+[data-look='konsola'] .dash { padding: 8px; }
+[data-look='konsola'] .dash-index { border-top: 0; }
+[data-look='konsola'] :is(.dash-plot, .dash-spec, .dash-idx, .dash-disks) { border: var(--hair) solid var(--border-strong); }
+/* Tytuł w krawędzi ramki: ┤ nazwa ├. */
+[data-look='konsola'] :is(.dash-head .lbl, .section-head h2)::before { content: '┤ '; color: var(--border-strong); }
+[data-look='konsola'] :is(.dash-head .lbl, .section-head h2)::after { content: ' ├'; color: var(--border-strong); }
+/* Przyciski i znaczniki w nawiasach. */
+[data-look='konsola'] .btn::before { content: '['; }
+[data-look='konsola'] .btn::after { content: ']'; position: static; width: auto; background: none; border-radius: 0; }
+[data-look='konsola'] .btn-primary { padding-right: 18px; }
+[data-look='konsola'] .btn-primary.btn-mini { padding-right: 11px; }
+[data-look='konsola'] .chip { padding: 0; }
+[data-look='konsola'] .chip::before { content: '['; }
+[data-look='konsola'] .chip::after { content: ']'; }
+[data-look='konsola'] .spec-table td:last-child { color: var(--accent); }

@@ -1,7 +1,6 @@
 import type { AppState } from '../state/appState'
-import { folders, moduleById, riskLabel } from '../data/modules'
+import { catalogNumbers, folders, moduleById, riskLabel, type ModuleDef } from '../data/modules'
 import { lazy, Suspense } from 'react'
-import { Icon } from '../components/Icons'
 
 type ViewProps = { app: AppState }
 
@@ -35,6 +34,7 @@ const MODULE_VIEWS: Record<string, React.ComponentType<ViewProps>> = {
   'grub-editor': lazyView(() => import('./modules/GrubEditorView'), 'GrubEditorView'),
   'desktop-theme': lazyView(() => import('./modules/DesktopThemeView'), 'DesktopThemeView'),
   'xcode-cache': lazyView(() => import('./modules/XcodeCacheView'), 'XcodeCacheView'),
+  'macos-slim': lazyView(() => import('./modules/XcodeCacheView'), 'MacosSlimView'),
   'time-machine': lazyView(() => import('./modules/TimeMachineView'), 'TimeMachineView'),
   bloatware: lazyView(() => import('./modules/BloatwareView'), 'BloatwareView'),
   services: lazyView(() => import('./modules/ServicesView'), 'ServicesView'),
@@ -58,31 +58,40 @@ export function ModuleView({ app, moduleId }: { app: AppState; moduleId: string 
     )
   }
   const folder = folders.find((f) => f.id === mod.folder)!
-  const ActiveModuleView = MODULE_VIEWS[mod.id]
 
   return (
-    <div className="view-enter">
-      <div className="glass module-hero" style={{ '--g1': folder.gradient.g1, '--g2': folder.gradient.g2 } as React.CSSProperties}>
-        <div className="ico-badge" style={{ '--g1': folder.gradient.g1, '--g2': folder.gradient.g2 } as React.CSSProperties}>
-          <Icon name={mod.icon} />
-        </div>
+    <div className="view-enter" data-tour="module">
+      <div className="glass module-hero" data-tour="module-hero" style={{ '--code': folder.gradient.g1 } as React.CSSProperties}>
+        <span className="module-hero__no">{catalogNumbers(app.onboarding?.os, app.linuxProfile).get(mod.id) ?? '—'}</span>
         <div>
-          <h2>{mod.name}</h2>
+          <h2>
+            <span className="code" />
+            {mod.name}
+          </h2>
           <div className="mh-desc">{mod.desc}</div>
         </div>
-        <span className={`chip ${mod.risk}`} style={{ marginLeft: 'auto' }}>{riskLabel[mod.risk]}</span>
+        <span className={`chip ${mod.risk}`}>{riskLabel[mod.risk]}</span>
       </div>
-      {ActiveModuleView ? (
-        <Suspense fallback={null}>
-          <ActiveModuleView key={mod.id} app={app} />
-        </Suspense>
-      ) : (
-        <div className="glass placeholder-body">
-          Interfejs modułu „{mod.name}" powstanie w kolejnych etapach —
-          <br />
-          tu trafi właściwe UI skanowania, podglądu i akcji tego modułu.
-        </div>
-      )}
+      <ModuleBody app={app} mod={mod} />
+    </div>
+  )
+}
+
+/**
+ * The module's own interface, without any frame. Every world draws its own
+ * header around this; the inside is built from the shared blocks.
+ */
+export function ModuleBody({ app, mod }: { app: AppState; mod: ModuleDef }) {
+  const ActiveModuleView = MODULE_VIEWS[mod.id]
+  return ActiveModuleView ? (
+    <Suspense fallback={null}>
+      <ActiveModuleView key={mod.id} app={app} />
+    </Suspense>
+  ) : (
+    <div className="glass placeholder-body">
+      Interfejs modułu „{mod.name}" powstanie w kolejnych etapach —
+      <br />
+      tu trafi właściwe UI skanowania, podglądu i akcji tego modułu.
     </div>
   )
 }

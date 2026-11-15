@@ -155,7 +155,7 @@ export function MetadataView() {
 
   return (
     <div>
-      <div className="glass empty-state" style={{ textAlign: 'left' }}>
+      <div className="glass empty-state intro">
         <div style={{ fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>Ukryte dane w zdjęciach</div>
         Zdjęcia z telefonów i aparatów często zawierają w sobie EXIF (model urządzenia, data, czasem dokładna
         lokalizacja GPS) oraz komentarze czy tagi tekstowe. Wybierz pliki JPEG lub PNG, rozwiń pozycję żeby zobaczyć
@@ -232,7 +232,7 @@ export function MetadataView() {
                 </div>
                 {isExpanded && f.fields.length > 0 && (
                   <div style={{ padding: '10px 16px 14px 44px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+                    <div style={{ fontSize: 13, color: 'var(--muted)' }}>
                       Zaznacz co zachować — reszta zostanie usunięta przy czyszczeniu.
                     </div>
                     {f.fields.map((field) => (
@@ -245,7 +245,7 @@ export function MetadataView() {
                         />
                         <span>
                           <strong>{field.label}</strong>
-                          <span className="mono" style={{ marginLeft: 8, color: 'var(--muted)', fontSize: 11.5 }}>{field.value}</span>
+                          <span className="mono" style={{ marginLeft: 8, color: 'var(--muted)', fontSize: 13 }}>{field.value}</span>
                         </span>
                       </label>
                     ))}
@@ -276,7 +276,7 @@ export function MetadataView() {
           <div className="done-badge">
             <Icon name="check" />
           </div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', fontFamily: 'var(--sans)' }}>
             Wyczyszczono {phase.result.entries.filter((e) => e.cleaned).length} plików ({formatBytes(phase.result.total_freed)})
           </div>
           <div className="clean-errors mono" style={{ color: 'var(--muted)', background: 'none', border: 'none', textAlign: 'left' }}>

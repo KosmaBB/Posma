@@ -34,10 +34,16 @@ The UI never reaches a module or the broker directly — everything goes
 through a Tauri command, which is where capability gating happens
 (`PermissionRegistry::require`).
 
+The UI's look is a *world* (`core/src/worlds/`): a shell, a home screen and
+a stylesheet loaded when the world is chosen. Worlds share the module
+interfaces, settings and every call to the backend, so a theme changes how
+the app looks and moves, never what it may do — see
+[Writing a theme](writing-a-theme.md).
+
 ## Modules (`modules/`)
 
 One crate per feature. Each builds to a standalone executable that
-`scripts/sync-sidecars.sh` copies into the app bundle, where Tauri launches
+`scripts/sync-sidecars.mjs` copies into the app bundle, where Tauri launches
 it as a *sidecar*.
 
 **Modules are unprivileged.** They run as the user, with no elevation of any

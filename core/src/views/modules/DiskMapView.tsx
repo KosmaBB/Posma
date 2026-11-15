@@ -173,7 +173,7 @@ export function DiskMapView({ app }: { app: AppState }) {
 
   return (
     <div>
-      <div className="glass empty-state" style={{ textAlign: 'left' }}>
+      <div className="glass empty-state intro">
         <div style={{ fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>Co zajmuje miejsce</div>
         Przegląd folderu warstwa po warstwie — największe pozycje na górze. Kliknij folder żeby zejść głębiej,
         albo wybierz inny punkt startowy poniżej. Widok jest wyłącznie do podglądu — nic tu nie usuwa plików.
@@ -253,7 +253,6 @@ export function DiskMapView({ app }: { app: AppState }) {
                 const sizeClass = area < 1800 ? 'tiny' : area < 5500 ? 'small' : ''
                 const drillable = isDrillable(r.item)
                 const t = r.item.size_bytes / maxSize
-                const lightness = 45 + t * 18
                 const pct = ((r.item.size_bytes / total) * 100).toFixed(1)
                 return (
                   <div
@@ -261,7 +260,8 @@ export function DiskMapView({ app }: { app: AppState }) {
                     className={`diskmap-tile ${sizeClass}`}
                     style={{
                       left: r.x, top: r.y, width: r.w, height: r.h,
-                      background: `linear-gradient(135deg, hsl(228 92% ${lightness}%), hsl(190 90% ${lightness + 8}%))`,
+                      // One grey scale, lighter as it grows: colour would suggest a category there is none of.
+                      background: `color-mix(in srgb, var(--ink) ${Math.round(6 + t * 22)}%, var(--bg))`,
                       cursor: drillable ? 'pointer' : 'default',
                     }}
                     onClick={() => drillable && goTo(r.item.path!)}
@@ -284,7 +284,6 @@ export function DiskMapView({ app }: { app: AppState }) {
                 const C = 2 * Math.PI * R
                 const frac = maxSize > 0 ? entry.size_bytes / maxSize : 0
                 const offset = C * (1 - frac)
-                const hue = 228 - i * 3
                 const pct = ((entry.size_bytes / total) * 100).toFixed(1)
                 return (
                   <div
@@ -301,7 +300,6 @@ export function DiskMapView({ app }: { app: AppState }) {
                         <circle
                           className="dr-fill"
                           cx="42" cy="42" r={R}
-                          stroke={`hsl(${hue} 90% 60%)`}
                           strokeDasharray={C}
                           strokeDashoffset={offset}
                         />

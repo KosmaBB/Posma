@@ -725,7 +725,7 @@ dependencies = [
 
 [[package]]
 name = "core"
-version = "0.2.1"
+version = "0.3.0"
 dependencies = [
  "distro",
  "serde",
@@ -2438,6 +2438,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "library-clean"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "libredox"
 version = "0.1.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2523,6 +2531,13 @@ dependencies = [
  "broker-common",
  "serde",
  "serde_json",
+]
+
+[[package]]
+name = "macos-slim"
+version = "0.1.0"
+dependencies = [
+ "library-clean",
 ]
 
 [[package]]
@@ -6144,8 +6159,7 @@ dependencies = [
 name = "xcode-cache"
 version = "0.1.0"
 dependencies = [
- "serde",
- "serde_json",
+ "library-clean",
 ]
 
 [[package]]

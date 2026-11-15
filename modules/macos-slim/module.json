@@ -1,0 +1,9 @@
+{
+  "id": "macos-slim",
+  "name": "Odchudzanie macOS",
+  "description": "Lists what Mail and Messages keep on disk that comes back by itself — copies of opened attachments, previews, caches — and deletes only what is handed back after confirmation. Never touches mailboxes, conversations or Messages' attachments.",
+  "version": "0.1.0",
+  "platforms": ["macos"],
+  "binary": "macos-slim",
+  "capabilities": ["fs-user", "fda"]
+}

@@ -219,7 +219,7 @@ export function BrowserHygieneView() {
           <div className="done-badge">
             <Icon name="check" />
           </div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', fontFamily: 'var(--sans)' }}>
             Odzyskano {formatBytes(phase.result.freed_bytes)}
           </div>
           Usunięto {phase.result.removed} pozycji.

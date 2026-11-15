@@ -55,7 +55,7 @@ fn broker_binary_path() -> Result<PathBuf, String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     let dir = exe.parent().ok_or("nie udało się ustalić katalogu aplikacji")?;
     // Tauri places sidecars without the target triple but with Windows' `.exe`.
-    Ok(dir.join(format!("{}{}", broker_binary_name(), std::env::consts::EXE_SUFFIX)))
+    Ok(dir.join(format!("posma-{}{}", broker_binary_name(), std::env::consts::EXE_SUFFIX)))
 }
 
 /// Distinguishes "couldn't reach the daemon at all" (safe to fall back to
@@ -331,6 +331,7 @@ mod uac {
     /// The whole path on a real Windows: the prompt, the pipe, the check on
     /// who connected, and a second answer from the same session. CI runs
     /// it; on a desktop it shows the UAC prompt once.
+    #[cfg(test)]
     #[tokio::test]
     #[ignore]
     async fn one_elevated_session_answers_every_call() {

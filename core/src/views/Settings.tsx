@@ -2,35 +2,11 @@ import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { open } from '@tauri-apps/plugin-dialog'
 import { detectOs, type AppState } from '../state/appState'
-import { autoScale, type Accent, type SettingsState, type Theme, type UiScale } from '../state/settings'
+import type { SettingsState } from '../state/settings'
 import { confirmAction } from '../components/confirm'
+import { SettingRow as Row } from '../components/SettingRow'
 import { SystemProfileFields, profileSummary } from '../components/SystemProfile'
-
-/** A label and its explanation, with whatever control it takes on the right. */
-function Row({
-  name,
-  desc,
-  children,
-  danger,
-}: {
-  name: string
-  desc: string
-  children: React.ReactNode
-  danger?: boolean
-}) {
-  return (
-    <div
-      className="glass setting-row"
-      style={danger ? { borderColor: 'color-mix(in srgb, var(--critical) 35%, transparent)' } : undefined}
-    >
-      <div className="st-text">
-        <div className="st-name" style={danger ? { color: 'var(--critical)' } : undefined}>{name}</div>
-        <div className="st-desc">{desc}</div>
-      </div>
-      {children}
-    </div>
-  )
-}
+import { AppearanceSection } from './Appearance'
 
 /**
  * macOS grants Full Disk Access only by hand, in System Settings. This can
@@ -38,7 +14,7 @@ function Row({
  * again whenever the window comes back to the front, which is when someone
  * returns from flipping the switch.
  */
-function FullDiskAccessRow() {
+export function FullDiskAccessRow() {
   const [granted, setGranted] = useState<boolean | null>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -79,15 +55,6 @@ function FullDiskAccessRow() {
   )
 }
 
-const SCALES: { value: UiScale; label: string }[] = [
-  { value: 'auto', label: 'Automatyczne' },
-  { value: '0.9', label: 'Mniejsze (90%)' },
-  { value: '1', label: 'Domyślne (100%)' },
-  { value: '1.15', label: 'Większe (115%)' },
-  { value: '1.3', label: 'Duże (130%)' },
-  { value: '1.5', label: 'Bardzo duże (150%)' },
-]
-
 export function Settings({ app, settings }: { app: AppState; settings: SettingsState }) {
   const { onboarding, resetOnboarding, linuxProfile, saveLinuxProfile } = app
   const { settings: s, set, addToBlacklist, removeFromBlacklist } = settings
@@ -124,9 +91,10 @@ export function Settings({ app, settings }: { app: AppState; settings: SettingsS
 
   return (
     <div className="view-enter">
+      <div className="section-head"><h2>Aplikacja</h2></div>
       <div className="settings-list">
         <Row
-          name="Poziom dostępu"
+          name="Poziom dostępu" tour="access"
           desc="Pełny zbiera wszystkie zgody z góry i zapamiętuje je. Wybiórczy nadaje uprawnienia na jedno uruchomienie i pyta ponownie po restarcie."
         >
           <select value={accessLevel} onChange={(e) => changeAccessLevel(e.target.value as 'full' | 'selective')}>
@@ -151,53 +119,7 @@ export function Settings({ app, settings }: { app: AppState; settings: SettingsS
         )}
 
         <Row
-          name="Motyw"
-          desc="Systemowy idzie za ustawieniem systemu i zmienia się razem z nim."
-        >
-          <select value={s.theme} onChange={(e) => set('theme', e.target.value as Theme)}>
-            <option value="dark">Ciemny</option>
-            <option value="light">Jasny</option>
-            <option value="system">Systemowy</option>
-          </select>
-        </Row>
-
-        <Row
-          name="Kolor akcentu"
-          desc="Kolor przycisków, podświetleń i obramowania zaznaczenia."
-        >
-          <div className="accent-picker">
-            {(['teal', 'blue', 'violet', 'amber', 'green'] as Accent[]).map((a) => (
-              <button
-                key={a}
-                type="button"
-                className="accent-dot"
-                data-accent={a}
-                data-active={s.accent === a}
-                aria-label={a}
-                aria-pressed={s.accent === a}
-                onClick={() => set('accent', a)}
-              />
-            ))}
-          </div>
-        </Row>
-
-        <Row
-          name="Skalowanie interfejsu"
-          desc={
-            s.uiScale === 'auto'
-              ? `Automatyczne dobiera skalę do szerokości okna — teraz ${Math.round(autoScale(window.innerWidth) * 100)}%.`
-              : 'Ustaw ręcznie, jeśli przy Twojej rozdzielczości tekst jest za mały lub za duży.'
-          }
-        >
-          <select value={s.uiScale} onChange={(e) => set('uiScale', e.target.value as UiScale)}>
-            {SCALES.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        </Row>
-
-        <Row
-          name="Czarna lista skanerów"
+          name="Czarna lista skanerów" tour="blacklist"
           desc="Ścieżki, których skanery nigdy nie wylistują ani nie zaproponują do usunięcia — dyski innego systemu, archiwum zdjęć, dokumenty klienta."
         >
           <button className="btn btn-ghost" onClick={pickBlacklistPath}>Dodaj folder</button>
@@ -249,6 +171,12 @@ export function Settings({ app, settings }: { app: AppState; settings: SettingsS
           </select>
         </Row>
 
+      </div>
+
+      <AppearanceSection settings={settings} />
+
+      <div className="section-head"><h2>Dane aplikacji</h2></div>
+      <div className="settings-list">
         <Row
           name="Absolutne odinstalowanie aplikacji"
           desc="Usuwa aplikację razem ze wszystkimi modułami, ustawieniami i danymi. Na razie: resetuje stan aplikacji (onboarding od nowa)."

@@ -1,21 +1,29 @@
 {
   "bundle": {
     "externalBin": [
-      "binaries/autostart",
-      "binaries/big-files",
-      "binaries/browser-hygiene",
-      "binaries/disk-map",
-      "binaries/duplicates",
-      "binaries/health-monitor",
-      "binaries/metadata",
-      "binaries/shredder",
-      "binaries/system-info",
-      "binaries/temp-clean",
-      "binaries/vault",
-      "binaries/windows-broker",
-      "binaries/bloatware",
-      "binaries/services",
-      "binaries/winget-ui"
-    ]
+      "binaries/posma-autostart",
+      "binaries/posma-big-files",
+      "binaries/posma-browser-hygiene",
+      "binaries/posma-disk-map",
+      "binaries/posma-duplicates",
+      "binaries/posma-health-monitor",
+      "binaries/posma-metadata",
+      "binaries/posma-shredder",
+      "binaries/posma-system-info",
+      "binaries/posma-temp-clean",
+      "binaries/posma-vault",
+      "binaries/posma-windows-broker",
+      "binaries/posma-bloatware",
+      "binaries/posma-services",
+      "binaries/posma-winget-ui"
+    ],
+    "targets": [
+      "nsis"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "perMachine"
+      }
+    }
   }
 }

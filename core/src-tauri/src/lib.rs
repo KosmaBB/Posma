@@ -33,7 +33,7 @@ async fn call_sidecar(
 ) -> Result<serde_json::Value, String> {
     let (mut rx, mut child) = app
         .shell()
-        .sidecar(module)
+        .sidecar(format!("posma-{module}"))
         .map_err(|e| e.to_string())?
         .envs(app.state::<ProfileStore>().get().env())
         .spawn()
@@ -103,7 +103,7 @@ async fn vault_start(app: tauri::AppHandle, state: tauri::State<'_, VaultState>)
     if guard.is_some() {
         return Ok(());
     }
-    let (rx, child) = app.shell().sidecar("vault").map_err(|e| e.to_string())?.spawn().map_err(|e| e.to_string())?;
+    let (rx, child) = app.shell().sidecar("posma-vault").map_err(|e| e.to_string())?.spawn().map_err(|e| e.to_string())?;
     *guard = Some(VaultSession { child, rx });
     Ok(())
 }

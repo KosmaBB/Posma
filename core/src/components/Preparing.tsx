@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Icon } from './Icons'
 
 /**
  * Waiting state for work that genuinely takes a while. Names the job, says
@@ -49,7 +50,7 @@ export function Preparing({
           {steps.map((s) => (
             <li key={s.label} data-done={s.done}>
               <span className="preparing__tick" aria-hidden="true">
-                {s.done ? '✓' : '·'}
+                {s.done ? <Icon name="check" /> : '·'}
               </span>
               {s.label}
             </li>

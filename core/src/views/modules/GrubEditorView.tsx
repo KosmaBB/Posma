@@ -142,7 +142,6 @@ function ThemePreviewBox({ preview, entries }: { preview: ThemePreview; entries:
         position: 'relative',
         width: '100%',
         aspectRatio: '16 / 9',
-        borderRadius: 10,
         overflow: 'hidden',
         border: '1px solid var(--border)',
         backgroundColor: preview.desktop_color ?? '#111',
@@ -160,7 +159,6 @@ function ThemePreviewBox({ preview, entries }: { preview: ThemePreview; entries:
           height: box.height ?? '30%',
           background: 'rgba(10,10,14,0.55)',
           border: '1px solid rgba(255,255,255,0.2)',
-          borderRadius: 6,
           padding: '8px 10px',
           display: 'flex',
           flexDirection: 'column',
@@ -172,10 +170,9 @@ function ThemePreviewBox({ preview, entries }: { preview: ThemePreview; entries:
           <div
             key={entry + i}
             style={{
-              fontSize: 11,
+              fontSize: 13,
               color: '#fff',
               padding: '3px 6px',
-              borderRadius: 4,
               background: i === 0 ? 'rgba(255,255,255,0.18)' : 'transparent',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
@@ -503,7 +500,7 @@ export function GrubEditorView() {
               type="text"
               value={grubDefault}
               onChange={(e) => setGrubDefault(e.target.value)}
-              style={{ flex: 1, padding: '9px 12px', borderRadius: 10, background: 'var(--bg-3)', border: '1px solid var(--border)', color: 'var(--ink)' }}
+              style={{ flex: 1, padding: '9px 12px', background: 'var(--bg)', border: '1px solid var(--border-strong)', color: 'var(--ink)' }}
             />
             <datalist id="grub-boot-entries">
               {defaultOptions.map((o) => <option key={o} value={o} />)}
@@ -522,7 +519,7 @@ export function GrubEditorView() {
             max={120}
             value={grubTimeout}
             onChange={(e) => setGrubTimeout(Number(e.target.value))}
-            style={{ padding: '9px 12px', borderRadius: 10, background: 'var(--bg-3)', border: '1px solid var(--border)', color: 'var(--ink)', maxWidth: 140 }}
+            style={{ padding: '9px 12px', background: 'var(--bg)', border: '1px solid var(--border-strong)', color: 'var(--ink)', maxWidth: 140 }}
           />
         </label>
 
@@ -531,7 +528,7 @@ export function GrubEditorView() {
           <select
             value={grubTimeoutStyle}
             onChange={(e) => setGrubTimeoutStyle(e.target.value)}
-            style={{ padding: '9px 12px', borderRadius: 10, background: 'var(--bg-3)', border: '1px solid var(--border)', color: 'var(--ink)', maxWidth: 220 }}
+            style={{ padding: '9px 12px', background: 'var(--bg)', border: '1px solid var(--border-strong)', color: 'var(--ink)', maxWidth: 220 }}
           >
             <option value="menu">Zawsze pokaż menu</option>
             <option value="countdown">Odliczanie</option>
@@ -567,7 +564,7 @@ export function GrubEditorView() {
         <h2 style={{ fontSize: 14 }}>Motyw</h2>
       </div>
       <div className="glass" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+        <div style={{ fontSize: 13, color: 'var(--muted)' }}>
           Aktywny motyw: <span className="mono">{scan.fields.grub_theme ?? 'brak (domyślny wygląd GRUB)'}</span>
         </div>
         {activePreview && (
@@ -583,7 +580,7 @@ export function GrubEditorView() {
             </button>
           )}
           {themePath && (
-            <span className="mono" style={{ fontSize: 11, color: 'var(--muted)' }}>{themePath}</span>
+            <span className="mono" style={{ fontSize: 13, color: 'var(--muted)' }}>{themePath}</span>
           )}
         </div>
         {themePath && themeInspection && !themeInspection.valid && (
@@ -593,7 +590,7 @@ export function GrubEditorView() {
         )}
         {themeInspection?.valid && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ fontSize: 12, color: 'var(--good)' }}>
+            <div style={{ fontSize: 13, color: 'var(--good)' }}>
               Rozpoznano motyw — {themeInspection.files} plików, {formatBytes(themeInspection.size_bytes)}.
             </div>
             {pickedPreview && (
@@ -607,7 +604,7 @@ export function GrubEditorView() {
                 type="text"
                 value={themeName}
                 onChange={(e) => setThemeName(e.target.value)}
-                style={{ padding: '9px 12px', borderRadius: 10, background: 'var(--bg-3)', border: '1px solid var(--border)', color: 'var(--ink)', maxWidth: 320 }}
+                style={{ padding: '9px 12px', background: 'var(--bg)', border: '1px solid var(--border-strong)', color: 'var(--ink)', maxWidth: 320 }}
               />
             </label>
             <div>
@@ -650,16 +647,16 @@ export function GrubEditorView() {
         <h2 style={{ fontSize: 14 }}>Kopie zapasowe</h2>
       </div>
       <div className="glass" style={{ padding: 16, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ fontSize: 12, color: 'var(--muted)' }}>Liczba przechowywanych kopii</span>
+        <span style={{ fontSize: 13, color: 'var(--muted)' }}>Liczba przechowywanych kopii</span>
         <input
           type="number"
           min={1}
           max={20}
           value={keepBackups}
           onChange={(e) => setKeepBackups(Math.max(1, Math.min(20, Number(e.target.value))))}
-          style={{ padding: '6px 10px', borderRadius: 8, background: 'var(--bg-3)', border: '1px solid var(--border)', color: 'var(--ink)', width: 70 }}
+          style={{ padding: '6px 10px', background: 'var(--bg)', border: '1px solid var(--border-strong)', color: 'var(--ink)', width: 70 }}
         />
-        <span style={{ fontSize: 11, color: 'var(--muted)' }}>domyślnie 2 — starsze kopie usuwane automatycznie przy kolejnym zapisie</span>
+        <span style={{ fontSize: 13, color: 'var(--muted)' }}>domyślnie 2 — starsze kopie usuwane automatycznie przy kolejnym zapisie</span>
       </div>
       {scan.backups.length === 0 ? (
         <div className="glass empty-state">Brak kopii zapasowych — pojawią się po pierwszym zapisie.</div>

@@ -127,7 +127,7 @@ export function BootLoaderEditor({ loader, backups, keepBackups, onChanged }: Pr
       <div className="glass" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {!menu ? (
           <>
-            <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+            <div style={{ fontSize: 13, color: 'var(--muted)' }}>
               {name} czyta konfigurację z partycji rozruchowej, którą odczytuje tylko administrator — dlatego już podgląd ustawień prosi o zgodę.
             </div>
             <div>
@@ -138,19 +138,19 @@ export function BootLoaderEditor({ loader, backups, keepBackups, onChanged }: Pr
           </>
         ) : (
           <>
-            <div className="mono" style={{ fontSize: 11, color: 'var(--muted)' }}>{menu.options?.path}</div>
+            <div className="mono" style={{ fontSize: 13, color: 'var(--muted)' }}>{menu.options?.path}</div>
             <label className="form-field">
               <span>Domyślny wpis</span>
               <input list="boot-loader-entries" type="text" value={defaultEntry} onChange={(e) => setDefaultEntry(e.target.value)} />
               <datalist id="boot-loader-entries">
                 {menu.entries.map((entry) => <option key={entry} value={entry} />)}
               </datalist>
-              <div style={{ fontSize: 11, color: 'var(--muted)' }}>{hint?.default}</div>
+              <div style={{ fontSize: 13, color: 'var(--muted)' }}>{hint?.default}</div>
             </label>
             <label className="form-field">
               <span>Czas oczekiwania</span>
               <input type="text" value={timeout} onChange={(e) => setTimeoutValue(e.target.value)} style={{ maxWidth: 160 }} />
-              <div style={{ fontSize: 11, color: 'var(--muted)' }}>{hint?.timeout} Puste pole zostawia ustawienie bez zmian.</div>
+              <div style={{ fontSize: 13, color: 'var(--muted)' }}>{hint?.timeout} Puste pole zostawia ustawienie bez zmian.</div>
             </label>
             <div>
               <button className="btn btn-primary" onClick={save} disabled={busy !== null}>

@@ -1,0 +1,60 @@
+/* ============================================================
+   Nadpisania użytkownika ponad wybrany wygląd (Ustawienia → Wygląd).
+   Każde to atrybut na <html>, wystawiany przez state/looks.ts tylko
+   wtedy, gdy ktoś coś zmienił. :root[data-x] ma (0,2,0), więc wygrywa
+   z wyglądem (0,1,0), a ten plik ładuje się po wyglądach.
+   ============================================================ */
+
+/* ---------- typografia ---------- */
+:root[data-font='archivo'] { --sans: 'Archivo Variable', 'Archivo', system-ui, sans-serif; }
+:root[data-font='system'] { --sans: system-ui, -apple-system, 'Segoe UI Variable Text', 'Segoe UI', Cantarell, 'Noto Sans', Ubuntu, sans-serif; }
+:root[data-font='atkinson'] { --sans: 'Atkinson Hyperlegible Next Variable', system-ui, sans-serif; }
+:root[data-font='albert'] { --sans: 'Albert Sans Variable', system-ui, sans-serif; }
+:root[data-font='jetbrains'] { --sans: 'JetBrains Mono Variable', ui-monospace, monospace; }
+
+:root[data-num-font='fragment'] { --mono: 'Fragment Mono', ui-monospace, monospace; }
+:root[data-num-font='atkinson'] { --mono: 'Atkinson Hyperlegible Mono Variable', ui-monospace, monospace; }
+:root[data-num-font='jetbrains'] { --mono: 'JetBrains Mono Variable', ui-monospace, monospace; }
+:root[data-num-font='system'] { --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Noto Sans Mono', 'DejaVu Sans Mono', monospace; }
+
+:root[data-labels='caps'] { --lbl-transform: uppercase; --lbl-tracking: 0.14em; --lbl-stretch: 118%; --lbl-size: 12px; }
+:root[data-labels='plain'] { --lbl-transform: none; --lbl-tracking: 0em; --lbl-stretch: 100%; --lbl-size: 13px; }
+:root[data-labels='lower'] { --lbl-transform: lowercase; --lbl-tracking: 0em; --lbl-stretch: 100%; --lbl-size: 13px; }
+
+/* ---------- kształt i gęstość ---------- */
+:root[data-corners='sharp'] { --radius: 0px; --radius-sm: 0px; --radius-pill: 0px; --bar-rx: 0px; }
+:root[data-corners='soft'] { --radius: 6px; --radius-sm: 4px; --radius-pill: 3px; --bar-rx: 2px; }
+:root[data-corners='round'] { --radius: 12px; --radius-sm: 8px; --radius-pill: 999px; --bar-rx: 4px; }
+
+:root[data-lines='thin'] { --hair: 1px; --rule: 1px; --chart-w: 1.4; }
+:root[data-lines='bold'] { --hair: 2px; --rule: 3px; --chart-w: 2.6; }
+
+:root[data-density='compact'] { --d: 0.7; }
+:root[data-density='normal'] { --d: 1; }
+:root[data-density='comfortable'] { --d: 1.35; }
+
+/* ---------- wykres ---------- */
+:root[data-chart-grid='on'] { --chart-grid-opacity: 1; }
+:root[data-chart-grid='off'] { --chart-grid-opacity: 0; }
+:root[data-peak='dashed'] { --chart-peak-dash: 3 3; }
+:root[data-peak='solid'] { --chart-peak-dash: none; }
+
+/* ---------- kontrast ----------
+   [data-theme] podnosi to do (0,3,0): kolory wyglądów siedzą pod
+   [data-look][data-theme] i bez tego wygrałyby z tym blokiem. Opisy
+   i linie zbliżają się do tuszu; akcent zostaje taki, jaki wybrano. */
+:root[data-contrast='high'][data-theme] {
+  --muted: color-mix(in srgb, var(--ink) 88%, var(--bg));
+  --dim: color-mix(in srgb, var(--ink) 80%, var(--bg));
+  --border: color-mix(in srgb, var(--ink) 38%, transparent);
+  --border-strong: color-mix(in srgb, var(--ink) 75%, transparent);
+  --chart-peak-opacity: 1;
+}
+
+/* ---------- ruch ----------
+   'reduced' powtarza reguły @media (prefers-reduced-motion) z global.css;
+   'off' gasi wszystko, łącznie z przenikaniem. */
+:root[data-motion='off'] *, :root[data-motion='off'] *::before, :root[data-motion='off'] *::after {
+  animation: none !important;
+  transition: none !important;
+}

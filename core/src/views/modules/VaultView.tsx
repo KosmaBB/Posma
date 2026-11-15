@@ -160,12 +160,12 @@ function UnlockOrCreate({ mode, onReady }: { mode: 'create' | 'unlock'; onReady:
   }
 
   return (
-    <div className="glass empty-state" style={{ textAlign: 'left', maxWidth: 380, margin: '40px auto' }}>
-      <div className="ico-badge" style={{ margin: '0 auto 14px', width: 46, height: 46, borderRadius: 13 }}>
+    <div className="glass empty-state" style={{ textAlign: 'left', maxWidth: 380, margin: '40px auto', padding: 40 }}>
+      <div className="ico-badge" style={{ margin: '0 auto 14px', width: 46, height: 46 }}>
         <Icon name="vault" />
       </div>
       <h2 style={{ textAlign: 'center', marginBottom: 6 }}>{mode === 'create' ? 'Utwórz sejf haseł' : 'Odblokuj sejf'}</h2>
-      <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 12.5, marginBottom: 18 }}>
+      <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, marginBottom: 18 }}>
         {mode === 'create'
           ? 'Właściwy klucz szyfrujący generujemy losowo i trzymamy w bezpiecznym magazynie systemowym (Secret Service / Keychain) — nigdy w pliku sejfu. 6-cyfrowy PIN to tylko szybka blokada dostępu, nie klucz.'
           : 'Wpisz 6-cyfrowy PIN, żeby odblokować sejf.'}
@@ -339,7 +339,7 @@ function EntryForm({
               setTemplateId(id)
               setValues({})
             }}
-            style={{ padding: '9px 12px', borderRadius: 10, background: 'var(--bg-3)', border: '1px solid var(--border)', color: 'var(--ink)' }}
+            style={{ padding: '9px 12px', background: 'var(--bg)', border: '1px solid var(--border-strong)', color: 'var(--ink)' }}
           >
             {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
           </select>
@@ -551,7 +551,7 @@ function SecurityAuditModal({ onClose }: { onClose: () => void }) {
                     <div className="clean-list">
                       {result.weak.map((w) => (
                         <div key={`${w.entry_id}-${w.field}`} className="glass clean-row" style={{ cursor: 'default', opacity: 1 }}>
-                          <span className="cr-path">{w.entry_title}<span style={{ color: 'var(--muted)', marginLeft: 8, fontSize: 11 }}>{w.field}</span></span>
+                          <span className="cr-path">{w.entry_title}<span style={{ color: 'var(--muted)', marginLeft: 8, fontSize: 13 }}>{w.field}</span></span>
                           <span className={`chip ${STRENGTH_LABEL[w.score].chip}`}>{STRENGTH_LABEL[w.score].label}</span>
                         </div>
                       ))}
@@ -663,7 +663,7 @@ function VaultMain({ onLocked }: { onLocked: () => void }) {
               onKeyDown={(e) => e.key === 'Enter' && addFolder()}
               placeholder="Nazwa folderu"
               autoFocus
-              style={{ padding: '6px 10px', borderRadius: 8, background: 'var(--bg-3)', border: '1px solid var(--border)', color: 'var(--ink)', fontSize: 12 }}
+              style={{ padding: '6px 10px', background: 'var(--bg)', border: '1px solid var(--border-strong)', color: 'var(--ink)', fontSize: 13 }}
             />
             <button className="btn btn-ghost btn-mini" onClick={addFolder}>Dodaj</button>
           </span>

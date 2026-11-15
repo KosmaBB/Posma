@@ -1,19 +1,27 @@
 {
   "bundle": {
     "externalBin": [
-      "binaries/big-files",
-      "binaries/browser-hygiene",
-      "binaries/disk-map",
-      "binaries/duplicates",
-      "binaries/health-monitor",
-      "binaries/metadata",
-      "binaries/shredder",
-      "binaries/system-info",
-      "binaries/temp-clean",
-      "binaries/vault",
-      "binaries/macos-broker",
-      "binaries/xcode-cache",
-      "binaries/time-machine"
-    ]
+      "binaries/posma-big-files",
+      "binaries/posma-browser-hygiene",
+      "binaries/posma-disk-map",
+      "binaries/posma-duplicates",
+      "binaries/posma-health-monitor",
+      "binaries/posma-metadata",
+      "binaries/posma-shredder",
+      "binaries/posma-system-info",
+      "binaries/posma-temp-clean",
+      "binaries/posma-vault",
+      "binaries/posma-macos-broker",
+      "binaries/posma-xcode-cache",
+      "binaries/posma-macos-slim",
+      "binaries/posma-time-machine"
+    ],
+    "targets": [
+      "app",
+      "dmg"
+    ],
+    "macOS": {
+      "signingIdentity": "-"
+    }
   }
 }

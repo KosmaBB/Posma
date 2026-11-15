@@ -53,26 +53,29 @@ stale binary did not send. A no-op sync costs about a second and a half.
 To sync without starting anything:
 
 ```bash
-bash scripts/sync-sidecars.sh
+node scripts/sync-sidecars.mjs
 ```
 
-On Windows this needs a bash — Git Bash or WSL — which is one of the things
-the Windows port has to settle.
+It is a Node script, not a shell one, so it runs the same on Windows,
+where `bash` in a script usually resolves to WSL and would build the Linux
+modules.
 
-**Why the sync exists.** `sync-sidecars.sh` builds the modules meant for
+**Why the sync exists.** `sync-sidecars.mjs` builds the modules meant for
 this system and copies each binary to
-`core/src-tauri/binaries/<module>-<target-triple>` — the naming Tauri's
-sidecar resolution requires. Those binaries are deliberately not committed,
+`core/src-tauri/binaries/posma-<module>-<target-triple>` — the naming Tauri's
+sidecar resolution requires. The `posma-` prefix is there because a Linux
+package installs sidecars into `/usr/bin`, where a bare `vault` would
+collide with HashiCorp Vault's. Those binaries are deliberately not committed,
 so on a fresh clone they don't exist yet, and Tauri refuses to build:
 
 ```
-resource path `binaries/system-info-x86_64-unknown-linux-gnu` doesn't exist
+resource path `binaries/posma-system-info-x86_64-unknown-linux-gnu` doesn't exist
 ```
 
 That message looks like a corrupt checkout but isn't — it's the expected
 state before the first sync. `cargo build --workspace` alone will not fix it.
 
-Re-run `sync-sidecars.sh` after changing any module: the app uses the copied
+Re-run `sync-sidecars.mjs` after changing any module: the app uses the copied
 binaries, so edits aren't picked up until they're re-synced.
 
 ## Layout
@@ -88,7 +91,7 @@ modules/
   <feature>/      One crate per module
   *-broker/       Per-OS privileged brokers
 scripts/
-  sync-sidecars.sh
+  sync-sidecars.mjs
   distro-check.sh
 ```
 
@@ -123,8 +126,8 @@ Adding a binary to `externalBin` **before** it exists breaks the Tauri build
 and takes `tauri dev` down with it. Correct order:
 
 1. write the crate
-2. `bash scripts/sync-sidecars.sh`
-3. add `"binaries/<name>"` to `externalBin` in `tauri.conf.json`
+2. `node scripts/sync-sidecars.mjs`
+3. add `"binaries/posma-<name>"` to `externalBin` in `tauri.<platform>.conf.json`
 4. restart `tauri dev`
 
 ## Tests that need a desktop session
@@ -157,17 +160,17 @@ and Apple's linker only run on macOS — so a build for another system is made
 ```bash
 git pull
 npm --prefix core ci
-bash scripts/sync-sidecars.sh
+node scripts/sync-sidecars.mjs
 npm --prefix core run tauri dev
 ```
 
-`sync-sidecars.sh` builds only the modules whose `module.json` lists the
+`sync-sidecars.mjs` builds only the modules whose `module.json` lists the
 system it is running on, so a macOS build carries no GRUB editor and a Linux
 one carries no Time Machine module. Which sidecars the bundle expects comes
 from `tauri.<platform>.conf.json`, which replaces the base list rather than
 adding to it.
 
-A release build (`sync-sidecars.sh release`, `tauri build`) uses the
+A release build (`sync-sidecars.mjs release`, `tauri build`) uses the
 workspace's `[profile.release]`: whole-program optimisation and stripped
 symbols make every binary about a third smaller. The price is a slower
 build, and a panic that names no functions in its backtrace — reproduce
@@ -191,13 +194,13 @@ Apple silicon needs each sidecar built twice and joined:
 
 ```bash
 rustup target add x86_64-apple-darwin aarch64-apple-darwin
-bash scripts/sync-sidecars.sh release --universal
+node scripts/sync-sidecars.mjs release --universal
 npm --prefix core run tauri build -- --target universal-apple-darwin
 ```
 
 `--universal` builds every module for both targets, keeps the
 per-architecture copies so `tauri dev` still works on either machine, and
-joins them with `lipo` into `<module>-universal-apple-darwin`. A missing
+joins them with `lipo` into `posma-<module>-universal-apple-darwin`. A missing
 Rust target is reported before the first build rather than as a linker
 error several minutes in.
 
@@ -229,8 +232,53 @@ too, once `core/src-tauri/binaries/` holds a file for each Windows sidecar —
 an empty one will do, the build only checks that it exists. What a type
 check cannot catch, CI does: it builds and tests every module on Apple
 silicon, on Intel and on Windows — on Windows also the elevated broker
-session, end to end — and on request makes the universal macOS bundle
-described above.
+session, end to end. A version tag builds the installers, described next.
+
+## Installers
+
+Pushing a tag `v*` runs `.github/workflows/release.yml`, which builds the
+installers and puts them in a **draft** release — nothing is public until
+the draft is published by hand. Run from the Actions tab instead, it builds
+the same files as workflow artifacts and releases nothing.
+
+| System | Files | Built on |
+|---|---|---|
+| Linux | `.deb` (apt family), `.rpm` (dnf, zypper) | Ubuntu 22.04, the oldest glibc supported |
+| macOS | one universal `.dmg` for Apple silicon and Intel | macOS 15 |
+| Windows | `.exe` (NSIS) | GitHub's `windows-latest` |
+
+Locally, on the system the installer is for:
+
+```bash
+npm --prefix core ci
+npm --prefix core run tauri build      # Linux: target/release/bundle/{deb,rpm}
+                                       # Windows: target/release/bundle/nsis
+```
+
+For the Mac, the universal build from [Both Mac architectures](#both-mac-architectures).
+
+**No AppImage.** An AppImage runs from a FUSE mount that only the user who
+started it can read — root included is refused — so `pkexec` could never
+start the broker from inside it, and every privileged operation would fail.
+The packages install the broker into `/usr/bin`, owned by root.
+
+There is no pacman package yet: on Arch and its descendants POSMA builds
+from source as above.
+
+**The Mac app is signed ad hoc, not by a developer.** Without an Apple
+developer account there is no identity to sign with; the ad-hoc signature
+(`signingIdentity: "-"` in `tauri.macos.conf.json`) at least keeps
+Gatekeeper from calling a downloaded copy damaged. The first start is
+still refused as from an unidentified developer: System Settings → Privacy
+& Security → *Open Anyway*, once.
+
+**The Windows installer installs for all users, into Program Files**
+(`installMode: perMachine` in `tauri.windows.conf.json`), and so asks for an
+administrator once. A per-user install would put the broker — the binary
+UAC runs as administrator — in a folder the user's own programs can
+write, where anything could replace it and wait for the next consent. It is
+unsigned too, so SmartScreen warns on first start: *More info* → *Run
+anyway*.
 
 ## Testing rules
 

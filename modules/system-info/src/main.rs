@@ -41,6 +41,8 @@ struct DiskInfo {
 struct SystemInfo {
     metrics: Vec<Metric>,
     disks: Vec<DiskInfo>,
+    /// Load of each logical core, in percent, in the order the kernel numbers them.
+    cores: Vec<f32>,
 }
 
 #[derive(Serialize)]
@@ -116,6 +118,9 @@ fn collect() -> SystemInfo {
 
     let mut metrics = Vec::new();
 
+    // Already sampled for the global figure, so the per-core split costs nothing.
+    let cores = sys.cpus().iter().map(|c| c.cpu_usage()).collect();
+
     let cpu = sys.global_cpu_usage() as f64;
     metrics.push(
         Metric::new("cpu", "CPU", cpu, "%", MetricKind::Load)
@@ -130,7 +135,8 @@ fn collect() -> SystemInfo {
         metrics.push(
             Metric::new("ram", "RAM", pct, "%", MetricKind::Load)
                 .percent_of(pct)
-                .detail(format!("{:.1} / {:.1} GB", gb(used), gb(ram_total))),
+                // Polish decimals: the dashboard shows this string as it is.
+                .detail(format!("{:.1} z {:.1} GB", gb(used), gb(ram_total)).replace('.', ",")),
         );
     }
 
@@ -156,7 +162,7 @@ fn collect() -> SystemInfo {
         })
         .collect();
 
-    SystemInfo { metrics, disks: one_per_filesystem(disks) }
+    SystemInfo { metrics, disks: one_per_filesystem(disks), cores }
 }
 
 /// What kind of Linux this is, for the interface to show and the user to
@@ -246,5 +252,7 @@ mod tests {
         for m in &info.metrics {
             assert!(m.value.is_finite());
         }
+        assert!(!info.cores.is_empty(), "every machine has at least one core");
+        assert!(info.cores.iter().all(|c| c.is_finite() && *c >= 0.0));
     }
 }

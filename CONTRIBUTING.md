@@ -59,7 +59,7 @@ order. The short version:
 
 ```bash
 npm --prefix core install
-bash scripts/sync-sidecars.sh   # required before the first build
+node scripts/sync-sidecars.mjs   # required before the first build
 npm --prefix core run tauri dev
 ```
 

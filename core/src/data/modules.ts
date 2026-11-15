@@ -66,7 +66,7 @@ export const modules: ModuleDef[] = [
   { id: 'shredder', name: 'Niszczarka plików', desc: 'Bezpowrotne kasowanie danych przez wielokrotne nadpisywanie.', folder: 'data', os: ALL, risk: 'critical', icon: 'shredder' },
   { id: 'metadata', name: 'Usuwanie metadanych', desc: 'Czyszczenie ukrytych informacji (GPS, autor) ze zdjęć i dokumentów.', folder: 'data', os: ALL, risk: 'low', icon: 'tag' },
   { id: 'xcode-cache', name: 'Czyszczenie Xcode', desc: 'Usuwanie plików tymczasowych DerivedData środowiska Xcode.', folder: 'data', os: ['macos'], risk: 'low', icon: 'hammer' },
-  { id: 'macos-slim', name: 'Odchudzanie macOS', desc: 'Usuwanie załączników cache Mail i Messages bez utraty treści.', folder: 'data', os: ['macos'], risk: 'medium', icon: 'scissors' },
+  { id: 'macos-slim', name: 'Odchudzanie macOS', desc: 'Kopie otwartych załączników, podglądy i cache Poczty i Wiadomości — skrzynek i rozmów nie dotyka.', folder: 'data', os: ['macos'], risk: 'low', icon: 'scissors' },
   { id: 'pkg-cache', name: 'Cache pakietów Linux', desc: 'Czyszczenie cache i osieroconych pakietów menedżera systemu (apt, pacman, dnf, zypper) oraz starych rewizji snap.', folder: 'data', os: ['linux'], risk: 'low', icon: 'package', quickAction: 'Wyczyść cache pakietów' },
   { id: 'journald-trim', name: 'Przycinanie logów systemd', desc: 'Czyszczenie logów journalctl do zadanego rozmiaru lub wieku.', folder: 'data', os: ['linux'], risk: 'low', icon: 'logs' },
 
@@ -139,6 +139,23 @@ export function modulesForOs(os: Os, profile: LinuxProfile | null = null): Modul
 
 export function modulesInFolder(folder: FolderId, os?: Os, profile: LinuxProfile | null = null): ModuleDef[] {
   return modules.filter((m) => m.folder === folder && (!os || m.os.includes(os))).map((m) => adaptModule(m, profile))
+}
+
+/**
+ * Catalog number per module: its folder's hundred plus its place in the
+ * registry. Registry order rather than the user's arrangement, so a number
+ * stays put when cards are dragged around.
+ */
+export function catalogNumbers(os?: Os, profile: LinuxProfile | null = null): Map<string, string> {
+  const out = new Map<string, string>()
+  folders.forEach((f, fi) =>
+    modulesInFolder(f.id, os, profile).forEach((m, i) => out.set(m.id, String((fi + 1) * 100 + i + 1))),
+  )
+  return out
+}
+
+export function folderNumber(id: FolderId): string {
+  return String((folders.findIndex((f) => f.id === id) + 1) * 100)
 }
 
 export function moduleById(id: string, profile: LinuxProfile | null): ModuleDef | undefined {

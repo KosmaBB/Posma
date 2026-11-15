@@ -1,0 +1,180 @@
+/*
+ * Starter world. Rename `starter` everywhere: this file, index.tsx, the
+ * registry entry. Prefix your own classes (here `st-`) so they never meet
+ * another world's.
+ *
+ * Specificity contract — keep it, or the person's settings stop working:
+ *   structure   [data-world='starter'] …                          (0,1,x)
+ *   colours     [data-world='starter'][data-theme='dark'|'light']  (0,2,0)
+ * The person's font, corner, line and density settings (styles/custom.css,
+ * 0,2,0) then outrank your structure, high contrast (0,3,0) outranks your
+ * colours, and a chosen accent is set inline on the root, above both.
+ *
+ * Any token you leave out falls back to Katalog's value from global.css.
+ */
+
+/* ------------------------------------------------------------ colours */
+[data-world='starter'][data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #111318;
+  --bg-2: #191c22;
+  --bg-3: #22262e;
+  --ink: #eceef2;
+  --muted: #b0b5bf;
+  --dim: #9ba1ac;
+  --accent: #7cc4ff;
+  --on-accent: #0b0d10;
+  --border: rgba(236, 238, 242, 0.14);
+  --border-strong: rgba(236, 238, 242, 0.32);
+  --good: #7fd6a0;
+  --warn: #ffc069;
+  --critical: #ff7a66;
+  --on-critical: #0b0d10;
+  --panel-bg: var(--bg-2);
+  --nav-active-bg: var(--bg-3);
+}
+
+[data-world='starter'][data-theme='light'] {
+  color-scheme: light;
+  --bg: #f4f5f7;
+  --bg-2: #ffffff;
+  --bg-3: #e9ebef;
+  --ink: #14161a;
+  --muted: #4a4f59;
+  --dim: #5a606b;
+  --accent: #1f5fbf;
+  --on-accent: #ffffff;
+  --border: rgba(20, 22, 26, 0.14);
+  --border-strong: rgba(20, 22, 26, 0.34);
+  --good: #1d7a45;
+  --warn: #8a5208;
+  --critical: #bf321d;
+  --on-critical: #ffffff;
+  --panel-bg: var(--bg-2);
+  --nav-active-bg: var(--bg-3);
+}
+
+/* ---------------------------------------------------------- structure */
+[data-world='starter'] {
+  /* Faces. The text and number font settings replace these when chosen. */
+  --sans: system-ui, -apple-system, 'Segoe UI', Cantarell, 'Noto Sans', sans-serif;
+  --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Noto Sans Mono', monospace;
+  /* Shape. The corner setting replaces these when chosen. */
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-pill: 999px;
+  /* Katalog's labels and buttons are 12 px; every other world keeps a 13 px floor. */
+  --lbl-size: 13px;
+  --btn-size: 13px;
+  --folder-size: 13px;
+}
+
+/* Shared text that global.css sets at a literal 12 px. */
+[data-world='starter'] :is(
+  .chip, .section-head .count, .cpu .axis, .code-seg, .disk-row__model, .section-no, .clean-row .cr-files, .spec-path,
+  .autostart-exec, .diskmap-size, .diskmap-total, .diskmap-tile .dt-size, .diskmap-tile .dt-pct,
+  .diskmap-ring-card .dr-rank, .diskmap-ring-card .dr-pct, .hm-frozen, .hm-sensor-value span, .hm-sensor-sub,
+  .preparing__timer, .ctx-menu__path, .look-card__name .mono, .look-card__desc, .tour-card__no, .tour-card__keys
+) { font-size: 13px; }
+
+[data-world='starter'] .st-shell {
+  display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100%;
+  background: var(--bg); color: var(--ink); font: 15px/1.5 var(--sans);
+}
+
+[data-world='starter'] .st-bar {
+  display: flex; align-items: center; gap: 16px; padding: 10px 20px;
+  border-bottom: var(--hair) solid var(--border);
+}
+[data-world='starter'] .st-brand {
+  padding: 6px 4px; border: 0; background: none; color: var(--ink); cursor: pointer;
+  font: 700 16px var(--sans); letter-spacing: 0.08em;
+}
+[data-world='starter'] .st-nav { display: flex; gap: 4px; flex: 1; min-width: 0; overflow-x: auto; }
+[data-world='starter'] .st-nav button {
+  padding: 8px 12px; border: 0; border-radius: var(--radius-sm); background: none; cursor: pointer;
+  color: var(--muted); font: 500 14px var(--sans); white-space: nowrap;
+}
+[data-world='starter'] .st-nav button:hover { color: var(--ink); }
+[data-world='starter'] .st-nav button[aria-current='page'] { color: var(--ink); background: var(--nav-active-bg); }
+/* The nav clips its overflow, so the focus ring goes inside. */
+[data-world='starter'] .st-nav button:focus-visible { outline-offset: -2px; }
+
+[data-world='starter'] .st-main { overflow-y: auto; padding: calc(24px * var(--d)) 28px calc(40px * var(--d)); }
+[data-world='starter'] .st-no { font-family: var(--mono); color: var(--dim); }
+[data-world='starter'] .st-empty { color: var(--muted); }
+[data-world='starter'] .st-warn { color: var(--warn); }
+
+/* ---------------------------------------------------------------- home */
+[data-world='starter'] .st-home { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: calc(16px * var(--d)); }
+[data-world='starter'] .st-card {
+  display: flex; flex-direction: column; gap: 10px; padding: calc(18px * var(--d)) 20px;
+  background: var(--panel-bg); border: var(--hair) solid var(--border); border-radius: var(--radius);
+}
+[data-world='starter'] .st-card--wide { grid-column: 1 / -1; }
+[data-world='starter'] .st-card h2 { font: 600 14px var(--sans); color: var(--muted); }
+[data-world='starter'] .st-card .btn { align-self: flex-start; margin-top: auto; }
+[data-world='starter'] .st-big { font: 600 40px/1 var(--mono); font-variant-numeric: tabular-nums; }
+[data-world='starter'] .st-sub { color: var(--muted); }
+
+[data-world='starter'] .st-facts { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; }
+[data-world='starter'] .st-facts__row { display: contents; }
+[data-world='starter'] .st-facts dt { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-world='starter'] .st-facts dd { margin: 0; text-align: right; white-space: nowrap; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+[data-world='starter'] :is(.st-found, .st-quick) { display: grid; gap: 6px; padding: 0; list-style: none; }
+[data-world='starter'] .st-quick { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+[data-world='starter'] .st-found li { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+[data-world='starter'] .st-quick li { display: flex; flex-direction: column; align-items: flex-start; }
+[data-world='starter'] :is(.st-found, .st-quick, .st-list) button {
+  padding: 2px 0; border: 0; background: none; cursor: pointer; text-align: left;
+  color: var(--accent); font: 500 15px var(--sans);
+}
+[data-world='starter'] :is(.st-found, .st-quick, .st-list) button:hover { text-decoration: underline; text-underline-offset: 3px; }
+[data-world='starter'] .st-found span { color: var(--muted); font-family: var(--mono); }
+[data-world='starter'] .st-quick span { color: var(--muted); font-size: 13px; }
+
+/* --------------------------------------------------- folder and module */
+[data-world='starter'] .st-page { display: flex; flex-direction: column; gap: calc(16px * var(--d)); max-width: 1200px; }
+[data-world='starter'] .st-page h1 { font: 600 28px/1.2 var(--sans); }
+[data-world='starter'] .st-page header p { color: var(--muted); max-width: 70ch; }
+[data-world='starter'] .st-list { display: grid; gap: 8px; padding: 0; list-style: none; }
+[data-world='starter'] .st-list li {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 16px; padding: 14px 16px;
+  background: var(--panel-bg); border: var(--hair) solid var(--border); border-radius: var(--radius);
+}
+[data-world='starter'] .st-list p { grid-column: 1; color: var(--muted); }
+[data-world='starter'] .st-list .chip { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+
+/* ------------------------------------------------------- shared blocks
+   Module interfaces, settings and the manager are shared. They already
+   follow the tokens above; restyle a block here only where your world
+   needs a different shape. */
+[data-world='starter'] .glass { background: var(--panel-bg); border-radius: var(--radius); }
+[data-world='starter'] .btn { border-radius: var(--radius-sm); }
+
+/* -------------------------------------------------------------- preview */
+[data-world='starter'] .stp { position: absolute; inset: 0; display: grid; grid-template-rows: 18% 1fr; gap: 8%; padding: 8%; background: var(--bg); }
+[data-world='starter'] .stp__bar { display: flex; gap: 6%; align-items: center; }
+[data-world='starter'] .stp__bar i { display: block; width: 18%; height: 40%; border-radius: 3px; background: var(--bg-3); }
+[data-world='starter'] .stp__bar i:first-child { background: var(--accent); }
+[data-world='starter'] .stp__cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6%; }
+[data-world='starter'] .stp__cards b {
+  display: grid; place-items: center; border-radius: 6px; background: var(--panel-bg); border: 1px solid var(--border);
+  color: var(--ink); font: 600 13px var(--mono);
+}
+
+/* -------------------------------------------------------- less space
+   Never @media for width: the window is at least 1600 px and UI scaling
+   (zoom) is invisible to media queries. settings.ts puts the steps on the
+   root instead — data-fit~='980 | 1100 | 1180 | 1280 | 1340 | 1407 | 1440 | 1700',
+   data-fit-h~='760'. :where() keeps the specificity of the rule inside. */
+[data-world='starter']:where([data-fit~='1280']) .st-home { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+[data-world='starter']:where([data-fit~='1100']) .st-home { grid-template-columns: minmax(0, 1fr); }
+
+/* -------------------------------------------------------------- motion
+   Transitions only when the OS and the motion setting both allow them;
+   'off' is enforced globally anyway. */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-world='starter']:not([data-motion]) .st-nav button { transition: background-color 0.15s ease, color 0.15s ease; }
+}

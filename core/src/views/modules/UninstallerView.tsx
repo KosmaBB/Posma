@@ -170,21 +170,20 @@ function AppDetail({ app, onClose, onUninstalled }: { app: InstalledApp; onClose
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 4 }}>
           <div>
             <h3 style={{ fontSize: 17 }}>{app.name}</h3>
-            <div className="mono" style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>
+            <div className="mono" style={{ fontSize: 13, color: 'var(--muted)', marginTop: 2 }}>
               {app.source} · {app.id} · {app.version}
               {app.size_bytes ? ` · ${formatBytes(app.size_bytes)}` : ''}
             </div>
           </div>
           <button className="btn btn-ghost btn-mini" onClick={onClose}>Zamknij</button>
         </div>
-        {app.description && <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>{app.description}</div>}
+        {app.description && <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 10 }}>{app.description}</div>}
 
         <div className="form-field" style={{ marginTop: 10 }}>
           <span>Odinstalowanie programu</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <button
-              className="btn btn-primary"
-              style={{ background: 'linear-gradient(135deg, var(--g-red-1), var(--g-red-2))' }}
+              className="btn btn-primary btn-danger"
               onClick={runUninstall}
               disabled={uninstallState === 'running'}
             >
@@ -238,7 +237,7 @@ function AppDetail({ app, onClose, onUninstalled }: { app: InstalledApp; onClose
                     <input type="checkbox" checked={checked.has(e.path)} onChange={() => toggle(e.path)} disabled={cleaning} />
                     <span className="cr-path">
                       {e.name}
-                      <span className="mono" style={{ color: 'var(--muted)', marginLeft: 8, fontSize: 10 }}>{e.path}</span>
+                      <span className="mono" style={{ color: 'var(--muted)', marginLeft: 8, fontSize: 13 }}>{e.path}</span>
                     </span>
                     <span className="chip os">{e.source}</span>
                     {recent && <span className="chip medium">{ageLabel(e.age_days)}</span>}
@@ -336,7 +335,7 @@ function AppsPanel() {
           placeholder="Szukaj aplikacji..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          style={{ flex: 1, minWidth: 200, padding: '9px 14px', borderRadius: 10, background: 'var(--bg-3)', border: '1px solid var(--border)', color: 'var(--ink)', fontSize: 13 }}
+          style={{ flex: 1, minWidth: 200, padding: '9px 14px', background: 'var(--bg)', border: '1px solid var(--border-strong)', color: 'var(--ink)', fontSize: 13 }}
         />
         <div className="diskmap-viewtabs">
           {[...new Set(apps.map((a) => a.source))].sort().map((s) => (
@@ -351,7 +350,7 @@ function AppsPanel() {
           <div key={`${a.source}:${a.id}`} className="glass clean-row" style={{ cursor: 'pointer', opacity: 1 }} onClick={() => setSelected(a)}>
             <span className="cr-path">
               {a.name}
-              {a.description && <span style={{ color: 'var(--muted)', marginLeft: 8, fontSize: 11 }}>{a.description}</span>}
+              {a.description && <span style={{ color: 'var(--muted)', marginLeft: 8, fontSize: 13 }}>{a.description}</span>}
             </span>
             <span className="chip os">{a.source}</span>
             <span className="cr-files mono">{a.version}</span>
@@ -443,7 +442,7 @@ function BlindScanPanel() {
   return (
     <div>
       {phase.kind === 'idle' && (
-        <div className="glass empty-state" style={{ textAlign: 'left' }}>
+        <div className="glass empty-state intro">
           <div style={{ fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>Ogólne skanowanie</div>
           Zamiast wybierać konkretną aplikację, przeszukaj <span className="mono">~/.config</span> i{' '}
           <span className="mono">~/.cache</span> pod kątem folderów, które nie pasują do żadnego zainstalowanego
@@ -493,7 +492,7 @@ function BlindScanPanel() {
                       <input type="checkbox" checked={checked.has(e.path)} onChange={() => toggle(e.path)} disabled={phase.kind === 'cleaning'} />
                       <span className="cr-path">
                         {e.name}
-                        <span className="mono" style={{ color: 'var(--muted)', marginLeft: 8, fontSize: 10.5 }}>{e.path}</span>
+                        <span className="mono" style={{ color: 'var(--muted)', marginLeft: 8, fontSize: 13 }}>{e.path}</span>
                       </span>
                       <span className="chip os">{e.source}</span>
                       {recent && <span className="chip medium">{ageLabel(e.age_days)} — sprawdź uważnie</span>}
@@ -510,7 +509,7 @@ function BlindScanPanel() {
       {phase.kind === 'done' && (
         <div className="glass empty-state">
           <div className="done-badge"><Icon name="check" /></div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', fontFamily: 'var(--sans)' }}>
             Odzyskano {formatBytes(phase.result.freed_bytes)}
           </div>
           Usunięto {phase.result.removed} pozycji.

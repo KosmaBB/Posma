@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { capabilitiesForAll } from '../../data/capabilities'
 import type { AccessLevel, OnboardingResult } from '../../state/appState'
@@ -10,58 +10,6 @@ import { Icon } from '../Icons'
 import { SystemProfileFields, profileSummary } from '../SystemProfile'
 
 const OS_LABEL: Record<Os, string> = { windows: 'Windows', linux: 'Linux', macos: 'macOS' }
-
-const MESH_BLOBS = [
-  { bx: 0.18, by: 0.22, r: 0.42, sx: 0.00012, sy: 0.00016, phase: 0, c: '#a83dff' },
-  { bx: 0.82, by: 0.18, r: 0.4, sx: 0.00015, sy: 0.00011, phase: 2, c: '#ff3d9e' },
-  { bx: 0.5, by: 0.55, r: 0.46, sx: 0.00011, sy: 0.00018, phase: 4, c: '#3d8bff' },
-  { bx: 0.78, by: 0.78, r: 0.38, sx: 0.00017, sy: 0.00013, phase: 1, c: '#34e6c8' },
-]
-
-function OnboardingMesh() {
-  const ref = useRef<HTMLCanvasElement | null>(null)
-  useEffect(() => {
-    const canvas = ref.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    function size() {
-      canvas!.width = window.innerWidth * 1.2
-      canvas!.height = window.innerHeight * 1.2
-    }
-    size()
-    window.addEventListener('resize', size)
-    let raf = 0
-    function draw(t: number) {
-      const w = canvas!.width
-      const h = canvas!.height
-      ctx!.clearRect(0, 0, w, h)
-      ctx!.globalCompositeOperation = 'lighter'
-      MESH_BLOBS.forEach((b) => {
-        const time = reduce ? 0 : t
-        const cx = (b.bx + Math.sin(time * b.sx + b.phase) * 0.12) * w
-        const cy = (b.by + Math.cos(time * b.sy + b.phase) * 0.12) * h
-        const r = Math.max(w, h) * b.r
-        const grad = ctx!.createRadialGradient(cx, cy, 0, cx, cy, r)
-        grad.addColorStop(0, b.c + '77')
-        grad.addColorStop(1, b.c + '00')
-        ctx!.fillStyle = grad
-        ctx!.beginPath()
-        ctx!.arc(cx, cy, r, 0, Math.PI * 2)
-        ctx!.fill()
-      })
-      ctx!.globalCompositeOperation = 'source-over'
-      if (!reduce) raf = requestAnimationFrame(draw)
-    }
-    raf = requestAnimationFrame(draw)
-    return () => {
-      window.removeEventListener('resize', size)
-      cancelAnimationFrame(raf)
-    }
-  }, [])
-  return <canvas className="onboarding-mesh" ref={ref} />
-}
 
 type Step = 'consent' | 'os' | 'access' | 'modules' | 'tutorial'
 const STEPS: Step[] = ['consent', 'os', 'access', 'modules', 'tutorial']
@@ -132,7 +80,6 @@ export function Onboarding({ onDone, linuxProfile, onProfileChange }: Onboarding
 
   return (
     <div className="onboarding">
-      <OnboardingMesh />
       <div className="onboarding-card">
         <div className="onboarding-progress" aria-hidden>
           {STEPS.map((s, i) => (
@@ -300,11 +247,11 @@ export function Onboarding({ onDone, linuxProfile, onProfileChange }: Onboarding
           <>
             <h2>Prawie gotowe</h2>
             <p className="lead">
-              Chcesz krótkie oprowadzenie po funkcjach i modułach? Zajmie mniej niż minutę i pokaże, gdzie co jest.
+              Chcesz oprowadzenie po aplikacji? Kilkanaście krótkich kroków, około dwóch minut. Wrócisz do niego w każdej chwili pod 904 w pasku bocznym.
             </p>
             <div className="onboarding-actions">
               <button className="btn btn-ghost" onClick={() => finish(false)}>
-                Pomiń tutorial (niezalecane)
+                Pomiń, zobaczę później
               </button>
               <button className="btn btn-primary" onClick={() => finish(true)}>
                 Pokaż mi aplikację

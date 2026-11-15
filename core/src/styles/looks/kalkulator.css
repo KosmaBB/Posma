@@ -1,0 +1,78 @@
+/* ============================================================
+   Wygląd „Kalkulator” — przemysłowy grafit: okrągłe klawisze, żółty
+   klawisz główny, wielki numer w okienku wyświetlacza.
+   ============================================================ */
+[data-look='kalkulator'] {
+  --sans: 'Albert Sans Variable', system-ui, sans-serif;
+  --head-weight: 550; --head-stretch: 100%;
+  --lbl-size: 13px; --lbl-weight: 500; --lbl-stretch: 100%; --lbl-tracking: 0.01em; --lbl-transform: lowercase;
+  --lbl-color: var(--dim);
+  --btn-size: 14px; --btn-weight: 600; --btn-stretch: 100%;
+  --folder-size: 13px; --folder-weight: 600;
+  --brand-size: 18px; --brand-weight: 700; --brand-stretch: 100%; --brand-tracking: 0.02em; --brand-transform: lowercase;
+  --hero-font: var(--mono); --hero-size: 46px; --hero-weight: 400; --hero-stretch: 100%; --hero-tracking: -0.02em;
+  --hero-pad: 12px 16px 10px; --hero-pad-mini: 3px 5px 2px;
+
+  --radius: 10px; --radius-sm: 8px; --radius-pill: 999px; --bar-rx: 4px;
+  --btn-radius: var(--radius-pill); --nav-radius: var(--radius-pill);
+
+  --btn-bg: var(--accent); --btn-fg: var(--on-accent); --btn-border: var(--accent); --btn-strip: 0px;
+  --ghost-bg: var(--bg-3); --ghost-border: transparent;
+  --chip-bg: var(--bg-3); --chip-border: transparent;
+  --nav-inset: 12px; --nav-no-bg: var(--accent); --nav-no-fg: var(--on-accent);
+  --panel-gap: 10px;
+  --meter-border: transparent;
+
+  --chart-peak: var(--accent); --chart-peak-opacity: 0.9;
+  --bar-track-stroke: none;
+}
+
+[data-look='kalkulator'][data-theme='dark'] {
+  --bg: #2e2d2a; --bg-2: #383733; --bg-3: #45443f;
+  --ink: #ece7da; --muted: #bfb9ab; --dim: #aaa496;
+  --accent: #f2b134; --on-accent: #2a2926;
+  --border: rgba(236, 231, 218, 0.1); --border-strong: rgba(236, 231, 218, 0.26);
+  --good: #9cd17f; --warn: #f2b134; --critical: #ff8466; --on-critical: #2a2926;
+  --g-teal-1: #f2b134; --g-teal-2: #f2b134;
+  --g-blue-1: #8cc46f; --g-blue-2: #8cc46f;
+  --g-green-1: #8fb3d9; --g-green-2: #8fb3d9;
+  --g-red-1: #ff8466; --g-red-2: #ff8466;
+  --g-violet-1: #8f8a7e; --g-violet-2: #8f8a7e;
+  --g-amber-1: #f2b134; --g-amber-2: #f2b134;
+  --g-indigo-1: #8fb3d9; --g-indigo-2: #8fb3d9;
+  --side-bg: #282724; --panel-bg: #383733; --panel-shadow: none;
+  --nav-active-bg: #45443f;
+  --hero-bg: #1d1c1a; --hero-fg: #d9e2c4;
+  --meter-bg: #1d1c1a; --bar-track-fill: #1d1c1a; --toggle-on: #8cc46f;
+  color-scheme: dark;
+}
+
+[data-look='kalkulator'][data-theme='light'] {
+  --bg: #e4e1da; --bg-2: #f1efea; --bg-3: #d6d2c8;
+  --ink: #262522; --muted: #4f4c46; --dim: #625e57;
+  --accent: #875400; --on-accent: #ffffff;
+  --border: rgba(38, 37, 34, 0.12); --border-strong: rgba(38, 37, 34, 0.3);
+  --good: #3f7a2b; --warn: #855300; --critical: #a83214; --on-critical: #ffffff;
+  --g-teal-1: #c98a00; --g-teal-2: #c98a00;
+  --g-blue-1: #4d8a35; --g-blue-2: #4d8a35;
+  --g-green-1: #3d6fa3; --g-green-2: #3d6fa3;
+  --g-red-1: #c2410c; --g-red-2: #c2410c;
+  --g-violet-1: #6b675f; --g-violet-2: #6b675f;
+  --g-amber-1: #c98a00; --g-amber-2: #c98a00;
+  --g-indigo-1: #3d6fa3; --g-indigo-2: #3d6fa3;
+  --side-bg: #dbd7cf; --panel-bg: #f1efea; --panel-shadow: none;
+  --nav-active-bg: #d6d2c8;
+  --hero-bg: #c3c8ad; --hero-fg: #232a1b;
+  --meter-bg: #d6d2c8; --bar-track-fill: #d6d2c8; --toggle-on: #4d8a35;
+  color-scheme: light;
+}
+
+/* Pulpit z paneli bez ramek, rozdzielonych szczeliną. */
+[data-look='kalkulator'] .dash-index { border-top: 0; }
+[data-look='kalkulator'] :is(.dash-plot, .dash-spec, .dash-idx, .dash-disks) {
+  background: var(--panel-bg); border: 0; border-radius: var(--radius);
+}
+[data-look='kalkulator'] .glass { border-color: transparent; }
+[data-look='kalkulator'] .btn { padding: 10px 20px; }
+[data-look='kalkulator'] .btn-mini { padding: 7px 14px; }
+[data-look='kalkulator'] .nav-item.active .nav-no, [data-look='kalkulator'] .nav-child.active .nav-no { padding: 1px 7px; margin-left: -7px; }

@@ -65,7 +65,7 @@ export function ShredderView() {
 
   return (
     <div>
-      <div className="glass empty-state" style={{ textAlign: 'left' }}>
+      <div className="glass empty-state intro">
         <div style={{ fontWeight: 700, color: 'var(--critical)', marginBottom: 8 }}>To działanie jest nieodwracalne.</div>
         Wybrane pliki i foldery zostaną nadpisane losowymi danymi ({PASSES}&times;), zmienią nazwę i zostaną usunięte —
         nie da się ich odzyskać z Kosza ani cofnąć.
@@ -106,8 +106,8 @@ export function ShredderView() {
             />
           </label>
           <button
-            className="btn btn-primary"
-            style={{ background: 'linear-gradient(135deg, var(--g-red-1), var(--g-red-2))', alignSelf: 'flex-start' }}
+            className="btn btn-primary btn-danger"
+            style={{ alignSelf: 'flex-start' }}
             disabled={!canConfirm || busy}
             onClick={runShred}
           >
@@ -127,7 +127,7 @@ export function ShredderView() {
           <div className="done-badge">
             <Icon name="check" />
           </div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', fontFamily: 'var(--sans)' }}>
             Zniszczono {phase.result.removed} pozycji ({formatBytes(phase.result.freed_bytes)})
           </div>
           {phase.result.errors.length > 0 && (

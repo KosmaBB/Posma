@@ -15,11 +15,9 @@ maintenance software makes you pick one or the other.
 > **Status: work in progress.** Linux is feature-complete against the planned
 > module catalog. The app starts on a real Mac and on Arch, but its modules
 > have not been tried there one by one yet; Windows has not run on real
-> hardware at all. Installers come later — for now this is a source repository.
->
-> No screenshots yet, on purpose: the interface is still being shaped, and
-> showing a version that won't match what ships would be worse than showing
-> nothing. They go in once the UI represents the real thing.
+> hardware at all. Installers for Linux (`.deb`, `.rpm`), macOS (`.dmg`) and
+> Windows (`.exe`) are built from a version tag; until the first release is
+> published this is a source repository.
 
 ---
 
@@ -67,6 +65,26 @@ unavoidable is asking you to take it on faith. The full source is published
 so you (or anyone you trust) can read exactly what happens, and the
 architecture is built so that reading it is *feasible*: the privileged parts
 are small, separate and deliberately boring.
+
+## Themes
+
+A theme in POSMA changes the whole app, not only its colours — the
+navigation, the home screen, the frame around each module. Each one has a
+light and a dark mode, and your accent, contrast, fonts, corners and density
+apply on top of whichever you pick.
+
+| | |
+|---|---|
+| ![Katalog](docs/images/themes/katalog.webp)<br>**Katalog** — catalog numbers, a folder bar, the processor's profile. The default, in five variants | ![Gęsto](docs/images/themes/gesto.webp)<br>**Gęsto** — everything on one screen: a mosaic of modules with red tabs |
+| ![Kaseta](docs/images/themes/kaseta.webp)<br>**Kaseta** — the disk as tape: a shelf of cassettes, an insert with side A and side B | ![Strumień](docs/images/themes/strumien.webp)<br>**Strumień** — one thing across the whole screen, the next one a scroll away |
+| ![Książeczka](docs/images/themes/ksiazeczka.webp)<br>**Książeczka** — free space kept like the balance in a passbook | ![Monochrom](docs/images/themes/monochrom.webp)<br>**Monochrom** — one scale of grey, every sentence with its evidence beside it |
+
+These six are the base themes — the ones POSMA ships with. Others will be
+there to find and install: a theme will install the same way a module does,
+and uninstall the same way too, arriving together with module distribution
+at [1.0](#10--module-distribution). Until then a theme is built into the app,
+and anyone can write one: [Writing a theme](https://kosmabb.github.io/Posma/writing-a-theme.html)
+covers the language, the variable names and a starter to copy.
 
 ## Modules
 
@@ -146,13 +164,13 @@ packaged there, and the app needs 4.1.
 | Module | What it does | Status |
 |---|---|---|
 | **Xcode cache** | Lists what Xcode left behind — build products, device symbols, simulator caches — marking what rebuilds itself and what cannot be recovered | 🧪 |
-| **Mail and Messages slimming** | Removes cached attachments without touching the messages themselves | 📋 |
+| **Mail and Messages slimming** | Clears what Mail and Messages rebuild by themselves — copies of opened attachments, previews, caches — and never touches mailboxes, conversations or Messages' attachments | 🧪 |
 | **Time Machine snapshots** | Lists the local snapshots that consume disk between real backups and deletes them, all or all but the newest | 🧪 |
 
-The privileged operations these need — `launchctl` and `tmutil` — are
-written in the macOS broker, which asks for the administrator password per
-action the way macOS's own prompt does. The app starts on a real Mac, but
-none of these operations has been tried there yet.
+The one privileged operation among them — deleting snapshots through
+`tmutil` — is written in the macOS broker, which asks for the administrator
+password per action the way macOS's own prompt does. The app starts on a
+real Mac, but that operation has not been tried there yet.
 Homebrew, SMART and log trimming are deliberately not in it: Homebrew refuses
 root and its prefix belongs to the user, macOS reads SMART without root, and
 `log erase` takes no age to trim by.
@@ -214,6 +232,11 @@ Paths of your own go in **Settings → Scanner blacklist**: a photo archive, a
 client's documents, anything that is nobody's junk.
 
 ### Settings
+
+**Appearance** picks the theme and the light or dark mode, and on top of any
+theme sets the accent colour, contrast, text and number fonts, labels,
+corners, lines, density, motion and the chart. A short tour of the app
+starts after the first run and can be replayed any time.
 
 Interface scaling has six levels plus an automatic mode that follows the
 window width — on dense displays and unusual resolutions the default size
@@ -297,23 +320,26 @@ distribution rather than on installed systems — on Arch only the app
 starting has been seen on a real machine so far; [Linux distributions](docs/distributions.md)
 keeps the two apart.
 
-### Next — macOS
+### In testing — macOS
 
-The second platform that can be tested live, so it's next in line.
+The second platform that can be tested live. Everything planned for it is
+written; what is left is running it on real Macs.
 
 - The app starts on a real Mac. Next is each module there, and the broker —
-  the administrator prompt, `launchctl` and Time Machine snapshots are
-  written but have never run on a Mac. Every module builds for both Apple
+  the administrator prompt and Time Machine snapshots are written but have
+  never run on a Mac. Every module builds for both Apple
   silicon and Intel.
-- macOS-only modules: Xcode derived-data cleanup and Time Machine local
-  snapshots are written; Mail/Messages slimming waits for a Mac — Messages'
-  attachments are content, not cache, and the line between the two has to
-  be seen on a real one.
+- macOS-only modules: Xcode derived-data cleanup, Time Machine local
+  snapshots and Mail/Messages slimming are written. The slimming takes only
+  what comes back by itself; Messages' attachments are content, not cache,
+  and stay for Messages' own "Review attachments", which also updates the
+  conversations pointing at them.
 - Full Disk Access: Settings shows whether macOS has granted it and opens
   the one pane where it is granted. POSMA never grants it itself — macOS
   makes that impossible on purpose.
-- CI builds and tests every macOS module on Apple silicon and on Intel, and
-  makes one universal bundle on request.
+- CI builds and tests every macOS module on Apple silicon and on Intel. A
+  version tag builds the installers — a universal `.dmg` for the Mac, `.deb`
+  and `.rpm` for Linux, an `.exe` for Windows — into a draft release.
 
 ### Then — Windows
 
@@ -349,10 +375,12 @@ land together at the 1.0 release:
   described above from architecture into a feature.
 - **Module vetting** for everything served — see
   [Module security](#module-security) below.
+- **Themes the same way** — a theme is found, installed and removed through
+  the same manager as a module; the six base themes ship with the app.
 
 ### Long term
 
-- **Community modules, plugins and translations** — a place for other people
+- **Community modules, themes, plugins and translations** — a place for other people
   to extend POSMA, with the same review standard applied to anything
   distributed through official channels.
 - Polish and English are the baseline languages; the goal is for community
@@ -402,8 +430,10 @@ are not something to bolt onto a single-user design.
   wired to real helper installation instead of recording a preference.
 - **Custom modules** — install a module you or someone else wrote, with a
   consent screen showing exactly which privileged capabilities it declares.
-- **Installers** — `.exe`, `.deb`/`.rpm`/AppImage and `.dmg`, so using POSMA
-  doesn't require a build toolchain.
+- **Installers** — `.deb`, `.rpm`, a universal `.dmg` and a Windows `.exe`
+  are built by [the release workflow](docs/building.md#installers), unsigned
+  until there are certificates to sign with. No AppImage: the broker cannot
+  be started as root from inside one.
 - **Password vault — deliberately last.** The module works and is already
   cross-platform, because the encryption and the database do not depend on
   the operating system. Further work on it waits until the end of production
@@ -411,7 +441,7 @@ are not something to bolt onto a single-user design.
   other managers, browser integration, hardware keys), and growing it
   alongside the macOS and Windows ports would mean doing the same work twice.
 - Smaller items: `pacman`/`dnf` support, flatpak unused-runtime cleanup,
-  settings persistence beyond the browser store, post-onboarding tutorial.
+  settings persistence beyond the browser store.
 
 ## Layout
 
@@ -424,7 +454,8 @@ crates/
   scan-filter/   One list of exclusions, shared by every disk scanner
   sysmetrics/    Sensor, temperature and graphics-card readings — no privilege
 modules/         One crate per feature module, plus the per-OS brokers
-scripts/         sync-sidecars.sh — builds this system's modules into the bundle
+templates/world/ A minimal theme to copy into core/src/worlds — see Writing a theme
+scripts/         sync-sidecars.mjs — builds this system's modules into the bundle
                  distro-check.sh — runs the modules in a container of each distribution
 ```
 
@@ -440,17 +471,17 @@ are listed with the build notes.
 
 ```bash
 npm --prefix core install
-bash scripts/sync-sidecars.sh   # build modules, copy them into the bundle
+node scripts/sync-sidecars.mjs   # build modules, copy them into the bundle
 npm --prefix core run tauri dev
 ```
 
-**Run `sync-sidecars.sh` before the first build.** Compiled module binaries
+**Run `sync-sidecars.mjs` before the first build.** Compiled module binaries
 are deliberately not committed, and the app bundles them, so a fresh clone
 fails until they exist. Skipping this step gives an error that looks like a
 broken checkout:
 
 ```
-resource path `binaries/system-info-x86_64-unknown-linux-gnu` doesn't exist
+resource path `binaries/posma-system-info-x86_64-unknown-linux-gnu` doesn't exist
 ```
 
 That is the expected state before the first sync, not a corrupt clone —
@@ -527,6 +558,7 @@ a link back here.
 | [Architecture](https://kosmabb.github.io/Posma/architecture.html) | How core, modules and brokers fit together, and why it is split that way |
 | [Security model](https://kosmabb.github.io/Posma/security-model.html) | What can reach root, what stops it, and an explicit list of what is *not* protected |
 | [Writing a module](https://kosmabb.github.io/Posma/writing-a-module.html) | The module contract — protocol, manifest, capabilities, per-OS logic, safety rules |
+| [Writing a theme](https://kosmabb.github.io/Posma/writing-a-theme.html) | Your own look for the whole app — the language, the variable names, a starter to copy, the rules |
 | [Building and development](https://kosmabb.github.io/Posma/building.html) | Toolchain, build order, the sidecar sync step, testing |
 | [Linux distributions](https://kosmabb.github.io/Posma/distributions.html) | Which distributions POSMA runs on, what each module does there, and what was actually run to find out |
 | [`Access_plan.md`](Access_plan.md) | The original permission and capability design (Polish) |

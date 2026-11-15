@@ -40,10 +40,17 @@ type Phase =
   | { kind: 'done'; result: CleanData }
   | { kind: 'error'; message: string }
 
+// Polish decimal comma, no thousands grouping, as the rest of the app writes sizes.
+const fixed = (digits: number) =>
+  new Intl.NumberFormat('pl-PL', { minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: false })
+const TWO = fixed(2)
+const ONE = fixed(1)
+const NONE = fixed(0)
+
 export function formatBytes(bytes: number): string {
-  if (bytes >= 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(2)} GB`
-  if (bytes >= 1024 ** 2) return `${(bytes / 1024 ** 2).toFixed(1)} MB`
-  if (bytes >= 1024) return `${(bytes / 1024).toFixed(0)} KB`
+  if (bytes >= 1024 ** 3) return `${TWO.format(bytes / 1024 ** 3)} GB`
+  if (bytes >= 1024 ** 2) return `${ONE.format(bytes / 1024 ** 2)} MB`
+  if (bytes >= 1024) return `${NONE.format(bytes / 1024)} KB`
   return `${bytes} B`
 }
 
@@ -250,7 +257,7 @@ export function TempCleanView() {
           <div className="done-badge">
             <Icon name="check" />
           </div>
-          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', fontFamily: 'Bricolage Grotesque, sans-serif' }}>
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', fontFamily: 'var(--sans)' }}>
             Odzyskano {formatBytes(phase.result.freed_bytes)}
           </div>
           Usunięto {phase.result.removed} pozycji.

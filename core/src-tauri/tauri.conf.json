@@ -1,7 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "core",
-  "version": "0.2.1",
+  "productName": "POSMA",
+  "mainBinaryName": "posma",
+  "version": "0.3.0",
   "identifier": "com.posma.app",
   "build": {
     "beforeDevCommand": "npm run dev:app",
@@ -26,17 +27,18 @@
   "bundle": {
     "active": true,
     "targets": "all",
+    "category": "Utility",
     "externalBin": [
-      "binaries/big-files",
-      "binaries/browser-hygiene",
-      "binaries/disk-map",
-      "binaries/duplicates",
-      "binaries/health-monitor",
-      "binaries/metadata",
-      "binaries/shredder",
-      "binaries/system-info",
-      "binaries/temp-clean",
-      "binaries/vault"
+      "binaries/posma-big-files",
+      "binaries/posma-browser-hygiene",
+      "binaries/posma-disk-map",
+      "binaries/posma-duplicates",
+      "binaries/posma-health-monitor",
+      "binaries/posma-metadata",
+      "binaries/posma-shredder",
+      "binaries/posma-system-info",
+      "binaries/posma-temp-clean",
+      "binaries/posma-vault"
     ],
     "icon": [
       "icons/32x32.png",

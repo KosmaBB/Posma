@@ -147,6 +147,10 @@
     "xcode-cache": [
       "fs-user"
     ],
+    "macos-slim": [
+      "fs-user",
+      "fda"
+    ],
     "services": [
       "svc",
       "restore-point"

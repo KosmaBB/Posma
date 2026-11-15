@@ -1,0 +1,73 @@
+/* ============================================================
+   Wygląd „Systemowy” — jak natywna aplikacja: krój systemu, karty
+   z zaokrągleniami i cieniem, akcent wypełnia przycisk główny.
+   ============================================================ */
+[data-look='systemowy'] {
+  --sans: system-ui, -apple-system, 'Segoe UI Variable Text', 'Segoe UI', Cantarell, 'Noto Sans', Ubuntu, sans-serif;
+  --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Noto Sans Mono', 'DejaVu Sans Mono', monospace;
+  --head-weight: 600; --head-stretch: 100%;
+  --title-weight: 600;
+  --lbl-size: 13px; --lbl-weight: 600; --lbl-stretch: 100%; --lbl-tracking: 0em; --lbl-transform: none;
+  --btn-size: 13px; --btn-stretch: 100%;
+  --folder-size: 13px;
+  --brand-size: 16px; --brand-weight: 700; --brand-stretch: 100%; --brand-tracking: 0em;
+  --hero-size: 46px; --hero-weight: 700; --hero-stretch: 100%; --hero-tracking: -0.03em;
+
+  --radius: 12px; --radius-sm: 8px; --radius-pill: 999px; --bar-rx: 3px;
+
+  --btn-bg: var(--accent); --btn-fg: var(--on-accent); --btn-border: var(--accent); --btn-strip: 0px;
+  --ghost-bg: var(--panel-bg);
+  --chip-bg: var(--bg-3); --chip-border: transparent;
+  --toggle-on: var(--accent);
+  --nav-inset: 10px; --nav-no-bg: transparent; --nav-no-fg: var(--dim);
+  --panel-gap: 14px;
+  --meter-fill: var(--accent); --meter-bg: var(--bg-3); --meter-border: transparent;
+
+  --chart-mean: var(--accent); --chart-w: 2;
+  --chart-peak: var(--muted); --chart-peak-opacity: 0.8;
+  --bar-fill: var(--accent); --bar-track-fill: var(--bg-3); --bar-track-stroke: none;
+}
+
+[data-look='systemowy'][data-theme='light'] {
+  --bg: #f3f3f4; --bg-2: #ffffff; --bg-3: #e8e8eb;
+  --ink: #1b1b1f; --muted: #55555d; --dim: #686870;
+  --accent: #2f6fde; --on-accent: #ffffff;
+  --border: rgba(0, 0, 0, 0.09); --border-strong: rgba(0, 0, 0, 0.22);
+  --good: #1b1b1f; --warn: #a65300; --critical: #c9372a; --on-critical: #ffffff;
+  --g-teal-1: #2f6fde; --g-teal-2: #2f6fde;
+  --g-blue-1: #d98a06; --g-blue-2: #d98a06;
+  --g-green-1: #1f9d55; --g-green-2: #1f9d55;
+  --g-red-1: #d9453b; --g-red-2: #d9453b;
+  --g-violet-1: #8a8a93; --g-violet-2: #8a8a93;
+  --g-amber-1: #d98a06; --g-amber-2: #d98a06;
+  --g-indigo-1: #1f9d55; --g-indigo-2: #1f9d55;
+  --side-bg: #e9e9ec; --panel-bg: #ffffff; --panel-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --nav-active-bg: rgba(0, 0, 0, 0.07);
+  color-scheme: light;
+}
+
+[data-look='systemowy'][data-theme='dark'] {
+  --bg: #1c1c1e; --bg-2: #252528; --bg-3: #313135;
+  --ink: #f2f2f3; --muted: #b6b6bd; --dim: #9a9aa2;
+  --accent: #6aa5ff; --on-accent: #08172f;
+  --border: rgba(255, 255, 255, 0.08); --border-strong: rgba(255, 255, 255, 0.22);
+  --good: #f2f2f3; --warn: #f0a43a; --critical: #ff7466; --on-critical: #1c1c1e;
+  --g-teal-1: #6aa5ff; --g-teal-2: #6aa5ff;
+  --g-blue-1: #f0a43a; --g-blue-2: #f0a43a;
+  --g-green-1: #45c47a; --g-green-2: #45c47a;
+  --g-red-1: #ff7466; --g-red-2: #ff7466;
+  --g-violet-1: #9a9aa2; --g-violet-2: #9a9aa2;
+  --g-amber-1: #f0a43a; --g-amber-2: #f0a43a;
+  --g-indigo-1: #45c47a; --g-indigo-2: #45c47a;
+  --side-bg: #161618; --panel-bg: #252528; --panel-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  --nav-active-bg: rgba(255, 255, 255, 0.08);
+  color-scheme: dark;
+}
+
+/* Pulpit z kart: każdy panel to osobna karta na tle okna. */
+[data-look='systemowy'] .dash-index { border-top: 0; }
+[data-look='systemowy'] :is(.dash-plot, .dash-spec, .dash-idx, .dash-disks) {
+  background: var(--panel-bg); border: var(--hair) solid var(--border); border-radius: var(--radius); box-shadow: var(--panel-shadow);
+}
+[data-look='systemowy'] .nav-item.active .nav-no, [data-look='systemowy'] .nav-child.active .nav-no { padding: 0; margin: 0; }
+[data-look='systemowy'] select { font-family: var(--sans); }

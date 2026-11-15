@@ -1,24 +1,28 @@
 {
   "bundle": {
     "externalBin": [
-      "binaries/big-files",
-      "binaries/browser-hygiene",
-      "binaries/disk-map",
-      "binaries/duplicates",
-      "binaries/health-monitor",
-      "binaries/metadata",
-      "binaries/shredder",
-      "binaries/system-info",
-      "binaries/temp-clean",
-      "binaries/vault",
-      "binaries/autostart",
-      "binaries/desktop-theme",
-      "binaries/grub-editor",
-      "binaries/journald-trim",
-      "binaries/kernel-mgr",
-      "binaries/pkg-cache",
-      "binaries/uninstaller",
-      "binaries/linux-broker"
+      "binaries/posma-big-files",
+      "binaries/posma-browser-hygiene",
+      "binaries/posma-disk-map",
+      "binaries/posma-duplicates",
+      "binaries/posma-health-monitor",
+      "binaries/posma-metadata",
+      "binaries/posma-shredder",
+      "binaries/posma-system-info",
+      "binaries/posma-temp-clean",
+      "binaries/posma-vault",
+      "binaries/posma-autostart",
+      "binaries/posma-desktop-theme",
+      "binaries/posma-grub-editor",
+      "binaries/posma-journald-trim",
+      "binaries/posma-kernel-mgr",
+      "binaries/posma-pkg-cache",
+      "binaries/posma-uninstaller",
+      "binaries/posma-linux-broker"
+    ],
+    "targets": [
+      "deb",
+      "rpm"
     ]
   }
 }

@@ -61,7 +61,7 @@ scratch.
    with the request in the module's own snake_case. A core command of its
    own is for the privileged half only — one that asks the broker, gated by
    an `operations` entry in the same catalog.
-3. **Build and sync**: `bash scripts/sync-sidecars.sh`
+3. **Build and sync**: `node scripts/sync-sidecars.mjs`
 4. **Add it to `externalBin`** in `core/src-tauri/tauri.<system>.conf.json`
    for every system its manifest names — *after* the binary exists, or the
    Tauri build fails with `resource path ... doesn't exist`. A test checks

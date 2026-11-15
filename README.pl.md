@@ -16,12 +16,9 @@ Większość programów do konserwacji każe wybrać jedno albo drugie.
 > **Status: w budowie.** Linux jest kompletny względem zaplanowanego katalogu
 > modułów. Aplikacja uruchamia się na prawdziwym Macu i na Archu, ale jej
 > moduły nie zostały tam jeszcze sprawdzone po kolei; Windows nie działał
-> jeszcze na prawdziwym sprzęcie. Instalatory powstaną później — na
-> razie jest to repozytorium źródeł.
->
-> Celowo brak zrzutów ekranu: interfejs wciąż się kształtuje, a pokazanie
-> wersji, która nie będzie odpowiadać temu, co trafi do wydania, byłoby
-> gorsze niż niepokazanie niczego. Pojawią się, gdy UI będzie reprezentatywne.
+> jeszcze na prawdziwym sprzęcie. Instalatory dla Linuksa (`.deb`, `.rpm`),
+> macOS (`.dmg`) i Windows (`.exe`) buduje tag wersji; do opublikowania
+> pierwszego wydania jest to repozytorium źródeł.
 
 ---
 
@@ -63,6 +60,27 @@ programami, a nie kodem wkompilowanym w jedną binarkę.
 > Ma to skutek, który łatwo wziąć za usterkę: moduł dodany w nowszej wersji
 > nie pokaże się sam. Aplikacja pamięta wybór z pierwszego uruchomienia, więc
 > nowy moduł czeka wyłączony w menedżerze, dopóki go tam nie włączysz.
+
+## Motywy
+
+Motyw w POSMA zmienia całą aplikację, nie tylko kolory — nawigację, ekran
+główny, ramę wokół każdego modułu. Każdy ma tryb jasny i ciemny, a Twój
+akcent, kontrast, kroje, narożniki i gęstość nakładają się na ten, który
+wybierzesz.
+
+| | |
+|---|---|
+| ![Katalog](docs/images/themes/katalog.webp)<br>**Katalog** — numery katalogowe, pasek folderów, profil procesora. Domyślny, w pięciu odmianach | ![Gęsto](docs/images/themes/gesto.webp)<br>**Gęsto** — wszystko na jednym ekranie: mozaika modułów z czerwonymi zakładkami |
+| ![Kaseta](docs/images/themes/kaseta.webp)<br>**Kaseta** — dysk jako taśma: półka kaset, wkładka ze stroną A i B | ![Strumień](docs/images/themes/strumien.webp)<br>**Strumień** — jedna rzecz na cały ekran, następna o jedno przewinięcie |
+| ![Książeczka](docs/images/themes/ksiazeczka.webp)<br>**Książeczka** — wolne miejsce prowadzone jak saldo w książeczce | ![Monochrom](docs/images/themes/monochrom.webp)<br>**Monochrom** — jedna skala szarości, każde zdanie z dowodem obok |
+
+Tych sześć to podstawowe motywy — te, z którymi POSMA jest dostarczana.
+Kolejne będzie można znaleźć i doinstalować: motyw zainstaluje się tak samo
+jak moduł i tak samo da się go usunąć — pojawi się to razem z dystrybucją
+modułów w [1.0](#10--dystrybucja-modułów). Do tego czasu motyw jest
+wbudowany w aplikację, a napisać go może każdy:
+[Pisanie motywu](https://kosmabb.github.io/Posma/writing-a-theme.html)
+opisuje język, nazwy zmiennych i podstawkę do skopiowania.
 
 ## Moduły
 
@@ -142,13 +160,13 @@ a aplikacja potrzebuje 4.1.
 | Moduł | Co robi | Status |
 |---|---|---|
 | **Cache Xcode** | Wylicza, co Xcode zostawił — wyniki kompilacji, symbole urządzeń, cache symulatorów — z zaznaczeniem, co odbuduje się samo, a czego nie da się odzyskać | 🧪 |
-| **Odchudzanie Mail i Messages** | Usuwa zapisane w cache załączniki, nie ruszając samych wiadomości | 📋 |
+| **Odchudzanie Mail i Messages** | Czyści to, co Poczta i Wiadomości odbudują same — kopie otwartych załączników, podglądy, cache — i nigdy nie dotyka skrzynek, rozmów ani załączników Wiadomości | 🧪 |
 | **Migawki Time Machine** | Pokazuje lokalne migawki zajmujące dysk pomiędzy właściwymi kopiami zapasowymi i usuwa wszystkie albo wszystkie poza najnowszą | 🧪 |
 
-Operacje uprzywilejowane, których te moduły potrzebują — `launchctl` i
-`tmutil` — są napisane w brokerze macOS, który przy każdej akcji prosi o hasło
+Jedyna operacja uprzywilejowana wśród nich — usuwanie migawek przez
+`tmutil` — jest napisana w brokerze macOS, który przy każdej akcji prosi o hasło
 administratora tak, jak robi to sam macOS. Aplikacja uruchamia się na
-prawdziwym Macu, ale żadnej z tych operacji jeszcze tam nie sprawdzono.
+prawdziwym Macu, ale tej operacji jeszcze tam nie sprawdzono.
 Homebrew, SMART i przycinania logów celowo w nim nie ma: Homebrew nie
 działa jako root, a jego katalog należy do użytkownika, SMART macOS czyta bez
 roota, a `log erase` nie przyjmuje wieku, według którego miałby przycinać.
@@ -205,6 +223,11 @@ Własne ścieżki dodajesz w **Ustawieniach → Czarna lista skanerów**: archiw
 zdjęć, dokumenty klienta, cokolwiek, co nie jest niczyim śmieciem.
 
 ### Ustawienia
+
+**Wygląd** wybiera motyw i tryb jasny lub ciemny, a na każdym motywie
+ustawia kolor akcentu, kontrast, krój tekstu i liczb, etykiety, narożniki,
+linie, gęstość, ruch i wykres. Po pierwszym uruchomieniu startuje krótki
+samouczek po aplikacji; można go powtórzyć w każdej chwili.
 
 Skalowanie interfejsu ma sześć poziomów plus tryb automatyczny dobierający
 się do szerokości okna — przy gęstych ekranach i niestandardowych
@@ -293,23 +316,26 @@ systemach — na Archu na prawdziwej maszynie widać było na razie tylko
 uruchomienie aplikacji; strona [Linux distributions](docs/distributions.md) rozdziela te
 dwie rzeczy.
 
-### Następny — macOS
+### W trakcie testów — macOS
 
-Drugi system, który da się testować na żywo, więc idzie jako kolejny.
+Drugi system, który da się testować na żywo. Wszystko, co dla niego
+zaplanowano, jest napisane; zostało uruchomienie tego na prawdziwych Macach.
 
 - Aplikacja uruchamia się na prawdziwym Macu. Następne są tam kolejne moduły
-  i broker — prośba o hasło administratora, `launchctl` i migawki Time
-  Machine są napisane, ale nigdy nie uruchomione na Macu. Każdy moduł
+  i broker — prośba o hasło administratora i migawki Time Machine są
+  napisane, ale nigdy nie uruchomione na Macu. Każdy moduł
   buduje się na Apple silicon i Intela.
-- Moduły wyłącznie dla macOS: czyszczenie DerivedData Xcode i lokalne
-  migawki Time Machine są napisane; odchudzanie Mail i Messages czeka na
-  Maca — załączniki Wiadomości to treść, nie cache, a granicę między nimi
-  trzeba zobaczyć na prawdziwym systemie.
+- Moduły wyłącznie dla macOS: czyszczenie DerivedData Xcode, lokalne
+  migawki Time Machine i odchudzanie Mail i Messages są napisane.
+  Odchudzanie bierze tylko to, co wraca samo; załączniki Wiadomości to
+  treść, nie cache, i zostają dla wbudowanego w Wiadomości „Przejrzyj
+  załączniki”, które przy okazji poprawia wskazujące na nie rozmowy.
 - Pełny dostęp do dysku: Ustawienia pokazują, czy macOS go nadał, i otwierają
   jedyny panel, w którym się go nadaje. POSMA nigdy nie nadaje go sama —
   macOS celowo to uniemożliwia.
-- CI buduje i testuje każdy moduł macOS na Apple silicon i na Intelu, a na
-  żądanie składa jedną paczkę dla obu.
+- CI buduje i testuje każdy moduł macOS na Apple silicon i na Intelu. Tag
+  wersji buduje instalatory — uniwersalny `.dmg` dla Maca, `.deb` i `.rpm`
+  dla Linuksa, `.exe` dla Windows — do szkicu wydania.
 
 ### Potem — Windows
 
@@ -347,10 +373,13 @@ pobierane, więc jedno i drugie pojawia się razem w wydaniu 1.0:
   wyżej modułowość z architektury w funkcję.
 - **Weryfikacja modułów** dla wszystkiego, co jest serwowane — patrz
   [Bezpieczeństwo modułów](#bezpieczeństwo-modułów).
+- **Motywy tak samo** — motyw znajduje się, instaluje i usuwa w tym samym
+  menedżerze co moduł; sześć podstawowych motywów jest dostarczanych z
+  aplikacją.
 
 ### Długoterminowo
 
-- **Moduły, wtyczki i tłumaczenia społeczności** — miejsce, w którym inni
+- **Moduły, motywy, wtyczki i tłumaczenia społeczności** — miejsce, w którym inni
   mogą rozbudowywać POSMA, przy tym samym standardzie weryfikacji dla
   wszystkiego, co idzie oficjalnym kanałem.
 - Polski i angielski są językami bazowymi; celem jest, żeby tłumaczenia
@@ -404,8 +433,10 @@ to nie są rzeczy, które dokleja się do projektu jednoosobowego.
 - **Moduły własne** — instalacja modułu napisanego przez Ciebie lub kogoś
   innego, z ekranem zgody pokazującym dokładnie, o jakie uprzywilejowane
   możliwości prosi.
-- **Instalatory** — `.exe`, `.deb`/`.rpm`/AppImage i `.dmg`, żeby korzystanie
-  z POSMA nie wymagało środowiska programistycznego.
+- **Instalatory** — `.deb`, `.rpm`, uniwersalny `.dmg` i `.exe` dla Windows
+  buduje [workflow wydań](docs/building.md#installers), bez podpisu, dopóki
+  nie ma certyfikatów. Bez AppImage: z jego wnętrza nie da się uruchomić
+  brokera jako root.
 - **Sejf haseł — świadomie na koniec.** Moduł działa i jest wieloplatformowy
   już dziś, bo szyfrowanie i baza nie zależą od systemu. Dalsza praca nad nim
   czeka jednak na sam koniec produkcji: to jedyny moduł, który prawie na
@@ -413,7 +444,7 @@ to nie są rzeczy, które dokleja się do projektu jednoosobowego.
   klucze sprzętowe), a rozbudowywanie go równolegle do portowania na macOS i
   Windows oznaczałoby przerabianie tego samego dwa razy.
 - Drobniejsze: obsługa `pacman`/`dnf`, czyszczenie nieużywanych środowisk
-  flatpak, trwałe zapisywanie ustawień, samouczek po pierwszym uruchomieniu.
+  flatpak, trwałe zapisywanie ustawień.
 
 ## Struktura
 
@@ -426,7 +457,8 @@ crates/
   scan-filter/   Jedna lista wykluczeń dla wszystkich skanerów dysku
   sysmetrics/    Odczyt czujników, temperatur i kart graficznych — bez uprawnień
 modules/         Po jednym crate na moduł, plus brokery per system
-scripts/         sync-sidecars.sh — buduje moduły dla tego systemu i wgrywa je do aplikacji
+templates/world/ Minimalny motyw do skopiowania do core/src/worlds — patrz Pisanie motywu
+scripts/         sync-sidecars.mjs — buduje moduły dla tego systemu i wgrywa je do aplikacji
                  distro-check.sh — uruchamia moduły w kontenerze każdej dystrybucji
 ```
 ## Budowanie ze źródeł
@@ -441,17 +473,17 @@ są spisane przy opisie budowania.
 
 ```bash
 npm --prefix core install
-bash scripts/sync-sidecars.sh   # zbuduj moduły i skopiuj je do aplikacji
+node scripts/sync-sidecars.mjs   # zbuduj moduły i skopiuj je do aplikacji
 npm --prefix core run tauri dev
 ```
 
-**Uruchom `sync-sidecars.sh` przed pierwszym budowaniem.** Skompilowane
+**Uruchom `sync-sidecars.mjs` przed pierwszym budowaniem.** Skompilowane
 binarki modułów celowo nie są commitowane, a aplikacja je dołącza, więc
 świeży klon nie zbuduje się, dopóki nie powstaną. Pominięcie tego kroku daje
 błąd, który wygląda jak uszkodzone repozytorium:
 
 ```
-resource path `binaries/system-info-x86_64-unknown-linux-gnu` doesn't exist
+resource path `binaries/posma-system-info-x86_64-unknown-linux-gnu` doesn't exist
 ```
 
 To oczekiwany stan przed pierwszą synchronizacją, a nie zepsuty klon — samo
@@ -531,6 +563,7 @@ dokumentacja i odnośnik z powrotem tutaj.
 | [Architektura](https://kosmabb.github.io/Posma/architecture.html) | Jak rdzeń, moduły i brokery łączą się w całość i dlaczego podział wygląda właśnie tak |
 | [Model bezpieczeństwa](https://kosmabb.github.io/Posma/security-model.html) | Co może sięgnąć do roota, co go przed tym powstrzymuje i jawna lista tego, co **nie** jest chronione |
 | [Pisanie modułu](https://kosmabb.github.io/Posma/writing-a-module.html) | Kontrakt modułu — protokół, manifest, uprawnienia, logika per system, zasady bezpieczeństwa |
+| [Pisanie motywu](https://kosmabb.github.io/Posma/writing-a-theme.html) | Własny wygląd całej aplikacji — język, nazwy zmiennych, podstawka do skopiowania, zasady |
 | [Budowanie i praca z kodem](https://kosmabb.github.io/Posma/building.html) | Wymagania, kolejność budowania, krok synchronizacji modułów, testowanie |
 | [Dystrybucje Linuksa](https://kosmabb.github.io/Posma/distributions.html) | Na których dystrybucjach POSMA działa, co każdy moduł tam robi i co faktycznie uruchomiono, żeby to ustalić |
 | [`Access_plan.md`](Access_plan.md) | Pierwotny projekt systemu uprawnień (po polsku) |

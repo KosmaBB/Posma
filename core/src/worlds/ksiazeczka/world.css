@@ -1,0 +1,596 @@
+/* Książeczka — the machine as a savings account in a bank passbook.
+   Structure tokens sit at 0,1,0 so custom.css overrides (0,2,0) still bite;
+   colours sit at 0,2,0 per mode. Doto prints figures, Libre Franklin the
+   form, Cousine the proof lines and paths. Nothing here is handwritten. */
+
+/* ---------- structure ---------- */
+[data-world='ksiazeczka'] {
+  --sans: 'Libre Franklin Variable', 'Libre Franklin', system-ui, sans-serif;
+  --mono: 'Cousine', ui-monospace, monospace;
+  --kz-matrix: 'Doto Variable', 'Doto', var(--mono);
+  --head-weight: 800; --head-stretch: 100%; --head-tracking: -0.01em;
+  --lbl-size: 13px; --lbl-weight: 700; --lbl-stretch: 100%; --lbl-tracking: 0.1em; --lbl-transform: uppercase;
+  --btn-size: 13px; --btn-weight: 700; --btn-stretch: 100%; --btn-tracking: 0.1em; --btn-transform: uppercase;
+  --btn-strip: 0px; --btn-radius: var(--radius-sm);
+  --hero-font: var(--kz-matrix); --hero-size: 64px; --hero-weight: 900; --hero-stretch: 100%; --hero-tracking: -0.02em; --hero-pad: 0px;
+  --radius: 2px; --radius-sm: 0px; --radius-pill: 2px; --bar-rx: 0px;
+  --hair: 1px; --rule: 2px;
+  --chart-w: 1.6; --chart-peak-dash: 2 3; --chart-peak-opacity: 0.9; --chart-grid-opacity: 0.7;
+}
+/* A chosen figure font replaces the dot matrix too. */
+:root[data-world='ksiazeczka'][data-num-font] { --kz-matrix: var(--mono); }
+
+/* ---------- light: white stock, black print, green cover, violet stamp ---------- */
+[data-world='ksiazeczka'][data-theme='light'] {
+  color-scheme: light;
+  --kz-cover: #0f3a2c; --kz-cover-2: #0a2c21; --kz-cover-ink: #e2efe8; --kz-cover-dim: #a9c9b8;
+  --kz-stock: #fdfdfb; --kz-print: #1d5541; --kz-print-2: #3b6a58; --kz-proof: #4c5450;
+  --kz-guil: #d6e9df; --kz-rule: #c2d9cc; --kz-debit: #b8161b;
+  --kz-stamp: var(--accent); --kz-carry: #eef5f0; --kz-hover: rgba(29, 85, 65, 0.07); --kz-field: rgba(255, 255, 255, 0.75);
+  --kz-acct-tab: #fdfdfb;
+  --kz-pink: #f7e3e6; --kz-pink-rule: #e3b7bf; --kz-pink-tab: #f7e3e6;
+  --kz-blue: #e1ebf6; --kz-blue-rule: #b5c8de; --kz-blue-tab: #e1ebf6;
+  --kz-yellow: #f6f0d2; --kz-yellow-rule: #dccf94; --kz-yellow-tab: #f6f0d2;
+  --kz-green: #e0f0e3; --kz-green-rule: #a9cfb2; --kz-green-tab: #e0f0e3;
+  --kz-grey: #ececea; --kz-grey-rule: #c9c9c4; --kz-grey-tab: #ececea;
+  --kz-spine: #0a2c21; --kz-gutter: rgba(15, 58, 44, 0.3); --kz-edge: #e6eae4; --kz-edge-2: #cfd6cf;
+  --kz-lamp: transparent; --kz-shadow: rgba(0, 0, 0, 0.45);
+  --kz-emboss-hi: #ffffff; --kz-emboss-lo: #d5dcd6; --kz-live: #8fe0b4;
+
+  --bg: #fdfdfb; --bg-2: #ffffff; --bg-3: #eef5f0;
+  --ink: #17191a; --muted: #3b6a58; --dim: #4c5450;
+  --accent: #5a3da6; --on-accent: #ffffff;
+  --border: #c2d9cc; --border-strong: #6f9584; --rule-color: #1d5541;
+  --warn: #8a5a00; --critical: #b8161b; --on-critical: #ffffff;
+  --panel-bg: rgba(255, 255, 255, 0.6); --panel-shadow: none;
+  --lbl-color: #1d5541;
+  --btn-bg: #1d5541; --btn-fg: #ffffff; --btn-border: #1d5541;
+  --ghost-bg: transparent; --ghost-border: #1d5541;
+  --chip-bg: transparent; --chip-border: currentColor; --toggle-on: #1d5541;
+  --meter-fill: #1d5541; --meter-bg: transparent; --meter-border: #6f9584;
+  --chart-mean: #17191a; --chart-peak: #3b6a58; --chart-grid: #c2d9cc;
+  --bar-fill: #1d5541; --bar-track-fill: none; --bar-track-stroke: #6f9584;
+  --hero-fg: #17191a; --hero-bg: transparent;
+  --g-teal-1: #c0657b; --g-teal-2: #c0657b;
+  --g-blue-1: #4f7fb5; --g-blue-2: #4f7fb5;
+  --g-green-1: #a88a1c; --g-green-2: #a88a1c;
+  --g-red-1: #3f8a55; --g-red-2: #3f8a55;
+  --g-violet-1: #7d7f7a; --g-violet-2: #7d7f7a;
+  --g-amber-1: #a88a1c; --g-amber-2: #a88a1c;
+  --g-indigo-1: #4f7fb5; --g-indigo-2: #4f7fb5;
+}
+
+/* ---------- dark: the passbook under a desk lamp at night ---------- */
+[data-world='ksiazeczka'][data-theme='dark'] {
+  color-scheme: dark;
+  --kz-cover: #0b1a14; --kz-cover-2: #07120d; --kz-cover-ink: #dfe9e2; --kz-cover-dim: #93ad9f;
+  --kz-stock: #201e19; --kz-print: #8fc4a8; --kz-print-2: #a3bcad; --kz-proof: #b3ab98;
+  --kz-guil: #2c2a23; --kz-rule: #3d4139; --kz-debit: #ff8a7a;
+  --kz-stamp: var(--accent); --kz-carry: #262b24; --kz-hover: rgba(143, 196, 168, 0.08); --kz-field: rgba(0, 0, 0, 0.22);
+  --kz-acct-tab: #36332b;
+  --kz-pink: #2a1f22; --kz-pink-rule: #4a3439; --kz-pink-tab: #45313a;
+  --kz-blue: #1c2129; --kz-blue-rule: #33404f; --kz-blue-tab: #2c394a;
+  --kz-yellow: #26231a; --kz-yellow-rule: #4a4330; --kz-yellow-tab: #423b25;
+  --kz-green: #1b251e; --kz-green-rule: #324637; --kz-green-tab: #2c4033;
+  --kz-grey: #232320; --kz-grey-rule: #3d3d38; --kz-grey-tab: #3a3a35;
+  --kz-spine: #040a07; --kz-gutter: rgba(0, 0, 0, 0.55); --kz-edge: #2b2923; --kz-edge-2: #1a1915;
+  --kz-lamp: rgba(255, 214, 150, 0.075); --kz-shadow: rgba(0, 0, 0, 0.7);
+  --kz-emboss-hi: #34312a; --kz-emboss-lo: #13120e; --kz-live: #7fd1a4;
+
+  --bg: #201e19; --bg-2: #2a2721; --bg-3: #262b24;
+  --ink: #ece4d0; --muted: #a9bdb0; --dim: #b3ab98;
+  --accent: #b9a3f0; --on-accent: #1a1426;
+  --border: #3d4139; --border-strong: #7d8f84; --rule-color: #8fc4a8;
+  --warn: #e6b450; --critical: #ff8a7a; --on-critical: #1a0d0b;
+  --panel-bg: rgba(255, 255, 255, 0.03); --panel-shadow: none;
+  --lbl-color: #8fc4a8;
+  --btn-bg: #8fc4a8; --btn-fg: #0b1a14; --btn-border: #8fc4a8;
+  --ghost-bg: transparent; --ghost-border: #8fc4a8;
+  --chip-bg: transparent; --chip-border: currentColor; --toggle-on: #8fc4a8;
+  --meter-fill: #8fc4a8; --meter-bg: transparent; --meter-border: #7d8f84;
+  --chart-mean: #ece4d0; --chart-peak: #8fc4a8; --chart-grid: #3d4139;
+  --bar-fill: #8fc4a8; --bar-track-fill: none; --bar-track-stroke: #7d8f84;
+  --hero-fg: #ece4d0; --hero-bg: transparent;
+  --g-teal-1: #d98da0; --g-teal-2: #d98da0;
+  --g-blue-1: #8fb1db; --g-blue-2: #8fb1db;
+  --g-green-1: #d6bc5c; --g-green-2: #d6bc5c;
+  --g-red-1: #82c49a; --g-red-2: #82c49a;
+  --g-violet-1: #a9aaa4; --g-violet-2: #a9aaa4;
+  --g-amber-1: #d6bc5c; --g-amber-2: #d6bc5c;
+  --g-indigo-1: #8fb1db; --g-indigo-2: #8fb1db;
+}
+
+/* Each folder prints its order forms on its own stock. */
+[data-world='ksiazeczka'] [data-folder='data'] { --kz-tint: var(--kz-pink); --kz-tint-rule: var(--kz-pink-rule); --kz-tab: var(--kz-pink-tab); }
+[data-world='ksiazeczka'] [data-folder='system'] { --kz-tint: var(--kz-blue); --kz-tint-rule: var(--kz-blue-rule); --kz-tab: var(--kz-blue-tab); }
+[data-world='ksiazeczka'] [data-folder='security'] { --kz-tint: var(--kz-yellow); --kz-tint-rule: var(--kz-yellow-rule); --kz-tab: var(--kz-yellow-tab); }
+[data-world='ksiazeczka'] [data-folder='apps'] { --kz-tint: var(--kz-green); --kz-tint-rule: var(--kz-green-rule); --kz-tab: var(--kz-green-tab); }
+[data-world='ksiazeczka'] [data-folder='custom'] { --kz-tint: var(--kz-grey); --kz-tint-rule: var(--kz-grey-rule); --kz-tab: var(--kz-grey-tab); }
+
+/* ---------- page furniture ---------- */
+:root[data-world='ksiazeczka'] body { background: var(--kz-cover); }
+[data-world='ksiazeczka'] ::selection { background: var(--kz-stamp); color: var(--on-accent); }
+[data-world='ksiazeczka'] :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+[data-world='ksiazeczka'] .kz {
+  height: 100%; display: grid; grid-template-rows: auto auto minmax(0, 1fr);
+  background: var(--kz-cover); color: var(--ink); font-family: var(--sans);
+}
+
+/* The bar printed on the cover. */
+[data-world='ksiazeczka'] .kz-bar {
+  display: flex; align-items: center; gap: 14px; min-height: 46px; padding: 0 22px;
+  color: var(--kz-cover-ink); font: 500 13px/1.2 var(--sans); white-space: nowrap;
+}
+[data-world='ksiazeczka'] .kz-bar__brand { font-weight: 800; font-size: 15px; letter-spacing: 0.18em; }
+[data-world='ksiazeczka'] .kz-bar__dim { color: var(--kz-cover-dim); }
+[data-world='ksiazeczka'] .kz-bar__sp { flex: 1; }
+[data-world='ksiazeczka'] .kz-bar__live { display: inline-flex; align-items: center; gap: 7px; color: var(--kz-cover-dim); }
+[data-world='ksiazeczka'] .kz-bar__live i { width: 7px; height: 7px; border-radius: 50%; background: var(--kz-live); }
+[data-world='ksiazeczka'] .kz-bar__nav { display: flex; gap: 2px; }
+[data-world='ksiazeczka'] .kz-bar__nav button {
+  background: none; border: 0; padding: 8px 10px; cursor: pointer; border-radius: var(--radius);
+  color: var(--kz-cover-ink); font: 600 13px/1 var(--sans);
+}
+[data-world='ksiazeczka'] .kz-bar__nav button:hover { background: rgba(255, 255, 255, 0.08); }
+[data-world='ksiazeczka'] .kz-bar__nav button[aria-current='page'] { box-shadow: inset 0 -2px 0 var(--kz-cover-ink); }
+[data-world='ksiazeczka'] .kz-bar__no { font-family: var(--kz-matrix); font-weight: 900; font-size: 15px; color: var(--kz-cover-dim); }
+[data-world='ksiazeczka'] :is(.kz-bar, .kz-tabs) :focus-visible { outline-color: var(--kz-cover-ink); }
+/* The tab strip clips its overflow, so the ring goes inside. */
+[data-world='ksiazeczka'] .kz-tabs :focus-visible { outline-offset: -2px; }
+
+/* Order-form tabs along the top edge. */
+[data-world='ksiazeczka'] .kz-tabs {
+  display: flex; align-items: flex-end; gap: 4px; padding: 4px 26px 0; min-height: 40px;
+  overflow-x: auto; overflow-y: hidden; scrollbar-width: thin;
+}
+[data-world='ksiazeczka'] .kz-tabgrp { display: flex; align-items: flex-end; gap: 2px; margin-left: 8px; }
+[data-world='ksiazeczka'] .kz-tab {
+  flex: none; height: 30px; padding: 0 12px; border: 0; cursor: pointer; white-space: nowrap;
+  border-radius: 3px 3px 0 0; background: var(--kz-tab, var(--kz-acct-tab));
+  color: var(--kz-print); font: 700 13px/1 var(--sans); letter-spacing: 0.02em;
+  transition: height 0.15s ease;
+}
+[data-world='ksiazeczka'] .kz-tab--acct { background: var(--kz-acct-tab); }
+[data-world='ksiazeczka'] .kz-tab--mod { padding: 0 8px; font-family: var(--kz-matrix); font-weight: 900; font-size: 15px; color: var(--ink); }
+[data-world='ksiazeczka'] .kz-tab__name { font: 700 13px/1 var(--sans); color: var(--kz-print); }
+[data-world='ksiazeczka'] .kz-tab:hover { height: 33px; }
+[data-world='ksiazeczka'] .kz-tab[aria-current='page'] { height: 36px; box-shadow: inset 0 3px 0 var(--kz-print); }
+/* width ≤ 1700px after UI scaling: set by settings.ts, since media queries cannot see zoom */
+[data-world='ksiazeczka']:where([data-fit~='1700']) .kz-tabgrp:not(.on) .kz-tab--mod { display: none; }
+
+
+/* The open book: two pages, a spine, page edges stacked underneath. */
+[data-world='ksiazeczka'] .kz-book {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 0; margin: 0 20px 18px;
+  box-shadow: -2px 2px 0 var(--kz-edge), -4px 4px 0 var(--kz-edge-2), 2px 2px 0 var(--kz-edge), 4px 4px 0 var(--kz-edge-2),
+    0 26px 40px -20px var(--kz-shadow);
+}
+[data-world='ksiazeczka'] .kz-book:not([data-view='dashboard']) { grid-template-columns: minmax(320px, 1fr) minmax(0, 1.6fr); }
+[data-world='ksiazeczka'] .kz-page {
+  --kz-paper: var(--kz-stock);
+  position: relative; isolation: isolate; min-height: 0; overflow-y: auto; overflow-x: hidden;
+  background: radial-gradient(ellipse 90% 60% at var(--kz-lamp-x, 100%) 0, var(--kz-lamp), transparent 70%), var(--kz-paper);
+}
+[data-world='ksiazeczka'] .kz-page--l {
+  container-type: inline-size; border-right: 1px solid var(--kz-spine);
+  box-shadow: inset -20px 0 24px -20px var(--kz-gutter);
+}
+[data-world='ksiazeczka'] .kz-page--r { --kz-lamp-x: 0%; box-shadow: inset 20px 0 24px -20px var(--kz-gutter); }
+[data-world='ksiazeczka'] .kz-book[data-folder] .kz-page--r { --kz-paper: var(--kz-tint); }
+
+[data-world='ksiazeczka'] .kz-guil {
+  position: absolute; left: 0; top: 0; width: 100%; height: 820px; z-index: -1; pointer-events: none;
+  fill: none; stroke: var(--kz-guil); stroke-width: 0.7;
+}
+[data-world='ksiazeczka'] .kz-book[data-folder] .kz-page--r .kz-guil { stroke: var(--kz-tint-rule); opacity: 0.55; }
+
+[data-world='ksiazeczka'] .kz-pad {
+  min-height: 100%; display: flex; flex-direction: column; gap: 18px;
+  padding: calc(24px * var(--d)) 36px 20px;
+}
+[data-world='ksiazeczka'] .kz-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 16px;
+  padding-bottom: 8px; border-bottom: var(--hair) solid var(--kz-rule);
+}
+[data-world='ksiazeczka'] .kz-pre {
+  font: 700 13px/1.25 var(--sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--kz-print);
+}
+[data-world='ksiazeczka'] .kz-pre--n { font-family: var(--kz-matrix); font-weight: 900; font-size: 15px; letter-spacing: 0.04em; white-space: nowrap; }
+[data-world='ksiazeczka'] .kz-foot {
+  margin-top: auto; padding-top: 14px; display: flex; justify-content: space-between; align-items: flex-end; gap: 16px;
+  border-top: var(--hair) solid var(--kz-rule);
+}
+[data-world='ksiazeczka'] .kz-pageno { font: 600 13px/1 var(--sans); letter-spacing: 0.08em; color: var(--kz-print-2); }
+
+/* Type voices. */
+[data-world='ksiazeczka'] .kz-lbl {
+  display: block; margin: 0;
+  font-family: var(--sans); font-size: var(--lbl-size); font-weight: var(--lbl-weight); font-stretch: var(--lbl-stretch);
+  letter-spacing: var(--lbl-tracking); text-transform: var(--lbl-transform); color: var(--lbl-color); line-height: 1.25;
+}
+[data-world='ksiazeczka'] .kz-proof { font: 400 13px/1.4 var(--mono); color: var(--kz-proof); }
+[data-world='ksiazeczka'] .kz-mx {
+  font-family: var(--kz-matrix); font-weight: 900; font-size: 16px; letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums; color: var(--ink);
+}
+[data-world='ksiazeczka'] .kz-mx--l { font-size: 30px; line-height: 1; }
+[data-world='ksiazeczka'] .kz-path {
+  display: inline-block; max-width: 24ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom;
+  font: 400 14px/1.3 var(--mono); color: var(--ink);
+}
+[data-world='ksiazeczka'] .kz-debit { color: var(--kz-debit); }
+[data-world='ksiazeczka'] .kz-cap { font: 13px/1.5 var(--sans); color: var(--muted); max-width: 72ch; }
+[data-world='ksiazeczka'] .kz-note { margin-top: -10px; }
+
+/* Rubber stamps: violet by default, red for what went wrong. */
+[data-world='ksiazeczka'] .kz-stamp {
+  display: inline-block; margin-left: 8px; padding: 3px 6px; white-space: nowrap; vertical-align: 1px;
+  font: 800 13px/1 var(--sans); letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--kz-stamp); border: 1.5px solid currentColor; border-radius: var(--radius-sm); transform: rotate(-3deg);
+}
+[data-world='ksiazeczka'] .kz-stamp--debit, [data-world='ksiazeczka'] .kz-stamp--critical { color: var(--kz-debit); }
+[data-world='ksiazeczka'] .kz-stamp--medium { color: var(--warn); }
+
+/* Security print. */
+[data-world='ksiazeczka'] .kz-micro { display: block; width: 100%; height: 7px; margin: 12px 0; fill: var(--kz-print-2); }
+[data-world='ksiazeczka'] .kz-micro text { font: 700 5.2px var(--sans); letter-spacing: 0.06em; }
+[data-world='ksiazeczka'] .kz-seal { width: 84px; height: 84px; flex: none; }
+[data-world='ksiazeczka'] .kz-seal circle { fill: none; stroke-width: 1.2; }
+[data-world='ksiazeczka'] .kz-seal text { font: 700 7.4px var(--sans); letter-spacing: 0.22em; }
+[data-world='ksiazeczka'] .kz-seal .kz-seal__no { font: 900 15px var(--kz-matrix); letter-spacing: 0.04em; }
+[data-world='ksiazeczka'] .kz-seal__hi text { fill: var(--kz-emboss-hi); }
+[data-world='ksiazeczka'] .kz-seal__hi circle { stroke: var(--kz-emboss-hi); }
+[data-world='ksiazeczka'] .kz-seal__lo text { fill: var(--kz-emboss-lo); }
+[data-world='ksiazeczka'] .kz-seal__lo circle { stroke: var(--kz-emboss-lo); }
+
+/* ---------- left page: the account card ---------- */
+[data-world='ksiazeczka'] .kz-acct__title { font: 800 30px/1.05 var(--sans); color: var(--kz-print); letter-spacing: -0.01em; overflow-wrap: anywhere; }
+[data-world='ksiazeczka'] .kz-acct__title span { font-weight: 500; color: var(--kz-print-2); }
+[data-world='ksiazeczka'] .kz-fields { display: flex; flex-wrap: wrap; gap: 8px 36px; margin: 14px 0 0; }
+[data-world='ksiazeczka'] .kz-fields dd { margin: 4px 0 0; font: 600 15px/1.2 var(--sans); color: var(--ink); }
+
+[data-world='ksiazeczka'] .kz-balance { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 10px 24px; }
+[data-world='ksiazeczka'] .kz-balance__row { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 14px; margin-top: 10px; }
+[data-world='ksiazeczka'] .kz-big {
+  font-family: var(--kz-matrix); font-weight: 900; font-size: clamp(56px, 15cqi, 104px); line-height: 0.86;
+  letter-spacing: -0.02em; white-space: nowrap; color: var(--ink); font-variant-numeric: tabular-nums;
+}
+[data-world='ksiazeczka'] .kz-big small { font-size: 0.42em; letter-spacing: 0; margin-left: 0.14em; }
+[data-world='ksiazeczka'] .kz-big--after { font-size: clamp(34px, 8cqi, 60px); color: var(--kz-print); }
+[data-world='ksiazeczka'] .kz-arrow { width: 34px; height: 14px; fill: none; stroke: var(--kz-print); stroke-width: 2; }
+[data-world='ksiazeczka'] .kz-balance__side { display: flex; flex-direction: column; gap: 5px; text-align: right; padding-bottom: 4px; }
+[data-world='ksiazeczka'] .kz-balance__side .kz-mx { font-size: 15px; }
+[data-world='ksiazeczka'] .kz-balance--wait { display: flex; flex-direction: column; gap: 12px; min-height: 140px; justify-content: center; }
+[data-world='ksiazeczka'] .kz-void {
+  font: 600 14px/1.5 var(--sans); color: var(--kz-debit); max-width: 52ch;
+  padding-left: 12px; border-left: 3px solid var(--kz-debit);
+}
+@container (max-width: 560px) {
+  [data-world='ksiazeczka'] .kz-balance { grid-template-columns: 1fr; }
+  [data-world='ksiazeczka'] .kz-balance__side { text-align: left; }
+}
+
+/* Ruled tables: sub-accounts and the ledger. */
+[data-world='ksiazeczka'] .kz-table { width: 100%; border-collapse: collapse; }
+[data-world='ksiazeczka'] .kz-table th {
+  text-align: left; white-space: nowrap; padding: 0 12px 7px 0; border-bottom: var(--hair) solid var(--kz-print);
+  font-family: var(--sans); font-size: var(--lbl-size); font-weight: var(--lbl-weight);
+  letter-spacing: var(--lbl-tracking); text-transform: var(--lbl-transform); color: var(--lbl-color);
+}
+[data-world='ksiazeczka'] .kz-table td {
+  padding: calc(9px * var(--d)) 12px calc(9px * var(--d)) 0; vertical-align: baseline;
+  border-bottom: var(--hair) solid var(--kz-rule); font-size: 14px;
+}
+[data-world='ksiazeczka'] .kz-table :is(th, td):last-child { padding-right: 0; }
+[data-world='ksiazeczka'] .kz-table .n { text-align: right; white-space: nowrap; }
+[data-world='ksiazeczka'] .kz-sub { margin-top: 18px; }
+[data-world='ksiazeczka'] .kz-sub td .kz-proof { margin-left: 4px; }
+[data-world='ksiazeczka'] .kz-fill {
+  display: inline-block; width: 72px; height: 8px; margin-right: 8px; vertical-align: 1px;
+  border: var(--hair) solid var(--kz-print);
+}
+[data-world='ksiazeczka'] .kz-fill i { display: block; height: 100%; background: var(--kz-print); }
+[data-world='ksiazeczka'] .kz-low .kz-fill { border-color: var(--kz-debit); }
+[data-world='ksiazeczka'] .kz-low .kz-fill i { background: var(--kz-debit); }
+[data-world='ksiazeczka'] .kz-link {
+  margin-top: 10px; padding: 0; border: 0; background: none; cursor: pointer;
+  font: 600 14px/1.4 var(--sans); color: var(--kz-print); text-decoration: underline; text-underline-offset: 3px;
+}
+
+[data-world='ksiazeczka'] .kz-statement {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 18px;
+  border: var(--hair) solid var(--kz-print); background: var(--kz-field);
+}
+[data-world='ksiazeczka'] .kz-statement > div { display: flex; flex-direction: column; gap: 6px; padding: 12px 14px; min-width: 0; }
+[data-world='ksiazeczka'] .kz-statement > div + div { border-left: var(--hair) solid var(--kz-print); }
+
+[data-world='ksiazeczka'] .kz-cpu { display: flex; flex-direction: column; margin-top: 4px; }
+[data-world='ksiazeczka'] .kz-cpu__head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  padding-bottom: 6px; border-bottom: var(--rule) solid var(--kz-print);
+}
+[data-world='ksiazeczka'] .kz-cpu .cpu-box { min-height: 190px; margin: 10px 0 8px; }
+[data-world='ksiazeczka'] .cpu-box--wait { border-color: var(--kz-print-2); color: var(--kz-proof); font: 13px/1.5 var(--mono); }
+[data-world='ksiazeczka'] .kz-watch { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+
+[data-world='ksiazeczka'] .kz-terms, [data-world='ksiazeczka'] .kz-contents {
+  display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: var(--rule) solid var(--kz-print);
+}
+[data-world='ksiazeczka'] .kz-terms p { font-size: 14px; color: var(--ink); max-width: 60ch; }
+[data-world='ksiazeczka'] .kz-terms b { color: var(--kz-print); }
+[data-world='ksiazeczka'] .kz-contents { gap: 0; }
+[data-world='ksiazeczka'] .kz-contents .kz-lbl { margin-bottom: 6px; }
+[data-world='ksiazeczka'] .kz-contents button {
+  display: flex; align-items: baseline; gap: 14px; padding: calc(9px * var(--d)) 4px; text-align: left; cursor: pointer;
+  background: none; border: 0; border-bottom: var(--hair) solid var(--kz-rule); font: 600 15px/1.3 var(--sans); color: var(--ink);
+}
+[data-world='ksiazeczka'] .kz-contents button:hover { background: var(--kz-hover); }
+[data-world='ksiazeczka'] .kz-contents button[aria-current='page'] { color: var(--kz-print); box-shadow: inset 3px 0 0 var(--kz-print); padding-left: 12px; }
+
+/* ---------- right page: the ledger ---------- */
+[data-world='ksiazeczka'] .kz-ledger th { border-top: var(--rule) solid var(--kz-print); padding-top: 9px; }
+[data-world='ksiazeczka'] .kz-c-pos { width: 52px; }
+[data-world='ksiazeczka'] .kz-c-mod { width: 70px; }
+[data-world='ksiazeczka'] .kz-c-sig { width: 128px; }
+[data-world='ksiazeczka'] .kz-ledger .kz-proof { display: block; margin-top: 2px; }
+[data-world='ksiazeczka'] .kz-op { display: block; font: 600 14px/1.35 var(--sans); color: var(--ink); }
+[data-world='ksiazeczka'] .kz-op--link {
+  padding: 0; border: 0; background: none; text-align: left; cursor: pointer; color: var(--kz-print);
+  text-decoration: underline; text-decoration-color: var(--kz-rule); text-underline-offset: 3px;
+}
+[data-world='ksiazeczka'] .kz-op--link:hover { text-decoration-color: currentColor; }
+[data-world='ksiazeczka'] .kz-credit::before { content: '+ '; }
+[data-world='ksiazeczka'] .kz-row--carry td { background: var(--kz-carry); }
+[data-world='ksiazeczka'] .kz-row--pending td { border-bottom-style: dashed; border-bottom-color: var(--kz-print-2); }
+[data-world='ksiazeczka'] .kz-row--struck :is(.kz-op, .n) {
+  text-decoration: line-through; text-decoration-color: var(--kz-debit); text-decoration-thickness: 1.5px;
+}
+[data-world='ksiazeczka'] .kz-row--struck .kz-proof { color: var(--kz-debit); }
+[data-world='ksiazeczka'] .kz-row--total td { border-top: var(--rule) solid var(--kz-print); border-bottom: 0; padding-top: 11px; }
+[data-world='ksiazeczka'] .kz-row--total .kz-mx { font-size: 20px; }
+[data-world='ksiazeczka'] .kz-sign {
+  display: inline-block; padding: 4px 7px; cursor: pointer; background: none; transform: rotate(-3deg);
+  font: 800 13px/1 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap;
+  color: var(--kz-stamp); border: 1.5px dashed var(--kz-stamp); border-radius: var(--radius-sm);
+}
+[data-world='ksiazeczka'] .kz-sign:hover { border-style: solid; }
+
+/* A new row is printed: the head runs across it cell by cell. */
+[data-world='ksiazeczka'] .kz-row--new td {
+  animation: kz-print 0.28s steps(8, end) both;
+  animation-delay: calc(var(--i, 0) * 120ms + var(--c, 0) * 45ms);
+}
+[data-world='ksiazeczka'] .kz-row--new td:nth-child(2) { --c: 1; }
+[data-world='ksiazeczka'] .kz-row--new td:nth-child(3) { --c: 2; }
+[data-world='ksiazeczka'] .kz-row--new td:nth-child(4) { --c: 3; }
+[data-world='ksiazeczka'] .kz-row--new td:nth-child(5) { --c: 4; }
+[data-world='ksiazeczka'] .kz-row--new td:nth-child(6) { --c: 5; }
+@keyframes kz-print { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+
+[data-world='ksiazeczka'] .kz-order {
+  display: flex; align-items: center; justify-content: space-between; gap: 18px;
+  padding: 14px 0; border-bottom: var(--hair) dashed var(--kz-print-2);
+}
+[data-world='ksiazeczka'] .kz-order .kz-proof { display: block; margin-top: 3px; }
+[data-world='ksiazeczka'] .kz-order .btn { flex: none; }
+[data-world='ksiazeczka'] .kz-head-run {
+  flex: none; width: 150px; height: 8px; border: var(--hair) solid var(--kz-print);
+  background: repeating-linear-gradient(90deg, var(--kz-rule) 0 2px, transparent 2px 4px);
+}
+[data-world='ksiazeczka'] .kz-head-run i {
+  display: block; height: 100%; transition: width 0.3s steps(6, end);
+  background: repeating-linear-gradient(90deg, var(--kz-print) 0 2px, transparent 2px 4px);
+}
+
+[data-world='ksiazeczka'] .kz-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font: 13px/1.4 var(--sans); color: var(--muted); }
+[data-world='ksiazeczka'] .kz-legend__line { display: inline-block; width: 26px; margin-left: 10px; border-top: 2px solid var(--kz-print); }
+[data-world='ksiazeczka'] .kz-legend__line:first-child { margin-left: 0; }
+[data-world='ksiazeczka'] .kz-legend__line--dashed { border-top-style: dashed; border-top-color: var(--kz-print-2); }
+[data-world='ksiazeczka'] .kz-legend__line--struck { border-top-color: var(--kz-debit); }
+
+[data-world='ksiazeczka'] .kz-index { margin-top: 6px; }
+[data-world='ksiazeczka'] .kz-index__title { padding-bottom: 7px; border-bottom: var(--rule) solid var(--kz-print); }
+[data-world='ksiazeczka'] .kz-index ul { list-style: none; margin: 0; padding: 0; }
+[data-world='ksiazeczka'] .kz-index > .kz-proof { padding-top: 10px; }
+[data-world='ksiazeczka'] .kz-idx {
+  width: 100%; display: grid; grid-template-columns: 52px minmax(0, 1fr) auto; gap: 14px; align-items: baseline;
+  padding: calc(10px * var(--d)) 4px; text-align: left; cursor: pointer; color: var(--ink);
+  background: none; border: 0; border-bottom: var(--hair) solid var(--kz-rule);
+}
+[data-world='ksiazeczka'] .kz-idx:hover { background: var(--kz-hover); }
+[data-world='ksiazeczka'] .kz-idx__name { font: 600 15px/1.3 var(--sans); min-width: 0; }
+[data-world='ksiazeczka'] .kz-idx__name .kz-proof { display: block; font-weight: 400; }
+[data-world='ksiazeczka'] .kz-idx .kz-idx__read { font: 700 13px/1.3 var(--mono); color: var(--kz-print); text-align: right; letter-spacing: 0; }
+
+/* ---------- order form (module) ---------- */
+[data-world='ksiazeczka'] .kz-form__head {
+  margin-bottom: 22px; padding: 14px 20px 0; background: var(--kz-field);
+  border: var(--rule) solid var(--kz-print);
+}
+[data-world='ksiazeczka'] .kz-form__head .kz-head { border-bottom-color: var(--kz-tint-rule, var(--kz-rule)); }
+[data-world='ksiazeczka'] .kz-form__title {
+  display: flex; align-items: baseline; gap: 14px; margin: 14px 0 6px;
+  font: 800 28px/1.1 var(--sans); color: var(--kz-print); letter-spacing: -0.01em;
+}
+[data-world='ksiazeczka'] .kz-form__title .kz-mx { font-size: 34px; }
+[data-world='ksiazeczka'] .kz-form__desc { font-size: 14px; color: var(--muted); max-width: 76ch; }
+[data-world='ksiazeczka'] .kz-cells {
+  display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+  margin: 16px -20px 0; border-top: var(--hair) solid var(--kz-print);
+}
+[data-world='ksiazeczka'] .kz-cell { display: flex; flex-direction: column; gap: 6px; padding: 9px 14px 11px; min-width: 0; }
+[data-world='ksiazeczka'] .kz-cell:first-child { padding-left: 20px; }
+[data-world='ksiazeczka'] .kz-cell + .kz-cell { border-left: var(--hair) solid var(--kz-print); }
+[data-world='ksiazeczka'] .kz-cell b { font: 600 15px/1.25 var(--sans); color: var(--ink); }
+[data-world='ksiazeczka'] .kz-cell .kz-mx { font-size: 20px; }
+[data-world='ksiazeczka'] .kz-cell .kz-stamp { margin-left: 0; }
+
+/* ---------- shared blocks, re-set as passbook forms ---------- */
+[data-world='ksiazeczka'] .glass { box-shadow: none; }
+[data-world='ksiazeczka'] .section-head { border-bottom: var(--rule) solid var(--kz-print); }
+[data-world='ksiazeczka'] .section-head h2 { color: var(--kz-print); }
+[data-world='ksiazeczka'] .btn-primary:not(:disabled):hover { filter: brightness(1.12); }
+[data-world='ksiazeczka'] .btn-ghost { color: var(--kz-print); }
+[data-world='ksiazeczka'] .btn-ghost:hover { border-color: var(--kz-print); background: var(--kz-hover); }
+[data-world='ksiazeczka'] .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+[data-world='ksiazeczka'] .chip {
+  font: 800 13px/1 var(--sans); letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 3px 6px; border-width: 1.5px; color: var(--kz-stamp);
+}
+[data-world='ksiazeczka'] .chip.medium { color: var(--warn); }
+[data-world='ksiazeczka'] .chip.critical { color: var(--kz-debit); }
+[data-world='ksiazeczka'] .chip.os { color: var(--muted); }
+
+/* Form lines: a ruled list with figures in the amount column. */
+[data-world='ksiazeczka'] .clean-list { border: 0; border-top: var(--rule) solid var(--kz-print); border-radius: 0; }
+[data-world='ksiazeczka'] .clean-list > .glass { background: transparent; border-color: var(--kz-tint-rule, var(--kz-rule)); }
+[data-world='ksiazeczka'] .clean-list > .glass:last-child { border-bottom: var(--hair) solid var(--kz-tint-rule, var(--kz-rule)); }
+[data-world='ksiazeczka'] .clean-row { padding-left: 6px; padding-right: 6px; }
+[data-world='ksiazeczka'] .clean-row:hover { background: var(--kz-hover); }
+[data-world='ksiazeczka'] .clean-row .cr-path { font-family: var(--mono); }
+[data-world='ksiazeczka'] .clean-row .cr-size {
+  min-width: 100px; font-family: var(--kz-matrix); font-weight: 900; font-size: 16px; color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+[data-world='ksiazeczka'] .clean-summary { border: var(--rule) solid var(--kz-print); border-radius: 0; background: var(--kz-field); }
+[data-world='ksiazeczka'] .clean-summary .cs-value { font-family: var(--kz-matrix); font-weight: 900; font-size: 26px; white-space: nowrap; }
+/* The section head already rules the list off; a second rule under it reads as a typo. */
+[data-world='ksiazeczka'] .section-head + .clean-list { border-top: 0; }
+[data-world='ksiazeczka'] .kz-sub td:nth-child(3) { white-space: nowrap; }
+[data-world='ksiazeczka'] .hm-tile-value { font-family: var(--kz-matrix); font-weight: 900; }
+
+/* Done: the cashier's round violet stamp. */
+[data-world='ksiazeczka'] .done-badge {
+  width: 64px; height: 64px; border-radius: 50%; color: var(--kz-stamp);
+  border: 2px solid var(--kz-stamp); transform: rotate(-10deg);
+  box-shadow: 0 0 0 3px var(--kz-tint, var(--kz-stock)), 0 0 0 4.5px var(--kz-stamp);
+}
+[data-world='ksiazeczka'] .done-badge svg { width: 26px; height: 26px; }
+
+/* Working: a dot-matrix head crossing a dotted track. */
+[data-world='ksiazeczka'] .scan-spinner {
+  width: 160px; height: 6px; background: repeating-linear-gradient(90deg, var(--kz-rule) 0 2px, transparent 2px 4px);
+}
+[data-world='ksiazeczka'] .scan-spinner::after {
+  background: repeating-linear-gradient(90deg, var(--kz-print) 0 2px, transparent 2px 4px);
+  animation-timing-function: steps(10, end);
+}
+
+[data-world='ksiazeczka'] :is(.form-field input, .form-field textarea, .kz-sheet select, .kz-form select, .kz-sheet input[type='text'], .kz-form input[type='text'], .kz-form input[type='search']) {
+  background: var(--kz-field); border: 0; border-bottom: var(--hair) solid var(--kz-print); border-radius: 0; color: var(--ink);
+}
+[data-world='ksiazeczka'] .form-field input:focus, [data-world='ksiazeczka'] .form-field textarea:focus { border-bottom-color: var(--kz-stamp); }
+
+/* Settings, manager, folder register. */
+[data-world='ksiazeczka'] .settings-list { max-width: none; border: 0; border-top: var(--rule) solid var(--kz-print); border-radius: 0; }
+[data-world='ksiazeczka'] .settings-list > .glass { background: transparent; border-color: var(--kz-rule); }
+[data-world='ksiazeczka'] .settings-list > .glass:last-child { border-bottom: var(--hair) solid var(--kz-rule); }
+[data-world='ksiazeczka'] .cat-list { border-top: var(--rule) solid var(--kz-print); }
+[data-world='ksiazeczka'] .cat-row { border-bottom-color: var(--kz-tint-rule, var(--kz-rule)); padding-left: 8px; }
+[data-world='ksiazeczka'] .cat-row:hover { background: var(--kz-hover); }
+[data-world='ksiazeczka'] .cat-row__no { font-family: var(--kz-matrix); font-weight: 900; font-size: 18px; color: var(--ink); }
+[data-world='ksiazeczka'] .cat-row__name { font-weight: 700; color: var(--kz-print); }
+[data-world='ksiazeczka'] .cat-row[data-on='false'] .cat-row__name { color: var(--muted); }
+[data-world='ksiazeczka'] .folder-head { border-bottom: var(--rule) solid var(--kz-print); }
+[data-world='ksiazeczka'] .folder-head__name { color: var(--kz-print); }
+[data-world='ksiazeczka'] .kz-sheet .back-link { display: none; }
+[data-world='ksiazeczka'] .look-card { border-radius: var(--radius-sm); }
+[data-world='ksiazeczka'] .link-card:hover { background: var(--kz-hover); }
+
+/* No shared text below 13px in this world. */
+[data-world='ksiazeczka'] :is(
+  .section-head .count, .cpu .axis, .code-seg, .disk-row__model, .section-no, .clean-row .cr-files, .spec-path,
+  .autostart-exec, .diskmap-size, .diskmap-total, .diskmap-tile .dt-size, .diskmap-tile .dt-pct,
+  .diskmap-ring-card .dr-rank, .diskmap-ring-card .dr-pct, .hm-frozen, .hm-sensor-value span, .hm-sensor-sub,
+  .preparing__timer, .ctx-menu__path, .look-card__name .mono, .look-card__desc, .tour-card__no, .tour-card__keys
+) { font-size: 13px; }
+
+/* Slips: modal, tour card, onboarding. */
+[data-world='ksiazeczka'] .modal-backdrop { background: color-mix(in srgb, var(--kz-cover) 78%, transparent); }
+[data-world='ksiazeczka'] .modal-card {
+  background: var(--kz-stock); border: var(--rule) solid var(--kz-print); border-radius: 0;
+  box-shadow: 8px 8px 0 var(--kz-shadow);
+}
+[data-world='ksiazeczka'] .modal-card h3 { color: var(--kz-print); }
+
+[data-world='ksiazeczka'] .tour-scrim { fill: var(--kz-cover); fill-opacity: 0.82; }
+[data-world='ksiazeczka'] .tour-frame { stroke: var(--kz-cover-ink); }
+[data-world='ksiazeczka'] .tour-marks { stroke: var(--kz-stamp); }
+[data-world='ksiazeczka'] .tour-card {
+  background: var(--kz-stock); border: var(--rule) solid var(--kz-print); border-radius: 0;
+  box-shadow: 6px 6px 0 var(--kz-shadow);
+}
+[data-world='ksiazeczka'] .tour-card__head { padding-bottom: 8px; border-bottom: var(--hair) solid var(--kz-rule); }
+[data-world='ksiazeczka'] .tour-card__no { font: 900 16px/1 var(--kz-matrix); color: var(--kz-stamp); }
+[data-world='ksiazeczka'] .tour-card h2 { font: 800 22px/1.2 var(--sans); color: var(--kz-print); }
+[data-world='ksiazeczka'] .tour-card p { color: var(--ink); }
+[data-world='ksiazeczka'] .tour-ticks i { width: 12px; height: 4px; background: var(--kz-rule); }
+[data-world='ksiazeczka'] .tour-ticks i.done { background: var(--kz-print); }
+[data-world='ksiazeczka'] .tour-ticks i.now { background: var(--kz-stamp); }
+
+[data-world='ksiazeczka'] .onboarding { background: var(--kz-cover); }
+[data-world='ksiazeczka'] .onboarding-card {
+  isolation: isolate; background: var(--kz-stock); border: 0; border-top: 10px solid var(--kz-print);
+  box-shadow: -3px 3px 0 var(--kz-edge), 3px 3px 0 var(--kz-edge), 0 30px 60px -30px var(--kz-shadow);
+}
+[data-world='ksiazeczka'] .onboarding-card::before {
+  content: ''; position: absolute; top: 0; right: 0; width: 280px; height: 280px; z-index: -1; pointer-events: none;
+  background: repeating-radial-gradient(circle at 100% 0, transparent 0 7px, var(--kz-guil) 7px 8px);
+}
+[data-world='ksiazeczka'] .onboarding-card h1 { color: var(--kz-print); }
+[data-world='ksiazeczka'] .onboarding-progress span { height: 4px; background: var(--kz-rule); }
+[data-world='ksiazeczka'] .onboarding-progress span.done { background: var(--kz-print); }
+[data-world='ksiazeczka'] .choice-card { border-color: var(--kz-print-2); border-radius: var(--radius-sm); }
+[data-world='ksiazeczka'] .choice-card:hover { border-color: var(--kz-print); }
+[data-world='ksiazeczka'] .choice-card.selected { border-color: var(--kz-print); background: var(--kz-carry); box-shadow: inset 0 0 0 1px var(--kz-print); }
+
+/* ---------- the world picker's miniature ---------- */
+[data-world='ksiazeczka'] .kz-prev { position: absolute; inset: 0; display: flex; flex-direction: column; padding: 6px 8px 8px; background: var(--kz-cover); }
+[data-world='ksiazeczka'] .kz-prev__tabs { display: flex; align-items: flex-end; gap: 3px; height: 10px; padding-left: 8px; }
+[data-world='ksiazeczka'] .kz-prev__tabs i { width: 18px; height: 6px; border-radius: 2px 2px 0 0; background: var(--kz-pink-tab); }
+[data-world='ksiazeczka'] .kz-prev__tabs i:first-child { height: 9px; background: var(--kz-acct-tab); }
+[data-world='ksiazeczka'] .kz-prev__tabs i:nth-child(3) { background: var(--kz-blue-tab); }
+[data-world='ksiazeczka'] .kz-prev__tabs i:nth-child(4) { background: var(--kz-yellow-tab); }
+[data-world='ksiazeczka'] .kz-prev__tabs i:nth-child(5) { background: var(--kz-green-tab); }
+[data-world='ksiazeczka'] .kz-prev__book { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--kz-spine); box-shadow: 2px 2px 0 var(--kz-edge-2); }
+[data-world='ksiazeczka'] .kz-prev__page { position: relative; display: flex; flex-direction: column; gap: 5px; padding: 8px 9px; overflow: hidden; background: var(--kz-stock); }
+[data-world='ksiazeczka'] .kz-prev__lbl { width: 50%; height: 3px; background: var(--kz-print); }
+[data-world='ksiazeczka'] .kz-prev__big { font: 900 26px/0.9 var(--kz-matrix); letter-spacing: -0.02em; color: var(--ink); }
+[data-world='ksiazeczka'] .kz-prev__rule { height: 1px; background: var(--kz-rule); }
+[data-world='ksiazeczka'] .kz-prev__line { margin-top: 3px; border-top: 1px solid var(--kz-print-2); }
+[data-world='ksiazeczka'] .kz-prev__line--dash { border-top-style: dashed; }
+[data-world='ksiazeczka'] .kz-prev__stamp {
+  position: absolute; right: 9px; bottom: 7px; width: 20px; height: 20px; border-radius: 50%;
+  border: 1.5px solid var(--kz-stamp); transform: rotate(-10deg);
+}
+
+/* ---------- narrower windows ---------- */
+/* width ≤ 1440px after UI scaling: set by settings.ts, since media queries cannot see zoom */
+[data-world='ksiazeczka']:where([data-fit~='1440']) .kz-bar__sys { display: none; }
+
+/* width ≤ 1180px after UI scaling: set by settings.ts, since media queries cannot see zoom */
+[data-world='ksiazeczka']:where([data-fit~='1180']) .kz-bar__title { display: none; }
+[data-world='ksiazeczka']:where([data-fit~='1180']) .kz-bar, [data-world='ksiazeczka']:where([data-fit~='1180']) .kz-tabs { padding-left: 14px; padding-right: 14px; }
+[data-world='ksiazeczka']:where([data-fit~='1180']) .kz-book { margin: 0 10px 10px; }
+/* The home spread stacks: account card, then the ledger, scrolled as one. */
+[data-world='ksiazeczka']:where([data-fit~='1180']) .kz-book[data-view='dashboard'] { grid-template-columns: minmax(0, 1fr); grid-auto-rows: max-content; overflow-y: auto; }
+/* Stacked, each page is as tall as its content; the book scrolls instead. */
+[data-world='ksiazeczka']:where([data-fit~='1180']) .kz-book[data-view='dashboard'] .kz-page { overflow: visible; min-height: auto; }
+[data-world='ksiazeczka']:where([data-fit~='1180']) .kz-book[data-view='dashboard'] .kz-page--l { border-right: 0; border-bottom: 1px solid var(--kz-spine); box-shadow: none; }
+[data-world='ksiazeczka']:where([data-fit~='1180']) .kz-book[data-view='dashboard'] .kz-page--r { box-shadow: none; }
+[data-world='ksiazeczka']:where([data-fit~='1180']) .kz-book:not([data-view='dashboard']) { grid-template-columns: 290px minmax(0, 1fr); }
+[data-world='ksiazeczka']:where([data-fit~='1180']) .kz-pad { padding-left: 22px; padding-right: 22px; }
+[data-world='ksiazeczka']:where([data-fit~='1180']) .kz-cells { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+[data-world='ksiazeczka']:where([data-fit~='1180']) .kz-cell:nth-child(3) { border-left: 0; padding-left: 20px; }
+[data-world='ksiazeczka']:where([data-fit~='1180']) .kz-cell:nth-child(n + 3) { border-top: var(--hair) solid var(--kz-print); }
+
+
+/* ---------- less motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  [data-world='ksiazeczka'] :is(.kz-row--new td, .scan-spinner::after) { animation: none; }
+  [data-world='ksiazeczka'] :is(.kz-tab, .kz-head-run i) { transition: none; }
+}
+:root[data-world='ksiazeczka']:is([data-motion='reduced'], [data-motion='off']) :is(.kz-row--new td, .scan-spinner::after) { animation: none; }
+:root[data-world='ksiazeczka']:is([data-motion='reduced'], [data-motion='off']) :is(.kz-tab, .kz-head-run i) { transition: none; }

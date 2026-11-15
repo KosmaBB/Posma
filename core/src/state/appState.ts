@@ -14,6 +14,7 @@ export interface OnboardingResult {
   os: Os
   accessLevel: AccessLevel
   installedModules: string[]
+  /** True when the last onboarding step asked for the tour; it starts right after. */
   tutorialDone: boolean
 }
 
@@ -69,6 +70,8 @@ export function useAppState() {
   // Detected afresh each start rather than stored: a different session
   // (GNOME today, Plasma tomorrow) has to show up without a reset.
   const [linuxProfile, setLinuxProfile] = useState<LinuxProfile | null>(null)
+  // Not persisted: a tour cut short by closing the app is restarted from 904.
+  const [touring, setTouring] = useState(false)
 
   useEffect(() => {
     if (detectOs() !== 'linux') return
@@ -94,7 +97,11 @@ export function useAppState() {
   const completeOnboarding = useCallback((result: OnboardingResult) => {
     setOnboarding(result)
     setView({ kind: 'dashboard' })
+    setTouring(result.tutorialDone)
   }, [])
+
+  const startTour = useCallback(() => setTouring(true), [])
+  const endTour = useCallback(() => setTouring(false), [])
 
   const resetOnboarding = useCallback(() => {
     localStorage.removeItem(STORAGE_KEY)
@@ -133,6 +140,9 @@ export function useAppState() {
     setFolderOrder,
     linuxProfile,
     saveLinuxProfile,
+    touring,
+    startTour,
+    endTour,
   }
 }
 

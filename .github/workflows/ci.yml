@@ -37,7 +37,7 @@ jobs:
       # until they exist. This is the same first-build ordering documented
       # in docs/building.md.
       - name: Build modules and sync sidecars
-        run: bash scripts/sync-sidecars.sh
+        run: node scripts/sync-sidecars.mjs
 
       - name: Build workspace
         run: cargo build --workspace --locked
@@ -69,7 +69,7 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
       - name: Build modules and sync sidecars
-        run: bash scripts/sync-sidecars.sh
+        run: node scripts/sync-sidecars.mjs
       - name: Test workspace
         run: cargo test --workspace --locked
       - name: Clippy
@@ -85,10 +85,13 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
       - name: Build modules and sync sidecars
-        shell: bash
-        run: bash scripts/sync-sidecars.sh
+        run: node scripts/sync-sidecars.mjs
       # The Linux and macOS brokers are a Unix-socket daemon at heart and are
       # never built for Windows.
+      # Without the test features too: a test macro outside #[cfg(test)]
+      # once broke only this build, the one an installer makes.
+      - name: Build workspace
+        run: cargo build --workspace --locked --exclude linux-broker --exclude macos-broker
       - name: Test workspace
         run: cargo test --workspace --locked --exclude linux-broker --exclude macos-broker
       # The UAC path end to end against the broker the sync just built: the
@@ -100,32 +103,6 @@ jobs:
         run: cargo test -p core --locked -- --ignored one_elevated_session_answers_every_call
       - name: Clippy
         run: cargo clippy --workspace --all-targets --locked --exclude linux-broker --exclude macos-broker -- -D warnings
-
-  # One bundle for both Mac architectures, as docs/building.md describes.
-  # Slow, so only on request; the app is unsigned until there is an Apple
-  # developer account to sign it with.
-  macos-bundle:
-    name: macOS universal bundle
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: macos-15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: x86_64-apple-darwin,aarch64-apple-darwin
-      - uses: Swatinem/rust-cache@v2
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: core/package-lock.json
-      - run: npm --prefix core ci
-      - run: bash scripts/sync-sidecars.sh release --universal
-      - run: npm --prefix core run tauri build -- --target universal-apple-darwin
-      - uses: actions/upload-artifact@v4
-        with:
-          name: posma-macos-universal
-          path: target/universal-apple-darwin/release/bundle/dmg/*.dmg
 
   frontend:
     name: Frontend — typecheck and build

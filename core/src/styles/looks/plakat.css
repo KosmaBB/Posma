@@ -1,0 +1,73 @@
+/* ============================================================
+   Wygląd „Plakat” — styl szwajcarski. Grube podziały zamiast ramek,
+   ogromne numery, czerwień jako jedyny kolor poza czernią i bielą.
+   ============================================================ */
+[data-look='plakat'] {
+  --head-weight: 750; --head-stretch: 100%; --head-tracking: -0.015em;
+  --title-size: 24px; --title-weight: 800;
+  --lbl-size: 14px; --lbl-weight: 750; --lbl-stretch: 100%; --lbl-tracking: -0.01em; --lbl-transform: none;
+  --lbl-color: var(--ink);
+  --btn-size: 14px; --btn-weight: 750; --btn-stretch: 100%;
+  --folder-size: 15px; --folder-weight: 800;
+  --brand-size: 22px; --brand-weight: 850; --brand-stretch: 100%; --brand-tracking: -0.02em;
+  --hero-size: 88px; --hero-weight: 850; --hero-stretch: 100%; --hero-tracking: -0.065em;
+
+  --rule: 3px; --rule-color: var(--ink);
+
+  --btn-bg: var(--accent); --btn-fg: var(--on-accent); --btn-border: var(--accent); --btn-strip: 0px;
+  --ghost-border: var(--ink);
+  --chip-border: transparent;
+  --nav-no-bg: var(--accent); --nav-no-fg: var(--on-accent);
+  --meter-bg: var(--bg-3); --meter-border: transparent;
+
+  --chart-mean: var(--ink); --chart-w: 2.6;
+  --chart-peak: var(--accent); --chart-peak-opacity: 1;
+  --bar-track-fill: var(--bg-3); --bar-track-stroke: none;
+}
+
+[data-look='plakat'][data-theme='light'] {
+  --bg: #ffffff; --bg-2: #ffffff; --bg-3: #f0f0ec;
+  --ink: #111111; --muted: #444441; --dim: #5f5f5b;
+  --accent: #e2231a; --on-accent: #ffffff;
+  --border: rgba(0, 0, 0, 0.13); --border-strong: #111111;
+  --good: #111111; --warn: #c41e16; --critical: #c41e16; --on-critical: #ffffff;
+  --g-teal-1: #e2231a; --g-teal-2: #e2231a;
+  --g-blue-1: #1f4bd8; --g-blue-2: #1f4bd8;
+  --g-green-1: #f2bd00; --g-green-2: #f2bd00;
+  --g-red-1: #111111; --g-red-2: #111111;
+  --g-violet-1: #9a9a96; --g-violet-2: #9a9a96;
+  --g-amber-1: #f2bd00; --g-amber-2: #f2bd00;
+  --g-indigo-1: #1f4bd8; --g-indigo-2: #1f4bd8;
+  --side-bg: #ffffff; --panel-bg: #ffffff; --panel-shadow: none;
+  --nav-active-bg: transparent;
+  color-scheme: light;
+}
+
+[data-look='plakat'][data-theme='dark'] {
+  --bg: #0d0d0d; --bg-2: #0d0d0d; --bg-3: #222222;
+  --ink: #f4f4f0; --muted: #c4c4be; --dim: #a2a29d;
+  --accent: #ff4a3d; --on-accent: #0d0d0d;
+  --border: rgba(244, 244, 240, 0.16); --border-strong: #f4f4f0;
+  --good: #f4f4f0; --warn: #ff5a4e; --critical: #ff5a4e; --on-critical: #0d0d0d;
+  --g-teal-1: #ff4a3d; --g-teal-2: #ff4a3d;
+  --g-blue-1: #6a8cff; --g-blue-2: #6a8cff;
+  --g-green-1: #ffd23f; --g-green-2: #ffd23f;
+  --g-red-1: #f4f4f0; --g-red-2: #f4f4f0;
+  --g-violet-1: #8a8a86; --g-violet-2: #8a8a86;
+  --g-amber-1: #ffd23f; --g-amber-2: #ffd23f;
+  --g-indigo-1: #6a8cff; --g-indigo-2: #6a8cff;
+  --side-bg: #0d0d0d; --panel-bg: #0d0d0d; --panel-shadow: none;
+  --nav-active-bg: transparent;
+  color-scheme: dark;
+}
+
+/* Kolumny dzielą grube linie, nie ramki: prawa krawędź kolumny i górna indeksu. */
+[data-look='plakat'] :is(.dash-plot, .dash-idx) { border-right-width: var(--rule); border-right-color: var(--rule-color); }
+[data-look='plakat'] .nav-no { color: var(--ink); font-weight: 700; }
+[data-look='plakat'] .btn-ghost { border-width: 2px; }
+[data-look='plakat'] .spec-table td { border-top-color: var(--ink); }
+[data-look='plakat'] .chip { padding: 0; font-family: var(--sans); font-weight: 750; }
+[data-look='plakat'] .module-hero.glass, [data-look='plakat'] .folder-head.glass { border-bottom: var(--rule) solid var(--rule-color); }
+[data-look='plakat'] .settings-list, [data-look='plakat'] .clean-list, [data-look='plakat'] .autostart-list, [data-look='plakat'] .diskmap-list {
+  border-width: var(--rule) 0 0; border-color: var(--rule-color); border-radius: 0;
+}

@@ -3,6 +3,7 @@ import { Preparing } from '../../components/Preparing'
 import { formatBytes } from './TempCleanView'
 import { confirmAction } from '../../components/confirm'
 import { callModule } from '../../data/callModule'
+import { FullDiskAccessRow } from '../Settings'
 
 type Recovery = 'rebuilt' | 'refetched' | 'permanent'
 
@@ -24,7 +25,10 @@ interface Category {
 interface ScanData {
   categories: Category[]
   total_bytes: number
-  xcode_present: boolean
+  /** False when the application has never run on this machine. */
+  present: boolean
+  /** Places that exist but macOS would not open without Full Disk Access. */
+  blocked: string[]
 }
 
 interface CleanData {
@@ -39,7 +43,40 @@ const RECOVERY: Record<Recovery, { label: string; chip: string }> = {
   permanent: { label: 'Bezpowrotne', chip: 'critical' },
 }
 
+/** What differs between the modules that clean a fixed list of Library places. */
+interface LibraryCleanProps {
+  module: string
+  scanning: string
+  scanningNote: string
+  absent: string
+  summary: string
+}
+
 export function XcodeCacheView() {
+  return (
+    <LibraryCleanView
+      module="xcode-cache"
+      scanning="Sprawdzam, co zostawił Xcode"
+      scanningNote="Liczę rozmiary katalogów kompilacji i symboli urządzeń. Przy dużych projektach to chwilę trwa."
+      absent="Nie znaleziono katalogu Xcode — ten moduł nie ma tu czego sprzątać."
+      summary="zajmują pozostałości Xcode"
+    />
+  )
+}
+
+export function MacosSlimView() {
+  return (
+    <LibraryCleanView
+      module="macos-slim"
+      scanning="Sprawdzam Pocztę i Wiadomości"
+      scanningNote="Liczę kopie otwartych załączników, podglądy i cache. Wiadomości i rozmowy nie są tu nawet czytane."
+      absent="Poczta i Wiadomości nie były na tym Macu używane — nie ma tu czego odchudzać."
+      summary="zajmują kopie i cache Poczty i Wiadomości"
+    />
+  )
+}
+
+function LibraryCleanView({ module, scanning, scanningNote, absent, summary }: LibraryCleanProps) {
   const [scan, setScan] = useState<ScanData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [picked, setPicked] = useState<Set<string>>(new Set())
@@ -50,15 +87,15 @@ export function XcodeCacheView() {
     setError(null)
     setResult(null)
     try {
-      const res = await callModule<ScanData>('xcode-cache', { cmd: 'scan' })
+      const res = await callModule<ScanData>(module, { cmd: 'scan' })
       if (!res.ok) {
         setError(res.error)
         return
       }
       setScan(res.data)
-      // Anything that comes back on its own is preselected; archives are
-      // not, because deleting one cannot be undone and a default should
-      // never make that choice for someone.
+      // Anything that comes back on its own is preselected; what cannot
+      // come back is not, because a default should never make that choice
+      // for someone.
       setPicked(
         new Set(
           res.data.categories
@@ -110,13 +147,13 @@ export function XcodeCacheView() {
   async function clean() {
     const warning =
       permanentPicked > 0
-        ? `\n\nWśród nich jest ${permanentPicked} archiwów, których nie da się odtworzyć.`
+        ? `\n\nWśród nich jest ${permanentPicked} pozycji, których nie da się odtworzyć.`
         : ''
     if (!(await confirmAction(`Usunąć ${selected.length} pozycji (${formatBytes(selectedBytes)})?${warning}`))) return
 
     setBusy(true)
     try {
-      const res = await callModule<CleanData>('xcode-cache', {
+      const res = await callModule<CleanData>(module, {
         cmd: 'clean',
         paths: selected.map((e) => e.path),
       })
@@ -145,27 +182,28 @@ export function XcodeCacheView() {
 
   if (!scan) {
     return (
-      <Preparing
-        title="Sprawdzam, co zostawił Xcode"
-        note="Liczę rozmiary katalogów kompilacji i symboli urządzeń. Przy dużych projektach to chwilę trwa."
-      />
+      <Preparing title={scanning} note={scanningNote} />
     )
   }
 
-  if (!scan.xcode_present) {
-    return (
-      <div className="glass empty-state">
-        Nie znaleziono katalogu Xcode — ten moduł nie ma tu czego sprzątać.
-      </div>
-    )
+  if (!scan.present) {
+    return <div className="glass empty-state">{absent}</div>
   }
 
   return (
     <>
+      {scan.blocked.length > 0 && (
+        <>
+          <div className="xc-note">
+            macOS nie pokazał: {scan.blocked.join(', ')}. Bez pełnego dostępu do dysku te miejsca są dla POSMA zamknięte.
+          </div>
+          <FullDiskAccessRow />
+        </>
+      )}
       <div className="glass xc-summary">
         <div>
           <div className="xc-summary-value mono">{formatBytes(scan.total_bytes)}</div>
-          <div className="xc-summary-label">zajmują pozostałości Xcode</div>
+          <div className="xc-summary-label">{summary}</div>
         </div>
         <button
           className="btn btn-primary"

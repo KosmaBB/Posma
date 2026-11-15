@@ -6,6 +6,7 @@ import { formatBytes } from './TempCleanView'
 import { MissingDependency } from '../../components/MissingDependency'
 import { confirmAction } from '../../components/confirm'
 import { callModule } from '../../data/callModule'
+import { Icon } from '../../components/Icons'
 
 interface ProcessInfo {
   pid: number
@@ -396,7 +397,7 @@ export function HealthMonitorView({ app }: { app: AppState }) {
           sub={`${formatBytes(snap.ram_used_bytes)} / ${formatBytes(snap.ram_total_bytes)}`}
           history={ramHistory}
           max={100}
-          color="var(--g-blue-2)"
+          color="var(--ink)"
           hover={hover}
           onHover={setHover}
           frozen={pointed ? `${pointed.ram.toFixed(0)}%` : undefined}
@@ -427,7 +428,7 @@ export function HealthMonitorView({ app }: { app: AppState }) {
                 {m.detail && <div className="hm-sensor-sub">{m.detail}</div>}
                 {m.percent !== undefined && (
                   <div className="vital-track">
-                    <div className="vital-fill" style={{ width: `${m.percent}%`, background: 'linear-gradient(90deg, var(--g-teal-1), var(--g-blue-2))' }} />
+                    <div className="vital-fill" style={{ width: `${m.percent}%` }} />
                   </div>
                 )}
               </div>
@@ -488,7 +489,7 @@ export function HealthMonitorView({ app }: { app: AppState }) {
             <span className="cr-path mono">{d.mount_point}</span>
             <span className="cr-files">{d.name}</span>
             <span className="cr-size mono">{formatBytes(d.total_bytes - d.available_bytes)} / {formatBytes(d.total_bytes)}</span>
-            <span className="hm-disk-go" aria-hidden="true">→</span>
+            <span className="hm-disk-go" aria-hidden="true"><Icon name="chevron" /></span>
           </button>
         ))}
       </div>

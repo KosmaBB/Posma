@@ -236,7 +236,7 @@ export function PkgCacheView() {
                 return (
                   <label key={key} className={`glass clean-row${checkedSnaps.has(key) ? ' checked' : ''}`}>
                     <input type="checkbox" checked={checkedSnaps.has(key)} onChange={() => toggleSnap(key)} disabled={snapRemoving} />
-                    <span className="cr-path">{e.name} <span className="mono" style={{ color: 'var(--muted)', fontSize: 10.5 }}>rev. {e.revision}</span></span>
+                    <span className="cr-path">{e.name} <span className="mono" style={{ color: 'var(--muted)', fontSize: 13 }}>rev. {e.revision}</span></span>
                     <span className="cr-size mono">{formatBytes(e.size_bytes)}</span>
                   </label>
                 )

@@ -1,0 +1,638 @@
+/* ============================================================
+   Strumień — one complete state per screen, the next one a snap away.
+   Structure under [data-world='strumien'] (0,1,0) so the person's
+   overrides in custom.css (0,2,0) still win; colours under
+   [data-world='strumien'][data-theme] (0,2,0).
+   ============================================================ */
+
+[data-world='strumien'] {
+  --sans: 'Familjen Grotesk Variable', system-ui, sans-serif;
+  --mono: 'Familjen Grotesk Variable', system-ui, sans-serif;
+  --display: 'Anybody Variable', 'Familjen Grotesk Variable', sans-serif;
+  --head-weight: 650; --head-stretch: 100%; --head-tracking: -0.005em;
+  --title-size: 20px; --title-weight: 600;
+  --lbl-size: 13px; --lbl-weight: 600; --lbl-stretch: 100%; --lbl-tracking: 0.01em; --lbl-transform: none;
+  --btn-size: 15px; --btn-weight: 650; --btn-stretch: 100%; --btn-strip: 0px;
+  --folder-size: 14px; --folder-weight: 600;
+  --hero-font: var(--display); --hero-size: 120px; --hero-weight: 800; --hero-stretch: 58%; --hero-tracking: -0.02em;
+  --radius: 22px; --radius-sm: 14px; --radius-pill: 999px; --bar-rx: 3px;
+  --btn-radius: var(--radius-pill); --nav-radius: var(--radius-pill);
+  --hair: 1px; --rule: 1px;
+  --d: 1.15;
+  --chart-w: 3.5; --chart-peak-dash: 7 6;
+  /* The feed's own measures. */
+  --peek: 44px;
+  --gutter: 48px;
+  --bar-h: 64px;
+}
+
+[data-world='strumien'][data-theme='dark'] {
+  --bg: #05070d; --bg-2: #0e121c; --bg-3: #181d2a;
+  --ink: #ffffff; --muted: #b7bdca; --dim: #949bab;
+  --accent: #ffffff; --on-accent: #05070d;
+  --border: rgba(255, 255, 255, 0.14); --border-strong: rgba(255, 255, 255, 0.36);
+  --good: #ffffff; --warn: #ffb547; --critical: #ff6b5c; --on-critical: #12060a;
+  --g-teal-1: #7d95ff; --g-teal-2: #7d95ff;
+  --g-blue-1: #45d1b8; --g-blue-2: #45d1b8;
+  --g-green-1: #b597ff; --g-green-2: #b597ff;
+  --g-red-1: #ff9455; --g-red-2: #ff9455;
+  --g-violet-1: #a7adb9; --g-violet-2: #a7adb9;
+  --g-amber-1: #ffb547; --g-amber-2: #ffb547;
+  --g-indigo-1: #7d95ff; --g-indigo-2: #7d95ff;
+  --side-bg: var(--bg); --panel-bg: #0e121c; --panel-shadow: 0 22px 48px -30px rgba(0, 0, 0, 0.9);
+  --nav-active-bg: var(--bg-3);
+  --btn-bg: #ffffff; --btn-fg: #05070d; --btn-border: #ffffff;
+  --ghost-bg: transparent; --ghost-border: rgba(255, 255, 255, 0.42);
+  --toggle-on: var(--accent);
+  --meter-fill: #ffffff; --meter-bg: rgba(255, 255, 255, 0.06); --meter-border: transparent;
+  --chart-mean: #ffffff; --chart-peak: #9fd4ff; --chart-grid: rgba(255, 255, 255, 0.12);
+  --bar-fill: #9fd4ff; --bar-track-stroke: rgba(255, 255, 255, 0.2);
+  color-scheme: dark;
+
+  /* Fields: each item's ground. Strong, saturated, white type on all of them. */
+  --f-machine: #070b16; --f-data: #1f39c9; --f-system: #0b6b5e; --f-security: #4a2a9c;
+  --f-apps: #a3470e; --f-custom: #2b303b; --f-disk: #0a1124; --f-fill: #2446e0; --f-full: #b5251c;
+  --f-mem: #0c4766; --f-index: #0b0e16;
+  --v-line: #9fd4ff; --v-ink: #ffffff;
+  --scrim: 3, 5, 12;
+  --on-field: #ffffff; --on-field-2: rgba(255, 255, 255, 0.84);
+}
+
+[data-world='strumien'][data-theme='light'] {
+  --bg: #f4f3ef; --bg-2: #ffffff; --bg-3: #e8e7e1;
+  --ink: #0b0d12; --muted: #464a54; --dim: #5a5e68;
+  --accent: #0b0d12; --on-accent: #ffffff;
+  --border: rgba(11, 13, 18, 0.13); --border-strong: rgba(11, 13, 18, 0.36);
+  --good: #0b0d12; --warn: #8a5300; --critical: #b42318; --on-critical: #ffffff;
+  --g-teal-1: #2446e0; --g-teal-2: #2446e0;
+  --g-blue-1: #0b7a6a; --g-blue-2: #0b7a6a;
+  --g-green-1: #6a3fd0; --g-green-2: #6a3fd0;
+  --g-red-1: #b4540f; --g-red-2: #b4540f;
+  --g-violet-1: #5f6470; --g-violet-2: #5f6470;
+  --g-amber-1: #8a5300; --g-amber-2: #8a5300;
+  --g-indigo-1: #2446e0; --g-indigo-2: #2446e0;
+  --side-bg: var(--bg); --panel-bg: #ffffff; --panel-shadow: 0 16px 36px -24px rgba(20, 24, 40, 0.35);
+  --nav-active-bg: var(--bg-3);
+  --btn-bg: #0b0d12; --btn-fg: #ffffff; --btn-border: #0b0d12;
+  --ghost-bg: transparent; --ghost-border: rgba(11, 13, 18, 0.4);
+  --toggle-on: var(--accent);
+  --meter-fill: #0b0d12; --meter-bg: rgba(11, 13, 18, 0.06); --meter-border: transparent;
+  --chart-mean: #0b0d12; --chart-peak: #2446e0; --chart-grid: rgba(11, 13, 18, 0.12);
+  --bar-fill: #2446e0; --bar-track-stroke: rgba(11, 13, 18, 0.2);
+  color-scheme: light;
+
+  /* Pale fields with near-black type: the same structure in daylight. */
+  --f-machine: #e6eaf5; --f-data: #c8d2ff; --f-system: #bde4da; --f-security: #ddd1f7;
+  --f-apps: #ffd6b8; --f-custom: #dcdee3; --f-disk: #eceef3; --f-fill: #9fb2ff; --f-full: #ffb3a8;
+  --f-mem: #c9e2f1; --f-index: #ebeae4;
+  --v-line: #1f39c9; --v-ink: #0b0d12;
+  --scrim: 246, 245, 241;
+  --on-field: #0b0d12; --on-field-2: #262a33;
+}
+
+[data-world='strumien'] .sm-field--machine { --field: var(--f-machine); }
+[data-world='strumien'] .sm-field--data { --field: var(--f-data); }
+[data-world='strumien'] .sm-field--system { --field: var(--f-system); }
+[data-world='strumien'] .sm-field--security { --field: var(--f-security); }
+[data-world='strumien'] .sm-field--apps { --field: var(--f-apps); }
+[data-world='strumien'] .sm-field--custom { --field: var(--f-custom); }
+[data-world='strumien'] .sm-field--disk { --field: var(--f-disk); --fill: var(--f-fill); }
+[data-world='strumien'] .sm-field--full { --field: var(--f-disk); --fill: var(--f-full); }
+[data-world='strumien'] .sm-field--mem { --field: var(--f-mem); }
+[data-world='strumien'] .sm-field--index { --field: var(--f-index); }
+/* Marks drawn on a field: white in the dark; in daylight the folder's own saturated ink, not grey. */
+[data-world='strumien'] .sm-item { --field-ink: var(--on-field); }
+[data-world='strumien'][data-theme='light'] .sm-item.sm-field--data { --field-ink: #2446e0; }
+[data-world='strumien'][data-theme='light'] .sm-item.sm-field--system { --field-ink: #0b7a6a; }
+[data-world='strumien'][data-theme='light'] .sm-item.sm-field--security { --field-ink: #6a3fd0; }
+[data-world='strumien'][data-theme='light'] .sm-item.sm-field--apps { --field-ink: #b4540f; }
+
+/* ---------------------------------------------------------------- base */
+[data-world='strumien'] body { font-size: 15px; }
+[data-world='strumien'] ::selection { background: var(--ink); color: var(--bg); }
+[data-world='strumien'] :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+[data-world='strumien'] ::-webkit-scrollbar { width: 12px; height: 12px; }
+[data-world='strumien'] ::-webkit-scrollbar-thumb { background: var(--border-strong); border: 4px solid transparent; background-clip: padding-box; border-radius: 999px; }
+[data-world='strumien'] kbd {
+  font: 500 13px var(--sans); border: 1px solid color-mix(in srgb, currentColor 38%, transparent);
+  border-radius: 5px; padding: 0 6px; line-height: 1.5;
+}
+
+/* ---------------------------------------------------------------- frame */
+[data-world='strumien'] .sm-shell { position: fixed; inset: 0; background: var(--bg); color: var(--ink); }
+[data-world='strumien'] .sm-main { position: absolute; inset: 0; }
+[data-world='strumien'] .sm-shell:not([data-view='dashboard'], [data-view='folder']) .sm-main { top: var(--bar-h); }
+
+[data-world='strumien'] .sm-top {
+  position: absolute; left: 0; right: 0; top: 0; height: var(--bar-h); z-index: 20;
+  display: flex; align-items: center; gap: 24px; padding: 0 var(--gutter); color: var(--on-field);
+}
+/* Over a page the bar is solid; over the feed it floats on the item's own top shade. */
+[data-world='strumien'] .sm-shell:not([data-view='dashboard'], [data-view='folder']) .sm-top {
+  background: var(--bg); color: var(--ink); --on-field: var(--ink); --on-field-2: var(--muted);
+  box-shadow: inset 0 -1px 0 var(--border);
+}
+[data-world='strumien'] .sm-brand {
+  display: flex; align-items: baseline; gap: 12px; padding: 0; border: 0; background: none; color: inherit; cursor: pointer;
+  font-family: var(--display); font-stretch: 140%; font-weight: 800; font-size: 15px; letter-spacing: 0.22em;
+}
+[data-world='strumien'] .sm-brand small { font-family: var(--sans); font-stretch: 100%; font-weight: 500; font-size: 14px; letter-spacing: 0; color: var(--on-field-2); }
+[data-world='strumien'] .sm-tabs { display: flex; gap: 2px; flex: 1; min-width: 0; overflow: hidden; }
+[data-world='strumien'] .sm-tabs button {
+  display: inline-flex; align-items: baseline; gap: 7px; padding: 8px 13px; border: 0; border-radius: 999px;
+  background: none; color: var(--on-field-2); font: 500 15px var(--sans); white-space: nowrap; cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+[data-world='strumien'] .sm-tabs button span { font-family: var(--display); font-stretch: 70%; font-weight: 700; font-size: 14px; }
+[data-world='strumien'] .sm-tabs button:hover { color: var(--on-field); }
+/* The tab row clips its overflow, so the ring goes inside. */
+[data-world='strumien'] .sm-tabs button:focus-visible { outline-offset: -2px; }
+[data-world='strumien'] .sm-tabs button[aria-current] { color: var(--on-field); background: color-mix(in srgb, var(--on-field) 15%, transparent); }
+[data-world='strumien'] .sm-top__right { display: flex; align-items: center; gap: 14px; flex: none; }
+[data-world='strumien'] .sm-link {
+  padding: 8px 4px; border: 0; background: none; color: var(--on-field-2); cursor: pointer;
+  font: 500 15px var(--sans); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px;
+}
+[data-world='strumien'] .sm-link:hover { color: var(--on-field); }
+[data-world='strumien'] .sm-menu-btn {
+  display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border: 0; border-radius: 999px; cursor: pointer;
+  background: color-mix(in srgb, var(--on-field) 14%, transparent); color: var(--on-field); font: 600 15px var(--sans);
+}
+[data-world='strumien'] .sm-menu-btn svg { width: 18px; height: 18px; }
+[data-world='strumien'] .sm-menu-btn:hover { background: color-mix(in srgb, var(--on-field) 22%, transparent); }
+
+/* ---------------------------------------------------------------- feed */
+[data-world='strumien'] .sm-feed-wrap { position: absolute; inset: 0; }
+[data-world='strumien'] .sm-feed {
+  position: absolute; inset: 0; overflow-y: auto; overscroll-behavior: contain;
+  scroll-snap-type: y mandatory; scrollbar-width: none; padding-bottom: var(--peek);
+}
+[data-world='strumien'] .sm-feed::-webkit-scrollbar { display: none; }
+[data-world='strumien'] .sm-feed:focus { outline: none; }
+
+[data-world='strumien'] .sm-item {
+  position: relative; height: calc(100% - var(--peek)); overflow: hidden;
+  scroll-snap-align: start; scroll-snap-stop: always;
+  background: var(--field, var(--f-machine)); color: var(--on-field);
+}
+[data-world='strumien'] .sm-visual { position: absolute; inset: 0; }
+[data-world='strumien'] .sm-scrim {
+  position: absolute; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(to top, rgba(var(--scrim), 0.88) 0%, rgba(var(--scrim), 0.62) 24%, rgba(var(--scrim), 0) 54%),
+    linear-gradient(to left, rgba(var(--scrim), 0.55) 0%, rgba(var(--scrim), 0) 18%),
+    linear-gradient(to bottom, rgba(var(--scrim), 0.66) 0%, rgba(var(--scrim), 0) 17%);
+}
+[data-world='strumien'] .sm-group { display: contents; }
+
+[data-world='strumien'] .sm-caption {
+  position: absolute; left: var(--gutter); bottom: 44px; z-index: 2;
+  width: min(780px, calc(100% - var(--gutter) - 230px));
+}
+[data-world='strumien'] .sm-source { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 15px; font-weight: 600; }
+[data-world='strumien'] .sm-source > i { width: 9px; height: 9px; border-radius: 50%; background: currentColor; flex: none; }
+[data-world='strumien'] .sm-source > span { font-weight: 400; color: var(--on-field-2); }
+[data-world='strumien'] .sm-source .chip { color: var(--on-field); border-color: color-mix(in srgb, var(--on-field) 50%, transparent); }
+[data-world='strumien'] .sm-figure {
+  display: flex; align-items: baseline; gap: 18px; margin: 16px 0 14px -0.03em; white-space: nowrap;
+  font-family: var(--display); font-stretch: 58%; font-weight: 800; font-size: clamp(92px, 21vh, 196px);
+  line-height: 0.82; letter-spacing: -0.02em; font-variant-numeric: tabular-nums;
+}
+[data-world='strumien'] .sm-figure small {
+  font-family: var(--sans); font-stretch: 100%; font-size: 21px; font-weight: 500; letter-spacing: 0;
+  line-height: 1.25; color: var(--on-field-2); white-space: normal; max-width: 290px;
+}
+[data-world='strumien'] .sm-title { font-family: var(--sans); font-stretch: 100%; font-size: 24px; font-weight: 600; line-height: 1.3; letter-spacing: 0; }
+[data-world='strumien'] .sm-path { overflow-wrap: anywhere; }
+[data-world='strumien'] .sm-text { margin-top: 8px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+[data-world='strumien'] .sm-text p {
+  max-width: 64ch; font-size: 18px; line-height: 1.5; color: var(--on-field-2);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+[data-world='strumien'] .sm-text p[data-open] { display: block; }
+[data-world='strumien'] .sm-more {
+  padding: 0; border: 0; background: none; color: var(--on-field); cursor: pointer;
+  font: 600 17px var(--sans); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px;
+}
+
+/* The right rail: stacked actions, the main one filled. */
+[data-world='strumien'] .sm-rail {
+  position: absolute; right: 60px; bottom: 46px; z-index: 2; width: 128px;
+  display: flex; flex-direction: column; align-items: center; gap: 18px;
+}
+[data-world='strumien'] .sm-act {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 0; border: 0; background: none;
+  color: var(--on-field); font: 600 14px/1.25 var(--sans); text-align: center; cursor: pointer;
+}
+[data-world='strumien'] .sm-act__g {
+  width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center;
+  border: 1.5px solid color-mix(in srgb, var(--on-field) 55%, transparent);
+  transition: background-color 0.2s ease, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-world='strumien'] .sm-act__g svg { width: 26px; height: 26px; }
+[data-world='strumien'] .sm-act:hover .sm-act__g { background: color-mix(in srgb, var(--on-field) 16%, transparent); }
+[data-world='strumien'] .sm-act:active .sm-act__g { transform: scale(0.93); }
+[data-world='strumien'] .sm-act[data-primary] .sm-act__g { background: var(--accent); border-color: var(--accent); color: var(--on-accent); box-shadow: 0 8px 22px -10px rgba(0, 0, 0, 0.55); }
+[data-world='strumien'] .sm-act[data-danger] .sm-act__g { background: var(--critical); border-color: var(--critical); color: var(--on-critical); }
+[data-world='strumien'] .sm-act:disabled { cursor: not-allowed; opacity: 0.6; }
+[data-world='strumien'] .sm-act:focus-visible { outline: none; }
+[data-world='strumien'] .sm-act:focus-visible .sm-act__g { outline: 2px solid var(--on-field); outline-offset: 3px; }
+[data-world='strumien'] .sm-act__count { font-weight: 400; color: var(--on-field-2); }
+[data-world='strumien'] .sm-act kbd { color: var(--on-field-2); }
+
+[data-world='strumien'] .sm-peek {
+  position: absolute; left: var(--gutter); top: 11px; z-index: 2; display: none; align-items: center; gap: 10px;
+  font-size: 15px; font-weight: 600;
+}
+[data-world='strumien'] .sm-peek svg { width: 16px; height: 16px; }
+[data-world='strumien'] .sm-item[data-state='next'] .sm-peek { display: flex; }
+
+[data-world='strumien'] .sm-progress {
+  position: absolute; left: var(--gutter); right: var(--gutter); top: var(--bar-h); z-index: 3;
+  display: flex; align-items: center; gap: 18px; pointer-events: none; color: var(--on-field);
+}
+[data-world='strumien'] .sm-segments { flex: 1; display: flex; gap: 4px; }
+[data-world='strumien'] .sm-segments i { flex: 1; height: 3px; border-radius: 2px; background: color-mix(in srgb, currentColor 30%, transparent); transition: background-color 0.3s ease; }
+[data-world='strumien'] .sm-segments i[data-at='done'] { background: color-mix(in srgb, currentColor 70%, transparent); }
+[data-world='strumien'] .sm-segments i[data-at='now'] { background: currentColor; }
+[data-world='strumien'] .sm-count { font-size: 14px; color: var(--on-field-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+[data-world='strumien'] .sm-count b { color: var(--on-field); font-weight: 600; }
+
+[data-world='strumien'] .sm-pos {
+  position: absolute; right: 18px; top: 50%; transform: translateY(-50%); z-index: 3;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+[data-world='strumien'] .sm-pos button {
+  position: relative; width: 4px; height: 10px; padding: 0; border: 0; border-radius: 2px; cursor: pointer;
+  background: color-mix(in srgb, var(--on-field) 34%, transparent); transition: height 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease;
+}
+/* A 4 px tick, hit across 24 px; half the gap above and below, so neighbours never overlap. */
+[data-world='strumien'] .sm-pos button::before { content: ''; position: absolute; inset: -3px -10px; }
+[data-world='strumien'] .sm-pos button[data-field='full'] { background: var(--critical); }
+[data-world='strumien'] .sm-pos button[data-now] { height: 30px; background: var(--on-field); }
+
+/* The overlay band: legend left, cores right. */
+[data-world='strumien'] .sm-overlay {
+  position: absolute; left: var(--gutter); right: 200px; top: calc(var(--bar-h) + 40px); z-index: 2;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 32px;
+}
+[data-world='strumien'] .sm-legend { display: flex; flex-wrap: wrap; gap: 8px 22px; font-size: 15px; color: var(--on-field-2); }
+[data-world='strumien'] .sm-legend b { color: var(--on-field); font-weight: 600; font-variant-numeric: tabular-nums; }
+[data-world='strumien'] .sm-key { display: inline-block; width: 24px; margin-right: 8px; vertical-align: middle; border-top: 3px solid var(--v-ink); }
+[data-world='strumien'] .sm-key--peak { border-top: 2px dashed var(--v-line); }
+[data-world='strumien'] .sm-cores { display: flex; align-items: flex-end; gap: 4px; height: 84px; width: min(420px, 34vw); flex: none; }
+[data-world='strumien'] .sm-core {
+  flex: 1; min-width: 4px; max-width: 18px; height: 100%; padding: 0; border: 0; border-radius: 3px; cursor: pointer;
+  display: flex; align-items: flex-end; overflow: hidden; background: color-mix(in srgb, var(--on-field) 12%, transparent);
+}
+[data-world='strumien'] .sm-core i { display: block; width: 100%; background: var(--v-line); transition: height 0.4s ease; }
+[data-world='strumien'] .sm-core:hover { background: color-mix(in srgb, var(--on-field) 22%, transparent); }
+[data-world='strumien'] .sm-core[aria-pressed='true'] { box-shadow: 0 0 0 2px var(--on-field); }
+[data-world='strumien'] .sm-core[aria-pressed='true'] i { background: var(--on-field); }
+
+/* ---------------------------------------------------------------- visuals */
+[data-world='strumien'] .sm-cpu { position: absolute; inset: 0; }
+[data-world='strumien'] .sm-cpu svg { display: block; width: 100%; height: 100%; }
+[data-world='strumien'] .sm-cpu svg * { vector-effect: non-scaling-stroke; }
+[data-world='strumien'] .sm-cpu__grid { stroke: var(--on-field); stroke-opacity: calc(0.1 * var(--chart-grid-opacity)); }
+[data-world='strumien'] .sm-cpu__core { fill: none; stroke: var(--v-line); stroke-opacity: 0.26; stroke-width: 1.25; }
+[data-world='strumien'] .sm-cpu__area { fill: var(--v-ink); fill-opacity: 0.07; }
+[data-world='strumien'] .sm-cpu__peak { fill: none; stroke: var(--v-line); stroke-width: 2; stroke-dasharray: var(--chart-peak-dash); }
+[data-world='strumien'] .sm-cpu__watch { fill: none; stroke: var(--v-line); stroke-width: 2.4; }
+[data-world='strumien'] .sm-cpu__mean { fill: none; stroke: var(--v-ink); stroke-width: var(--chart-w); stroke-linejoin: round; stroke-linecap: round; }
+[data-world='strumien'] .sm-cpu__now { stroke: var(--on-field); stroke-opacity: 0.25; }
+[data-world='strumien'] .sm-cpu__label {
+  position: absolute; left: 86%; transform: translate(12px, -50%); font-size: 13px; color: var(--on-field-2);
+  font-variant-numeric: tabular-nums; opacity: var(--chart-grid-opacity);
+}
+[data-world='strumien'] .sm-cpu--wait {
+  background: repeating-linear-gradient(to bottom, transparent 0 79px, color-mix(in srgb, var(--on-field) 8%, transparent) 79px 80px);
+}
+
+[data-world='strumien'] .sm-tiles { position: absolute; inset: 0; }
+[data-world='strumien'] .sm-tile {
+  position: absolute; box-shadow: inset 0 0 0 2px var(--field);
+  background-color: color-mix(in srgb, var(--on-field) 13%, transparent);
+  background-image: radial-gradient(color-mix(in srgb, var(--field-ink) 42%, transparent) 1.7px, transparent 2px);
+  background-size: 12px 12px; background-position: 6px 6px;
+  transition: background-color 0.4s ease;
+}
+[data-world='strumien'] .sm-tile[data-hot] { background-color: color-mix(in srgb, var(--field-ink) 24%, transparent); }
+[data-world='strumien'] .sm-tile[data-quiet] { background-color: color-mix(in srgb, var(--on-field) 5%, transparent); background-image: none; }
+[data-world='strumien'] .sm-tile__label { position: absolute; left: 16px; top: 14px; right: 12px; font-size: 15px; font-weight: 600; line-height: 1.3; }
+[data-world='strumien'] .sm-tile__label span { display: block; font-weight: 400; color: var(--on-field-2); font-variant-numeric: tabular-nums; }
+/* The top shade covers the first labels; push them under the bar. */
+[data-world='strumien'] .sm-tile[data-top] .sm-tile__label { top: calc(var(--bar-h) + 40px); }
+[data-world='strumien'] .sm-tile[data-left] .sm-tile__label { left: var(--gutter); }
+
+[data-world='strumien'] .sm-fill { position: absolute; inset: 0; }
+[data-world='strumien'] .sm-fill__level { position: absolute; left: 0; right: 0; bottom: 0; background: var(--fill); transition: height 0.9s cubic-bezier(0.16, 1, 0.3, 1); }
+[data-world='strumien'] .sm-fill i { position: absolute; left: 0; right: 0; height: 0; border-top: 1px solid color-mix(in srgb, var(--on-field) 12%, transparent); }
+
+/* Above the scrim: the waffle stands right of the caption and needs its full contrast. */
+[data-world='strumien'] .sm-waffle {
+  position: absolute; z-index: 1; top: calc(var(--bar-h) + 56px); bottom: 64px; left: 55%; right: 210px;
+  display: grid; grid-template-columns: repeat(var(--cols), 1fr); grid-auto-rows: 1fr; gap: 5px;
+}
+[data-world='strumien'] .sm-waffle i { border-radius: 3px; background: color-mix(in srgb, var(--on-field) 12%, transparent); }
+[data-world='strumien'] .sm-waffle i[data-on] { background: var(--v-line); }
+
+[data-world='strumien'] .sm-pattern { position: absolute; inset: 0; width: 100%; height: 100%; }
+[data-world='strumien'] .sm-pattern rect { fill: var(--field-ink); fill-opacity: 0.16; }
+[data-world='strumien'] .sm-pattern rect[data-strong] { fill-opacity: 0.4; }
+
+[data-world='strumien'] .sm-stripes { position: absolute; inset: 0; display: flex; }
+[data-world='strumien'] .sm-stripes i { flex: 1; background: var(--field); }
+[data-world='strumien'] .sm-stripes i:nth-child(even) { background: color-mix(in srgb, var(--field) 82%, var(--bg)); }
+
+/* The shortcuts item: a list in the caption instead of prose. */
+[data-world='strumien'] .sm-quick {
+  list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px;
+  max-height: 34vh; overflow-y: auto;
+}
+[data-world='strumien'] .sm-quick__row {
+  display: grid; grid-template-columns: 54px minmax(0, 1fr) auto; align-items: baseline; gap: 14px; width: 100%;
+  padding: 11px 16px; border: 0; border-radius: 14px; cursor: pointer; text-align: left;
+  background: color-mix(in srgb, var(--field) 78%, transparent); color: var(--on-field); font: 600 17px var(--sans);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+[data-world='strumien'] .sm-quick__row:hover { transform: translateX(6px); }
+[data-world='strumien'] .sm-quick__no { font-family: var(--display); font-stretch: 70%; font-weight: 750; font-size: 19px; }
+[data-world='strumien'] .sm-quick__row em { font-style: normal; font-weight: 400; font-size: 14px; color: var(--on-field-2); white-space: nowrap; }
+
+/* ---------------------------------------------------------------- module */
+[data-world='strumien'] .sm-module { position: absolute; inset: 0; overflow-y: auto; scroll-snap-type: y proximity; }
+/* A short cover, so the module's own controls are on screen the moment it opens. */
+[data-world='strumien'] .sm-module > .sm-item { height: clamp(420px, 60%, 600px); }
+[data-world='strumien'] .sm-module .sm-figure { font-size: clamp(84px, 16vh, 150px); }
+[data-world='strumien'] .sm-module > .sm-item .sm-scrim {
+  background:
+    linear-gradient(to top, rgba(var(--scrim), 0.88) 0%, rgba(var(--scrim), 0.6) 26%, rgba(var(--scrim), 0) 56%),
+    linear-gradient(to left, rgba(var(--scrim), 0.5) 0%, rgba(var(--scrim), 0) 18%);
+}
+[data-world='strumien'] .sm-body { scroll-snap-align: start; min-height: 100%; padding: 0 var(--gutter) 96px; background: var(--bg); }
+[data-world='strumien'] .sm-body__head {
+  position: sticky; top: 0; z-index: 5; max-width: 1180px; margin: 0 auto 22px;
+  display: flex; align-items: center; gap: 16px; padding: 18px 0; background: var(--bg); box-shadow: 0 1px 0 var(--border);
+}
+[data-world='strumien'] .sm-body__no { font-family: var(--display); font-stretch: 66%; font-weight: 800; font-size: 36px; line-height: 1; }
+[data-world='strumien'] .sm-body__head h1 { flex: 1; min-width: 0; font-size: 22px; font-weight: 650; }
+[data-world='strumien'] .sm-body__inner { max-width: 1180px; margin: 0 auto; }
+
+/* ---------------------------------------------------------------- pages */
+[data-world='strumien'] .sm-page { position: absolute; inset: 0; overflow-y: auto; padding: 44px var(--gutter) 96px; }
+[data-world='strumien'] .sm-page__head { max-width: 1180px; margin: 0 auto 10px; display: flex; align-items: baseline; gap: 24px; }
+[data-world='strumien'] .sm-page__no {
+  font-family: var(--display); font-stretch: 58%; font-weight: 800; font-size: clamp(84px, 13vh, 132px);
+  line-height: 0.82; letter-spacing: -0.02em;
+}
+[data-world='strumien'] .sm-page__head h1 { font-size: 34px; font-weight: 650; }
+[data-world='strumien'] .sm-page__body { max-width: 1180px; margin: 0 auto; }
+
+/* ---------------------------------------------------------------- menu */
+[data-world='strumien'] .sm-menu {
+  position: fixed; inset: 0; z-index: 60; overflow-y: auto; padding: 26px var(--gutter) 56px;
+  background: var(--bg); color: var(--ink); animation: sm-rise 0.34s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes sm-rise { from { opacity: 0; transform: translateY(20px); } }
+[data-world='strumien'] .sm-menu__head { display: flex; align-items: center; justify-content: space-between; gap: 24px; margin-bottom: 40px; }
+[data-world='strumien'] .sm-menu__home {
+  display: flex; align-items: baseline; gap: 18px; padding: 0; border: 0; background: none; color: var(--ink); cursor: pointer;
+  font-family: var(--display); font-stretch: 58%; font-weight: 800; font-size: 76px; line-height: 0.9; letter-spacing: -0.02em;
+}
+[data-world='strumien'] .sm-menu__home span { font: 500 18px var(--sans); letter-spacing: 0; color: var(--muted); }
+[data-world='strumien'] .sm-menu__cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 30px; }
+[data-world='strumien'] .sm-menu__col { border-top: 4px solid var(--field); padding-top: 14px; min-width: 0; }
+[data-world='strumien'][data-theme='dark'] .sm-menu__col.sm-field--index, [data-world='strumien'][data-theme='dark'] .sm-menu__col.sm-field--custom { border-top-color: var(--border-strong); }
+[data-world='strumien'] .sm-menu__folder {
+  display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; padding: 0; border: 0; background: none;
+  color: var(--ink); font: 650 20px var(--sans); cursor: pointer; text-align: left;
+}
+[data-world='strumien'] .sm-menu__folder--static { cursor: default; }
+[data-world='strumien'] .sm-menu__folder span { font-family: var(--display); font-stretch: 70%; font-weight: 750; font-size: 20px; color: var(--muted); }
+[data-world='strumien'] .sm-menu__col ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+[data-world='strumien'] .sm-menu__col li button {
+  width: 100%; display: flex; align-items: baseline; gap: 12px; padding: 9px 10px; border: 0; border-radius: 10px;
+  background: none; color: var(--ink); font: 500 16px var(--sans); text-align: left; cursor: pointer;
+}
+[data-world='strumien'] .sm-menu__col li button:hover { background: var(--bg-3); }
+[data-world='strumien'] .sm-menu__col li button span { min-width: 34px; font-family: var(--display); font-stretch: 70%; font-weight: 700; font-size: 16px; color: var(--muted); }
+[data-world='strumien'] .sm-menu__empty { padding: 9px 10px; font-size: 15px; color: var(--muted); }
+
+/* ---------------------------------------------------------------- shared blocks
+   Module interiors, settings, manager: big, round, touch-sized. */
+[data-world='strumien'] .glass { border-radius: var(--radius); background: var(--panel-bg); border: var(--hair) solid var(--border); box-shadow: var(--panel-shadow); }
+[data-world='strumien'] .btn { min-height: 46px; padding: 12px 22px; gap: 10px; font-size: var(--btn-size); }
+[data-world='strumien'] .btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); padding-right: 22px; }
+[data-world='strumien'] .btn-primary::after { display: none; }
+[data-world='strumien'] .btn-primary:hover:not(:disabled) { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); }
+[data-world='strumien'] .btn-primary.btn-danger { background: var(--critical); border-color: var(--critical); color: var(--on-critical); }
+[data-world='strumien'] .btn-primary.btn-danger:hover:not(:disabled) { box-shadow: 0 0 0 4px color-mix(in srgb, var(--critical) 25%, transparent); }
+[data-world='strumien'] .btn-ghost { border-width: 1.5px; }
+[data-world='strumien'] .btn-ghost:hover { background: color-mix(in srgb, var(--ink) 6%, transparent); }
+[data-world='strumien'] .btn-mini { min-height: 36px; padding: 7px 14px; font-size: 14px; }
+[data-world='strumien'] .btn-primary.btn-mini { padding-right: 14px; }
+[data-world='strumien'] .chip { font-family: var(--sans); font-size: 13px; font-weight: 600; padding: 3px 11px; }
+[data-world='strumien'] .toggle { width: 50px; height: 28px; }
+[data-world='strumien'] .toggle::after { top: 4px; left: 4px; width: 18px; height: 18px; }
+[data-world='strumien'] .toggle.on::after { transform: translateX(22px); background: var(--on-accent); }
+[data-world='strumien'] :is(.clean-row, .dup-group-toggle, .dup-path, .form-check) input[type='checkbox'] { width: 20px; height: 20px; accent-color: var(--accent); }
+
+[data-world='strumien'] .section-head { margin: 44px 0 14px; padding: 0; border-bottom: 0; align-items: baseline; }
+[data-world='strumien'] .section-head h2 {
+  font-family: var(--display); font-stretch: 78%; font-size: 30px; font-weight: 760; letter-spacing: -0.01em;
+  color: var(--ink); text-transform: none;
+}
+[data-world='strumien'] .section-head .count, [data-world='strumien'] .section-no { font-family: var(--sans); font-size: 14px; color: var(--muted); }
+[data-world='strumien'] .settings-group { margin: 30px 0 10px; font-size: 15px; color: var(--ink); }
+[data-world='strumien'] .empty-state { font-size: 16px; color: var(--muted); }
+[data-world='strumien'] .placeholder-body { border-style: dashed; border-radius: var(--radius); font-size: 16px; }
+
+[data-world='strumien'] :is(.settings-list, .clean-list, .autostart-list, .diskmap-list) {
+  border: 0; border-radius: var(--radius); background: var(--panel-bg); box-shadow: var(--panel-shadow); overflow: hidden;
+}
+[data-world='strumien'] .settings-list { max-width: 900px; }
+[data-world='strumien'] :is(.settings-list, .clean-list, .autostart-list, .diskmap-list) > .glass { border-color: var(--border); background: transparent; }
+[data-world='strumien'] .setting-row { gap: 20px; padding: calc(18px * var(--d)) 24px; }
+[data-world='strumien'] .setting-row .st-name { font-size: 16px; font-weight: 600; }
+[data-world='strumien'] .setting-row .st-desc { font-size: 14px; line-height: 1.5; }
+[data-world='strumien'] :is(.setting-row select, .field-select, .form-field select) {
+  font-family: var(--sans); font-size: 15px; padding: 10px 14px; border-radius: var(--radius-sm);
+  background: var(--bg-3); border-color: var(--border);
+}
+
+[data-world='strumien'] .clean-summary { gap: 48px; padding: 24px 28px; margin-bottom: 14px; }
+[data-world='strumien'] .clean-summary .cs-value {
+  font-family: var(--display); font-stretch: 62%; font-size: 46px; font-weight: 800; line-height: 1; letter-spacing: -0.01em;
+}
+[data-world='strumien'] .clean-row { gap: 16px; padding: calc(14px * var(--d)) 22px; font-size: 15px; }
+[data-world='strumien'] .clean-row.checked { background: color-mix(in srgb, var(--accent) 9%, transparent); color: var(--ink); }
+[data-world='strumien'] .clean-row .cr-path { font-size: 15px; }
+[data-world='strumien'] .clean-row .cr-files { font-size: 13px; }
+[data-world='strumien'] .clean-row .cr-size {
+  min-width: 100px; font-family: var(--display); font-stretch: 72%; font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+[data-world='strumien'] .clean-errors, [data-world='strumien'] .form-warning, [data-world='strumien'] .form-preview { border-radius: var(--radius-sm); font-size: 14px; }
+[data-world='strumien'] .done-badge { width: 60px; height: 60px; border-radius: 50%; border-width: 2px; }
+[data-world='strumien'] .scan-spinner { width: 220px; height: 4px; border-radius: 4px; }
+[data-world='strumien'] .scan-spinner::after { border-radius: 4px; }
+
+[data-world='strumien'] .dup-group { padding: 18px 22px; }
+[data-world='strumien'] .dup-group-toggle { font-size: 15px; }
+[data-world='strumien'] .dup-group-waste { font-size: 14px; }
+[data-world='strumien'] .dup-path { font-size: 14px; border-radius: 10px; }
+[data-world='strumien'] .scan-options { gap: 34px; padding: 20px 24px; }
+[data-world='strumien'] .scan-option-input { border-radius: var(--radius-sm); padding: 8px 14px; background: var(--bg-3); border-color: var(--border); }
+[data-world='strumien'] .scan-option-input input[type='number'] { font-family: var(--sans); font-size: 15px; }
+[data-world='strumien'] .autostart-row { padding: calc(16px * var(--d)) 22px; }
+[data-world='strumien'] .autostart-name { font-size: 16px; }
+[data-world='strumien'] .autostart-comment { font-size: 14px; }
+[data-world='strumien'] .autostart-exec { font-size: 13px; }
+
+[data-world='strumien'] .cat-list { border-top: 0; }
+[data-world='strumien'] .cat-row { padding: calc(18px * var(--d)) 10px calc(18px * var(--d)) 18px; border-radius: 14px; border-bottom-color: var(--border); }
+[data-world='strumien'] .cat-row__no { font-family: var(--display); font-stretch: 70%; font-size: 20px; font-weight: 700; color: var(--muted); }
+[data-world='strumien'] .cat-row__name { font-size: 17px; font-weight: 650; }
+[data-world='strumien'] .cat-row__desc { font-size: 14px; }
+
+[data-world='strumien'] .links-grid { gap: 14px; max-width: 1000px; border: 0; }
+[data-world='strumien'] .links-grid > * { border: var(--hair) solid var(--border); border-radius: var(--radius); }
+[data-world='strumien'] .link-card { padding: 24px; gap: 16px; }
+[data-world='strumien'] .link-card .lk-name { font-size: 17px; font-weight: 650; }
+[data-world='strumien'] .link-card .lk-desc { font-size: 14px; }
+[data-world='strumien'] .ico-badge { border-radius: 14px; width: 44px; height: 44px; overflow: hidden; }
+
+[data-world='strumien'] .modal-backdrop { background: rgba(var(--scrim), 0.78); backdrop-filter: blur(8px); }
+[data-world='strumien'] .modal-card { border: 0; border-radius: 26px; padding: 34px; background: var(--panel-bg); box-shadow: 0 36px 90px -40px rgba(0, 0, 0, 0.7); }
+[data-world='strumien'] .modal-card h3 { font-family: var(--display); font-stretch: 78%; font-size: 30px; font-weight: 760; }
+[data-world='strumien'] .form-field input[type='text'], [data-world='strumien'] .form-field input[type='password'], [data-world='strumien'] .form-field textarea {
+  padding: 12px 14px; font-size: 15px; border-radius: var(--radius-sm); background: var(--bg-3); border-color: var(--border);
+}
+[data-world='strumien'] .form-check { font-size: 15px; }
+
+[data-world='strumien'] .diskmap-crumbs { font-family: var(--sans); font-size: 14px; }
+[data-world='strumien'] .diskmap-crumb { border-radius: 8px; }
+[data-world='strumien'] .diskmap-row { padding: calc(11px * var(--d)) 20px; }
+[data-world='strumien'] .diskmap-name { font-size: 15px; }
+[data-world='strumien'] .diskmap-size, [data-world='strumien'] .diskmap-total { font-family: var(--sans); font-size: 14px; }
+[data-world='strumien'] .diskmap-bar-track { height: 12px; }
+[data-world='strumien'] .diskmap-viewtabs { border-radius: 999px; padding: 4px; gap: 2px; border-color: var(--border); }
+[data-world='strumien'] .diskmap-viewtab { padding: 8px 16px; font-size: 14px; border-radius: 999px; }
+[data-world='strumien'] .diskmap-viewtab + .diskmap-viewtab { border-left: 0; }
+[data-world='strumien'] .diskmap-viewtab.active { background: var(--ink); color: var(--bg); }
+[data-world='strumien'] .diskmap-tile { border-radius: 4px; box-shadow: 0 0 0 2px var(--bg) inset; }
+[data-world='strumien'] .diskmap-tile .dt-name { font-size: 14px; }
+[data-world='strumien'] .diskmap-tile :is(.dt-size, .dt-pct), [data-world='strumien'] .diskmap-ring-card :is(.dr-rank, .dr-pct) { font-size: 13px; font-family: var(--sans); }
+[data-world='strumien'] .diskmap-rings, [data-world='strumien'] .hm-grid, [data-world='strumien'] .hm-sensors { border: 0; gap: 12px; }
+[data-world='strumien'] .diskmap-ring-card { border: var(--hair) solid var(--border); border-radius: var(--radius); }
+[data-world='strumien'] .hm-grid > .glass, [data-world='strumien'] .hm-sensors > .glass { border: var(--hair) solid var(--border); border-radius: var(--radius); }
+[data-world='strumien'] .hm-tile { padding: 20px 22px; }
+[data-world='strumien'] .hm-tile-value { font-family: var(--display); font-stretch: 64%; font-size: 44px; font-weight: 800; line-height: 1; }
+[data-world='strumien'] .hm-tile-sub, [data-world='strumien'] .hm-sensor-sub, [data-world='strumien'] .hm-legend { font-family: var(--sans); font-size: 13px; }
+[data-world='strumien'] .hm-sensor { padding: 16px 18px; }
+[data-world='strumien'] .hm-sensor-value { font-family: var(--display); font-stretch: 66%; font-size: 32px; font-weight: 800; }
+[data-world='strumien'] .hm-sensor-value span { font-size: 14px; }
+[data-world='strumien'] .hm-frozen { font-size: 13px; border-radius: 999px; padding: 2px 9px; }
+[data-world='strumien'] .vital-track { height: 10px; }
+[data-world='strumien'] .hm-core-fill { border-radius: 2px 2px 0 0; }
+
+[data-world='strumien'] .xc-summary-value { font-family: var(--display); font-stretch: 64%; font-size: 40px; font-weight: 800; }
+[data-world='strumien'] .xc-summary-label, [data-world='strumien'] .xc-result, [data-world='strumien'] .xc-error { font-size: 14px; }
+[data-world='strumien'] .xc-note { font-size: 15px; }
+[data-world='strumien'] .missing-dep-text { font-size: 14px; }
+[data-world='strumien'] .blacklist__path { font-size: 14px; }
+[data-world='strumien'] .ctx-menu { border-radius: 16px; padding: 6px; border-color: var(--border); background: var(--panel-bg); box-shadow: 0 24px 60px -30px rgba(0, 0, 0, 0.7); }
+[data-world='strumien'] .ctx-menu__path { font-family: var(--sans); font-size: 13px; }
+[data-world='strumien'] .ctx-menu__item { border-radius: 10px; font-size: 14px; }
+
+[data-world='strumien'] .preparing__title { font-size: 18px; }
+[data-world='strumien'] .preparing__note, [data-world='strumien'] .preparing__steps { font-size: 14px; }
+[data-world='strumien'] .preparing__timer { font-family: var(--sans); font-size: 13px; }
+
+/* Appearance: the gallery cards and the accent swatches. */
+[data-world='strumien'] .look-card { border-radius: var(--radius); }
+[data-world='strumien'] .look-card .mono { font-size: 13px; }
+[data-world='strumien'] .accent-dot { width: 30px; height: 22px; }
+[data-world='strumien'] .accent-dot--look, [data-world='strumien'] .accent-dot--custom span { font-family: var(--sans); font-size: 13px; }
+
+/* ---------------------------------------------------------------- tour card */
+[data-world='strumien'] .tour-scrim { fill: rgb(var(--scrim)); fill-opacity: 0.82; }
+[data-world='strumien'] .tour-frame { stroke: var(--ink); stroke-width: 2; }
+[data-world='strumien'] .tour-card { border: 0; border-radius: 24px; padding: 24px 26px 18px; background: var(--panel-bg); box-shadow: 0 30px 70px -30px rgba(0, 0, 0, 0.75); }
+[data-world='strumien'] .tour-card h2 { font-family: var(--display); font-stretch: 78%; font-size: 30px; font-weight: 760; line-height: 1.05; }
+[data-world='strumien'] .tour-card p { font-size: 15px; }
+[data-world='strumien'] .tour-card__no, [data-world='strumien'] .tour-card__keys { font-family: var(--sans); font-size: 13px; }
+[data-world='strumien'] .tour-ticks i { width: 12px; height: 3px; border-radius: 2px; }
+
+/* ---------------------------------------------------------------- onboarding */
+[data-world='strumien'] .onboarding { background: var(--f-data); }
+[data-world='strumien'][data-theme='light'] .onboarding { background: var(--f-data); }
+[data-world='strumien'] .onboarding-card { border: 0; border-radius: 28px; padding: 44px 48px; background: var(--panel-bg); box-shadow: 0 40px 100px -40px rgba(0, 0, 0, 0.6); }
+[data-world='strumien'] .onboarding-card h1 { font-family: var(--display); font-stretch: 66%; font-size: 54px; font-weight: 800; line-height: 0.95; letter-spacing: -0.015em; }
+[data-world='strumien'] .onboarding-card h2 { font-size: 24px; font-weight: 600; }
+[data-world='strumien'] .onboarding-card .lead { font-size: 16px; }
+[data-world='strumien'] .onboarding-progress span { height: 3px; border-radius: 2px; }
+[data-world='strumien'] .choice-card { border-radius: var(--radius); padding: 22px; }
+[data-world='strumien'] .choice-card h3 { font-size: 17px; }
+[data-world='strumien'] .choice-card.selected { border-color: var(--accent); box-shadow: inset 0 0 0 2px var(--accent); }
+[data-world='strumien'] .os-row { border-radius: var(--radius); }
+[data-world='strumien'] .module-pick .mp-name { font-size: 15px; }
+[data-world='strumien'] .module-pick .mp-desc { font-size: 14px; }
+
+/* ---------------------------------------------------------------- picker miniature */
+[data-world='strumien'] .smp { position: absolute; inset: 0; display: block; overflow: hidden; background: var(--f-data); }
+[data-world='strumien'] .smp__item { position: absolute; left: 0; right: 0; top: 0; bottom: 13%; overflow: hidden; background: var(--f-machine); color: var(--on-field); }
+[data-world='strumien'] .smp__chart { position: absolute; left: 0; top: 16%; width: 100%; height: 64%; }
+[data-world='strumien'] .smp__chart * { vector-effect: non-scaling-stroke; fill: none; }
+[data-world='strumien'] .smp__mean { stroke: var(--v-ink); stroke-width: 2; }
+[data-world='strumien'] .smp__peak { stroke: var(--v-line); stroke-width: 1.2; stroke-dasharray: 3 3; }
+[data-world='strumien'] .smp__seg { position: absolute; left: 8px; right: 8px; top: 7px; display: flex; gap: 2px; }
+[data-world='strumien'] .smp__seg i { flex: 1; height: 2px; border-radius: 1px; background: color-mix(in srgb, var(--on-field) 32%, transparent); }
+[data-world='strumien'] .smp__seg i[data-now] { background: var(--on-field); }
+[data-world='strumien'] .smp__fig {
+  position: absolute; left: 9px; bottom: 7px; font-family: var(--display); font-stretch: 58%; font-weight: 800;
+  font-size: 36px; line-height: 0.85; letter-spacing: -0.02em;
+}
+[data-world='strumien'] .look-grid--wide .smp__fig { font-size: 50px; }
+[data-world='strumien'] .smp__rail { position: absolute; right: 9px; bottom: 8px; display: flex; flex-direction: column; gap: 4px; }
+[data-world='strumien'] .smp__rail i { width: 11px; height: 11px; border-radius: 50%; border: 1px solid color-mix(in srgb, var(--on-field) 60%, transparent); }
+[data-world='strumien'] .smp__rail i[data-on] { background: var(--on-field); }
+
+/* ---------------------------------------------------------------- window sizes
+   1600×900 is the design; below 1280 the tabs drop their names to numbers,
+   the caption takes the width the rail leaves, the waffle moves above it. */
+/* width ≤ 1280px after UI scaling: set by settings.ts, since media queries cannot see zoom */
+[data-world='strumien']:where([data-fit~='1280']) { --gutter: 32px; }
+[data-world='strumien']:where([data-fit~='1280']) .sm-tabs button { padding: 8px 9px; }
+[data-world='strumien']:where([data-fit~='1280']) .sm-brand small { display: none; }
+[data-world='strumien']:where([data-fit~='1280']) .sm-waffle { left: var(--gutter); right: 190px; bottom: 50%; }
+[data-world='strumien']:where([data-fit~='1280']) .sm-rail { right: 36px; width: 112px; gap: 14px; }
+[data-world='strumien']:where([data-fit~='1280']) .sm-overlay { right: 160px; }
+/* The rail stands where the lower scale labels would be. */
+[data-world='strumien']:where([data-fit~='1280']) .sm-cpu__label:nth-of-type(-n+2) { display: none; }
+
+/* width ≤ 1100px after UI scaling: set by settings.ts, since media queries cannot see zoom */
+[data-world='strumien']:where([data-fit~='1100']) .sm-tabs button { font-size: 0; gap: 0; }
+[data-world='strumien']:where([data-fit~='1100']) .sm-tabs button span { font-size: 15px; }
+[data-world='strumien']:where([data-fit~='1100']) .sm-tabs button:first-child { font-size: 15px; }
+[data-world='strumien']:where([data-fit~='1100']) .sm-legend { font-size: 14px; }
+[data-world='strumien']:where([data-fit~='1100']) .sm-cores { width: min(300px, 30vw); height: 64px; }
+
+/* height ≤ 760px after UI scaling: set by settings.ts, since media queries cannot see zoom */
+[data-world='strumien']:where([data-fit-h~='760']) .sm-title { font-size: 21px; }
+[data-world='strumien']:where([data-fit-h~='760']) .sm-text p { font-size: 16px; }
+[data-world='strumien']:where([data-fit-h~='760']) .sm-act__g { width: 48px; height: 48px; }
+[data-world='strumien']:where([data-fit-h~='760']) .sm-act__g svg { width: 22px; height: 22px; }
+[data-world='strumien']:where([data-fit-h~='760']) .sm-act kbd { display: none; }
+[data-world='strumien']:where([data-fit-h~='760']) .sm-rail { bottom: 32px; gap: 12px; }
+[data-world='strumien']:where([data-fit-h~='760']) .sm-caption { bottom: 30px; }
+[data-world='strumien']:where([data-fit-h~='760']) .sm-figure { margin: 10px 0 10px -0.03em; }
+
+
+/* ---------------------------------------------------------------- less motion */
+@media (prefers-reduced-motion: reduce) {
+  [data-world='strumien'] :is(.sm-menu) { animation: none; }
+  [data-world='strumien'] :is(.sm-fill__level, .sm-core i, .sm-quick__row, .sm-act__g, .sm-pos button) { transition: none; }
+}
+:root[data-world='strumien'][data-motion='reduced'] .sm-menu { animation: none; }
+:root[data-world='strumien'][data-motion='reduced'] :is(.sm-fill__level, .sm-core i, .sm-quick__row, .sm-act__g, .sm-pos button) { transition: none; }

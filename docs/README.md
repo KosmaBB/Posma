@@ -10,6 +10,7 @@ that question.
 | [Architecture](architecture.md) | How core, modules and brokers fit together, and why it's split that way |
 | [Security model](security-model.md) | The privilege model in full: what can reach root, what stops it, and what is *not* protected |
 | [Writing a module](writing-a-module.md) | The module contract — protocol, manifest, capabilities, safety rules |
+| [Writing a theme](writing-a-theme.md) | Your own look for the whole app: language, variable names, the starter template, the rules |
 | [Building and development](building.md) | Toolchain, build order, the sidecar sync step, testing |
 
 Docs are written in English so they stay usable for contributors who don't

@@ -237,7 +237,7 @@ mod tests {
                 .as_array()
                 .expect("externalBin")
                 .iter()
-                .map(|b| b.as_str().unwrap().trim_start_matches("binaries/").to_string())
+                .map(|b| b.as_str().unwrap().trim_start_matches("binaries/posma-").to_string())
                 .collect();
             let mut wanted: BTreeSet<String> =
                 manifests.iter().filter(|m| m.platforms.iter().any(|p| p == os)).map(|m| m.id.clone()).collect();
