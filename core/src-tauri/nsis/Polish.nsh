@@ -1,4 +1,4 @@
-﻿; Tauri's own installer messages in Polish; NSIS translates its standard pages itself.
+; Tauri's own installer messages in Polish; NSIS translates its standard pages itself.
 ; Wired in through customLanguageFiles in tauri.windows.conf.json.
 LangString addOrReinstall ${LANG_POLISH} "Dodaj lub zainstaluj ponownie"
 LangString alreadyInstalled ${LANG_POLISH} "Już zainstalowano"
