@@ -103,6 +103,19 @@ jobs:
         with:
           path: installers
           merge-multiple: true
+      # Posma-<system>-<version>, whatever the bundler called each file.
+      - name: Name the installers
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          find installers -type f | while read -r file; do
+            case "$file" in
+              *.exe) system=Windows ;;
+              *.dmg) system=macOS ;;
+              *.deb | *.rpm) system=Linux ;;
+              *) continue ;;
+            esac
+            mv -n "$file" "installers/Posma-$system-$version.${file##*.}"
+          done
       # Re-running the workflow for the same tag replaces the files in the
       # draft it made the first time.
       - name: Create the draft and attach the installers
