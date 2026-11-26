@@ -42,7 +42,7 @@ jobs:
       # enabled in the repository settings yet. Without it the first run of
       # this workflow fails on a brand-new repository, because Pages does
       # not exist to configure.
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
         with:
           enablement: true
 
