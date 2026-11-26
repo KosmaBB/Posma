@@ -2,12 +2,19 @@ name: Release
 
 # A version tag (v0.3.0) builds the installers — .deb and .rpm, a universal
 # .dmg, a Windows .exe — and puts them in a draft release, which nobody sees
-# until it is published by hand. Run by hand, it builds the same installers
-# as workflow artifacts and releases nothing.
+# until it is published by hand. Run by hand, it builds the same installers,
+# for every system or only the one picked, as workflow artifacts and
+# releases nothing.
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      system:
+        description: Installers to build
+        type: choice
+        options: [all, windows, macos, linux]
+        default: all
 
 env:
   CARGO_TERM_COLOR: always
@@ -20,6 +27,8 @@ permissions:
 jobs:
   linux:
     name: Linux — .deb and .rpm
+    # A tag has no inputs, so it builds everything.
+    if: (inputs.system || 'all') == 'all' || inputs.system == 'linux'
     # A binary runs on a newer glibc, never an older one, so it is built on
     # the oldest system it supports (docs/distributions.md).
     runs-on: ubuntu-22.04
@@ -50,6 +59,7 @@ jobs:
 
   macos:
     name: macOS — universal .dmg
+    if: (inputs.system || 'all') == 'all' || inputs.system == 'macos'
     runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
@@ -72,6 +82,7 @@ jobs:
 
   windows:
     name: Windows — .exe installer
+    if: (inputs.system || 'all') == 'all' || inputs.system == 'windows'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
