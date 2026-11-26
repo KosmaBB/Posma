@@ -1,4 +1,5 @@
 import { confirm } from '@tauri-apps/plugin-dialog'
+import { t } from '../i18n'
 
 /**
  * Asks before something that cannot be undone, and waits for the answer.
@@ -10,5 +11,5 @@ import { confirm } from '@tauri-apps/plugin-dialog'
  * through, with no dialog shown at all.
  */
 export function confirmAction(message: string): Promise<boolean> {
-  return confirm(message, { title: 'POSMA', kind: 'warning', okLabel: 'Tak', cancelLabel: 'Anuluj' })
+  return confirm(message, { title: 'POSMA', kind: 'warning', okLabel: t('common.yes'), cancelLabel: t('common.cancel') })
 }

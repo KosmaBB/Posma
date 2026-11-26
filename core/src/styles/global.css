@@ -354,11 +354,12 @@ input, select, textarea { font-family: inherit; caret-color: var(--accent); }
 /* ============================================================
    Pulpit — okładka katalogu
    ============================================================ */
-/* Wysokość okna, nie treści: wynik sprawdzania przewija się we własnej
-   kolumnie, więc indeks i nośniki zostają na pierwszym ekranie. */
+/* Co najmniej wysokość okna. Przy 900 px panel „Ta maszyna” z wynikiem
+   sprawdzania jest wyższy niż górny wiersz — wtedy pulpit rośnie i przewija
+   się cały, zamiast ucinać przycisk i listę odzysku. */
 .dash {
   display: grid; grid-template-columns: minmax(0, 1fr) 400px; grid-template-rows: minmax(440px, 1fr) auto;
-  height: 100%; gap: var(--panel-gap); padding: var(--panel-gap);
+  min-height: 100%; gap: var(--panel-gap); padding: var(--panel-gap);
 }
 .dash-plot { padding: 26px 30px 18px; border-right: var(--hair) solid var(--border); display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .dash-head { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; }
@@ -414,7 +415,7 @@ input, select, textarea { font-family: inherit; caret-color: var(--accent); }
 .dash-cap { font: 13px/1.55 var(--sans); color: var(--muted); max-width: 76ch; }
 .dash-cap b { color: var(--ink); font-weight: 600; }
 
-.dash-spec { padding: 26px 30px 22px; display: flex; flex-direction: column; min-width: 0; min-height: 0; overflow-y: auto; }
+.dash-spec { padding: 26px 30px 22px; display: flex; flex-direction: column; min-width: 0; }
 .dash-spec > * { flex-shrink: 0; }
 .dash-no { white-space: nowrap; line-height: 0.9; font-family: var(--hero-font); font-size: var(--hero-size); font-weight: var(--hero-weight); font-stretch: var(--hero-stretch); letter-spacing: var(--hero-tracking); color: var(--hero-fg); background: var(--hero-bg); padding: var(--hero-pad); border-radius: calc(var(--radius) * 0.6); margin-top: 18px; align-self: flex-start; }
 .dash-sub { margin-top: 12px; font-size: 15px; color: var(--muted); }
@@ -509,9 +510,16 @@ input, select, textarea { font-family: inherit; caret-color: var(--accent); }
 .section-no { font: 400 12px var(--mono); letter-spacing: 0; text-transform: none; color: var(--dim); margin-right: 18px; }
 
 /* ---------- ustawienia ---------- */
-.settings-list { display: flex; flex-direction: column; max-width: 760px; border: var(--hair) solid var(--border); border-radius: var(--radius); overflow: hidden; }
-.settings-list > .glass { border-width: var(--hair) 0 0; border-radius: 0; box-shadow: none; }
-.settings-list > .glass:first-child { border-top-width: 0; }
+/* Lista wypełnia szerokość i dzieli się na kolumny, gdy wiersz miałby ponad ~1200 px
+   od nazwy do kontrolki. Każdy wiersz rysuje linię u góry i z lewej i siedzi o jej
+   grubość wyżej i w lewo, więc zewnętrzne linie ucina overflow listy przy każdej
+   liczbie kolumn. */
+.settings-list {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 600px), 1fr));
+  border: var(--hair) solid var(--border); border-radius: var(--radius); overflow: hidden;
+}
+.settings-list > .glass { border-width: var(--hair) 0 0 var(--hair); border-radius: 0; box-shadow: none; margin: calc(-1 * var(--hair)) 0 0 calc(-1 * var(--hair)); }
+.settings-list > :not(.setting-row) { grid-column: 1 / -1; }
 .setting-row { display: flex; align-items: center; gap: 16px; padding: calc(16px * var(--d)) 18px; }
 .setting-row .st-text { flex: 1; min-width: 0; }
 .setting-row .st-name { font-size: 14px; font-weight: 500; }
@@ -522,7 +530,7 @@ input, select, textarea { font-family: inherit; caret-color: var(--accent); }
 }
 
 /* ---------- linki ---------- */
-.links-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); max-width: 840px; border-top: var(--hair) solid var(--border); border-left: var(--hair) solid var(--border); }
+.links-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); border-top: var(--hair) solid var(--border); border-left: var(--hair) solid var(--border); }
 .links-grid > * { border-top: 0; border-left: 0; border-radius: 0; box-shadow: none; }
 .link-card { display: flex; align-items: center; gap: 12px; padding: 18px; text-decoration: none; transition: background-color 0.15s ease; }
 .link-card:hover { background: var(--bg-3); }
@@ -657,6 +665,17 @@ input, select, textarea { font-family: inherit; caret-color: var(--accent); }
 .diskmap-list > .glass { border-width: var(--hair) 0 0; border-radius: 0; box-shadow: none; }
 .diskmap-list > .glass:first-child { border-top-width: 0; }
 .diskmap-row { display: flex; align-items: center; gap: 12px; padding: calc(8px * var(--d)) 14px; transition: background-color 0.15s ease; }
+/* The item's own menu. A tile too small to label is too small for it too;
+   a right click still opens the menu there. */
+.diskmap-more {
+  flex: none; display: grid; place-items: center; width: 26px; height: 26px; padding: 0;
+  border: 0; border-radius: var(--radius); background: none; color: var(--muted); cursor: pointer;
+}
+.diskmap-more svg { width: 16px; height: 16px; }
+.diskmap-more:hover, .diskmap-more:focus-visible { background: var(--bg-3); color: var(--ink); }
+:is(.diskmap-tile, .diskmap-ring-card) .diskmap-more { position: absolute; top: 4px; right: 4px; }
+.diskmap-tile:not(.tiny, .small) .dt-name { padding-right: 24px; }
+.diskmap-tile.tiny .diskmap-more { display: none; }
 .diskmap-row:hover { background: var(--bg-3); }
 .diskmap-icon { flex-shrink: 0; width: 16px; height: 16px; color: var(--muted); }
 .diskmap-icon svg { width: 16px; height: 16px; }
@@ -847,8 +866,13 @@ input, select, textarea { font-family: inherit; caret-color: var(--accent); }
 .view-enter > .section-head:first-child { margin-top: 0; }
 .settings-group { display: block; margin: 22px 0 8px; }
 
-.look-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; max-width: 760px; }
-.look-grid--wide { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+/* Every card in one row across the page; where six worlds would get under ~170 px
+   each they stand in rows of three, so none is left alone on a second row. */
+.look-grid { display: flex; flex-wrap: wrap; gap: 10px; container-type: inline-size; }
+.look-grid > .look-card { flex: 1 1 0; min-width: 0; }
+@container (max-width: 1069px) {
+  .look-grid--wide > .look-card { flex: 0 0 calc((100% - 20px) / 3); }
+}
 .look-grid--wide :is(.look-prev, .world-prev) { height: 128px; }
 /* A world's miniature: the world's stylesheet draws inside it with its own tokens. */
 .world-prev {
@@ -908,7 +932,7 @@ input, select, textarea { font-family: inherit; caret-color: var(--accent); }
   border-radius: var(--radius-pill); outline-offset: 3px; background: var(--swatch, var(--accent)); position: relative;
 }
 .accent-dot[aria-pressed='true'], .accent-dot[data-checked='true'] { outline: var(--hair) solid var(--ink); }
-.appearance-reset { display: flex; align-items: center; gap: 16px; margin-top: 14px; max-width: 760px; }
+.appearance-reset { display: flex; align-items: center; gap: 16px; margin-top: 14px; }
 .look-prev__chart * { vector-effect: non-scaling-stroke; }
 .accent-dot:focus-visible, .accent-dot--custom:has(input:focus-visible) { outline: var(--hair) solid var(--accent); }
 .accent-dot--look { width: auto; padding: 0 8px; font: 12px var(--mono); color: var(--on-accent); }
@@ -942,6 +966,13 @@ input, select, textarea { font-family: inherit; caret-color: var(--accent); }
   .shell { grid-template-columns: 360px 1fr; }
   .content { padding: 48px 52px; }
 }
+/* Strony wypełniają okno; listy modułów od 2400 px dzielą się na dwie kolumny,
+   żeby na 32:9 wiersz nie miał 3000 px od nazwy do przycisku. */
+:where([data-wide~='2400']) .cat-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 48px; align-content: start; }
+/* Szeroko po skalowaniu (data-wide z settings.ts): indeks w dwóch kolumnach,
+   więc wykres dostaje wysokość, a wiersze nie ciągną się przez cały ekran. */
+:where([data-wide~='2400']) .idx-list { columns: 2; column-gap: 48px; }
+:where([data-wide~='2400']) .idx-row { break-inside: avoid; }
 
 /* ---------------------------------------------------------------- samouczek · Wkładka
    Matowa zasłona z wycięciem, włosowa rama z paserami drukarskimi i karta

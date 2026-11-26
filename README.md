@@ -455,7 +455,9 @@ crates/
   sysmetrics/    Sensor, temperature and graphics-card readings — no privilege
 modules/         One crate per feature module, plus the per-OS brokers
 templates/world/ A minimal theme to copy into core/src/worlds — see Writing a theme
+templates/translation/ Every interface text in English, to translate — see Writing a translation
 scripts/         sync-sidecars.mjs — builds this system's modules into the bundle
+                 check-translations.mjs — checks every language file against the Polish keys
                  distro-check.sh — runs the modules in a container of each distribution
 ```
 
@@ -559,6 +561,7 @@ a link back here.
 | [Security model](https://kosmabb.github.io/Posma/security-model.html) | What can reach root, what stops it, and an explicit list of what is *not* protected |
 | [Writing a module](https://kosmabb.github.io/Posma/writing-a-module.html) | The module contract — protocol, manifest, capabilities, per-OS logic, safety rules |
 | [Writing a theme](https://kosmabb.github.io/Posma/writing-a-theme.html) | Your own look for the whole app — the language, the variable names, a starter to copy, the rules |
+| [Writing a translation](https://kosmabb.github.io/Posma/writing-a-translation.html) | POSMA in your language — the file format, plural forms, the template, the check |
 | [Building and development](https://kosmabb.github.io/Posma/building.html) | Toolchain, build order, the sidecar sync step, testing |
 | [Linux distributions](https://kosmabb.github.io/Posma/distributions.html) | Which distributions POSMA runs on, what each module does there, and what was actually run to find out |
 | [`Access_plan.md`](Access_plan.md) | The original permission and capability design (Polish) |
@@ -570,10 +573,10 @@ a link back here.
 | [LICENSE.md](LICENSE.md) | The binding noncommercial terms |
 | [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md) · [po polsku](COMMERCIAL-LICENSE.pl.md) | Who pays, who doesn't, and how to arrange it |
 
-The documentation is written in English so it stays usable for contributors
-who don't read Polish. Everything a *user* needs — this README, the security
-policy, the contributing guide and the licence explanations — exists in both
-languages.
+The documentation exists in English and in
+[Polish](https://kosmabb.github.io/Posma/pl/), as does everything a *user*
+needs — this README, the security policy, the contributing guide and the
+licence explanations. Only the binding licence text is English alone.
 
 ## Licensing
 

@@ -1,5 +1,7 @@
 # access/
 
+*[Polska wersja →](README.pl.md)*
+
 `catalog.json` is the single source of truth for the permission system.
 
 Before this directory existed, the same facts were written down in four

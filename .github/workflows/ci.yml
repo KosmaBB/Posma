@@ -13,6 +13,11 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+# Read-only unless a job asks for more: a build step or a third-party action
+# never holds a token that can push or publish.
+permissions:
+  contents: read
+
 jobs:
   rust:
     name: Rust — build, test, clippy
@@ -118,6 +123,8 @@ jobs:
 
       - run: npm --prefix core ci
       - run: npx --prefix core tsc --noEmit --project core
+      - name: Translations match the Polish keys
+        run: node scripts/check-translations.mjs
       - run: npm --prefix core run build
 
   audit:

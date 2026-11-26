@@ -3,6 +3,7 @@ import type { AppState } from '../../state/appState'
 import { catalogNumbers, folderNumber, folders, moduleById, riskLabel } from '../../data/modules'
 import { ModuleBody } from '../../views/ModuleView'
 import { Band, Key } from './parts'
+import { t } from '../../i18n'
 
 /**
  * A module's cassette, inserted: the j-card's title strip carries number,
@@ -20,10 +21,10 @@ export function ModuleFrame({ app, moduleId }: { app: AppState; moduleId: string
         <section className="ks-page__stock">
           <Band />
           <div className="ks-page__body empty-state">
-            Nie ma takiej kasety na półce.
+            {t('world.kaseta.module.missing')}
             <br />
             <button type="button" className="btn btn-primary" onClick={() => setView({ kind: 'dashboard' })}>
-              Wróć na pulpit
+              {t('world.kaseta.module.back')}
             </button>
           </div>
         </section>
@@ -55,13 +56,13 @@ export function ModuleFrame({ app, moduleId }: { app: AppState; moduleId: string
               <p className="ks-hero__desc">{mod.desc}</p>
               <dl className="ks-hero__fields">
                 <div>
-                  <dt className="ks-printed">Folder</dt>
+                  <dt className="ks-printed">{t('world.kaseta.module.folder')}</dt>
                   <dd>
                     {folderNumber(folder.id)} · {folder.name}
                   </dd>
                 </div>
                 <div>
-                  <dt className="ks-printed">Ryzyko</dt>
+                  <dt className="ks-printed">{t('world.kaseta.module.risk')}</dt>
                   <dd>
                     <span className={`chip ${mod.risk}`}>{riskLabel[mod.risk]}</span>
                   </dd>
@@ -74,9 +75,9 @@ export function ModuleFrame({ app, moduleId }: { app: AppState; moduleId: string
       </div>
       <div className="ks-deck ks-deck--module">
         <div className="ks-keys">
-          <Key icon="eject" label="Na półkę" sub="wróć na pulpit" onClick={() => setView({ kind: 'dashboard' })} />
+          <Key icon="eject" label={t('world.kaseta.module.shelve')} sub={t('world.kaseta.module.shelve-sub')} onClick={() => setView({ kind: 'dashboard' })} />
         </div>
-        <p className="ks-pen ks-deck__note">nic nie znika, dopóki nie potwierdzisz w module</p>
+        <p className="ks-pen ks-deck__note">{t('world.kaseta.module.note')}</p>
       </div>
     </div>
   )

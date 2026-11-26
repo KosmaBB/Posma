@@ -3,6 +3,7 @@ import { createPortal, flushSync } from 'react-dom'
 import type { AppState, View } from '../../state/appState'
 import { motionReduced as reducedMotion } from '../../state/looks'
 import { tourSteps } from './steps'
+import { t } from '../../i18n'
 
 interface Rect {
   x: number
@@ -323,18 +324,18 @@ export function Tour({ app, onClose }: TourProps) {
           </div>
           <div className="tour-card__btns">
             <button className="btn btn-ghost btn-mini" onClick={() => go(-1)} disabled={index === 0}>
-              Wstecz
+              {t('tour.back')}
             </button>
             <button className="btn btn-primary btn-mini" ref={nextRef} onClick={() => go(1)}>
-              {last ? 'Zakończ' : 'Dalej'}
+              {last ? t('tour.finish') : t('tour.next')}
             </button>
           </div>
         </div>
         <div className="tour-card__keys">
-          <span>Strzałki przełączają kroki, Esc kończy</span>
+          <span>{t('tour.keys')}</span>
           {!last && (
             <button className="tour-skip" onClick={finish}>
-              Zamknij samouczek
+              {t('tour.close')}
             </button>
           )}
         </div>

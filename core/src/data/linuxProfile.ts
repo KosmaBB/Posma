@@ -5,6 +5,7 @@
  * it starts, so this is what the modules act on, not only what is shown.
  */
 import { invoke } from '@tauri-apps/api/core'
+import { t } from '../i18n'
 
 export type PkgManager = 'apt' | 'pacman' | 'dnf' | 'zypper'
 
@@ -54,7 +55,9 @@ export const DESKTOP_LABEL: Record<string, string> = {
   pantheon: 'Pantheon',
   lxqt: 'LXQt',
   cosmic: 'COSMIC',
-  other: 'Inne',
+  get other() {
+    return t('profile.desktop.other')
+  },
 }
 
 export const BOOTLOADER_LABEL: Record<string, string> = {
@@ -62,7 +65,9 @@ export const BOOTLOADER_LABEL: Record<string, string> = {
   'systemd-boot': 'systemd-boot',
   limine: 'Limine',
   refind: 'rEFInd',
-  other: 'Inny',
+  get other() {
+    return t('profile.bootloader.other')
+  },
 }
 
 /** Loaders the boot editor sets in place, through the broker; GRUB has its own. */

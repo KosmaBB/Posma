@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { formatBytes } from './TempCleanView'
 import { confirmAction } from '../../components/confirm'
 import { callModule } from '../../data/callModule'
+import { t } from '../../i18n'
 
 interface UsageData {
   total_bytes: number
@@ -20,16 +21,23 @@ interface VacuumResult {
 
 type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: string }
 
-type Preset = { label: string; mode: 'size' | 'time'; value: number }
+type Preset = { mode: 'size' | 'time'; value: number }
 
 const PRESETS: Preset[] = [
-  { label: 'Zachowaj 100 MB', mode: 'size', value: 100 },
-  { label: 'Zachowaj 500 MB', mode: 'size', value: 500 },
-  { label: 'Zachowaj 1 GB', mode: 'size', value: 1024 },
-  { label: 'Zachowaj 7 dni', mode: 'time', value: 7 },
-  { label: 'Zachowaj 30 dni', mode: 'time', value: 30 },
-  { label: 'Zachowaj 90 dni', mode: 'time', value: 90 },
+  { mode: 'size', value: 100 },
+  { mode: 'size', value: 500 },
+  { mode: 'size', value: 1024 },
+  { mode: 'time', value: 7 },
+  { mode: 'time', value: 30 },
+  { mode: 'time', value: 90 },
 ]
+
+function presetLabel(p: Preset): string {
+  if (p.mode === 'time') return t('view.journald-trim.preset.days', { n: p.value })
+  return p.value >= 1024
+    ? t('view.journald-trim.preset.gb', { n: p.value / 1024 })
+    : t('view.journald-trim.preset.mb', { n: p.value })
+}
 
 export function JournaldTrimView() {
   const [usage, setUsage] = useState<UsageData | null>(null)
@@ -53,13 +61,9 @@ export function JournaldTrimView() {
   }, [])
 
   async function runVacuum(preset: Preset) {
-    const unit = preset.mode === 'size' ? 'do rozmiaru' : 'starsze niż'
-    const amount = preset.mode === 'size' ? formatBytes(preset.value * 1024 * 1024) : `${preset.value} dni`
-    if (
-      !(await confirmAction(
-        `Przyciąć logi systemowe (${unit} ${amount})? Usunięte wpisy dziennika nie wrócą — to nie dotyczy aplikacji ani ich danych, tylko historii logów systemd.`,
-      ))
-    ) {
+    const confirmKey = preset.mode === 'size' ? 'view.journald-trim.confirm.size' : 'view.journald-trim.confirm.time'
+    const amount = preset.mode === 'size' ? formatBytes(preset.value * 1024 * 1024) : t('view.journald-trim.days', { n: preset.value })
+    if (!(await confirmAction(t(confirmKey, { amount })))) {
       return
     }
     setRunning(preset)
@@ -90,38 +94,38 @@ export function JournaldTrimView() {
     <div>
       <div className="clean-summary glass">
         <div>
-          <div className="cs-label">Zajętość dziennika systemd</div>
+          <div className="cs-label">{t('view.journald-trim.usage')}</div>
           <div className="cs-value mono">
-            {usage ? (usage.readable ? formatBytes(usage.total_bytes) : 'brak dostępu do odczytu') : usageError ? 'błąd' : '...'}
+            {usage ? (usage.readable ? formatBytes(usage.total_bytes) : t('view.journald-trim.no-access')) : usageError ? t('view.journald-trim.error-short') : '...'}
           </div>
         </div>
         {usage && usage.readable && (
           <div>
-            <div className="cs-label">Pliki dziennika</div>
+            <div className="cs-label">{t('view.journald-trim.files')}</div>
             <div className="cs-value mono">{usage.files}</div>
           </div>
         )}
         <div style={{ marginLeft: 'auto' }}>
-          <button className="btn btn-ghost" onClick={loadUsage}>Odśwież</button>
+          <button className="btn btn-ghost" onClick={loadUsage}>{t('view.journald-trim.refresh')}</button>
         </div>
       </div>
 
       {usageError && (
-        <div className="glass empty-state" style={{ color: 'var(--critical)' }}>Błąd: {usageError}</div>
+        <div className="glass empty-state" style={{ color: 'var(--critical)' }}>{t('view.journald-trim.error', { error: usageError })}</div>
       )}
 
       <div className="section-head" style={{ marginTop: 18 }}>
-        <h2 style={{ fontSize: 14 }}>Przytnij dziennik</h2>
+        <h2 style={{ fontSize: 14 }}>{t('view.journald-trim.trim')}</h2>
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
         {PRESETS.map((preset) => (
           <button
-            key={preset.label}
+            key={`${preset.mode}-${preset.value}`}
             className="btn btn-ghost"
             disabled={running !== null}
             onClick={() => runVacuum(preset)}
           >
-            {running === preset ? 'Przycinanie...' : preset.label}
+            {running === preset ? t('view.journald-trim.trimming') : presetLabel(preset)}
           </button>
         ))}
       </div>
@@ -135,7 +139,7 @@ export function JournaldTrimView() {
               : { marginTop: 14, color: 'var(--critical)' }
           }
         >
-          {result.success ? 'Dziennik przycięty.' : `Nie udało się: ${result.error}`}
+          {result.success ? t('view.journald-trim.done') : t('view.journald-trim.failed', { error: result.error ?? '' })}
         </div>
       )}
     </div>

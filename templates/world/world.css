@@ -135,7 +135,7 @@
 [data-world='starter'] .st-quick span { color: var(--muted); font-size: 13px; }
 
 /* --------------------------------------------------- folder and module */
-[data-world='starter'] .st-page { display: flex; flex-direction: column; gap: calc(16px * var(--d)); max-width: 1200px; }
+[data-world='starter'] .st-page { display: flex; flex-direction: column; gap: calc(16px * var(--d)); }
 [data-world='starter'] .st-page h1 { font: 600 28px/1.2 var(--sans); }
 [data-world='starter'] .st-page header p { color: var(--muted); max-width: 70ch; }
 [data-world='starter'] .st-list { display: grid; gap: 8px; padding: 0; list-style: none; }
@@ -171,6 +171,11 @@
    data-fit-h~='760'. :where() keeps the specificity of the rule inside. */
 [data-world='starter']:where([data-fit~='1280']) .st-home { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 [data-world='starter']:where([data-fit~='1100']) .st-home { grid-template-columns: minmax(0, 1fr); }
+
+/* -------------------------------------------------------- more space
+   The other way for large screens: data-wide~='1900 | 2400 | 3200' while at
+   least that much is left. Spend it on columns, not on longer rows. */
+[data-world='starter']:where([data-wide~='2400']) .st-home { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
 /* -------------------------------------------------------------- motion
    Transitions only when the OS and the motion setting both allow them;

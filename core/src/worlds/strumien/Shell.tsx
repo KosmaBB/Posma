@@ -12,6 +12,7 @@ import { Settings } from '../../views/Settings'
 import { ModuleManager } from '../../views/ModuleManager'
 import { Links } from '../../views/Links'
 import type { ShellProps } from '../index'
+import { t } from '../../i18n'
 import { typing } from './Feed'
 import { Glyph } from './glyphs'
 import { Home } from './Home'
@@ -43,13 +44,13 @@ function Menu({ app, go, onClose }: { app: AppState; go: (v: View) => void; onCl
   }, [])
 
   return (
-    <div className="sm-menu" role="dialog" aria-modal="true" aria-label="Menu" ref={ref}>
+    <div className="sm-menu" role="dialog" aria-modal="true" aria-label={t('world.strumien.menu')} ref={ref}>
       <div className="sm-menu__head">
         <button type="button" className="sm-menu__home" onClick={() => go({ kind: 'dashboard' })}>
-          Strumień <span>wszystko po kolei</span>
+          Strumień <span>{t('world.strumien.menu.tagline')}</span>
         </button>
         <button type="button" className="btn btn-ghost btn-mini" onClick={onClose}>
-          Zamknij <kbd>Esc</kbd>
+          {t('world.strumien.menu.close')} <kbd>Esc</kbd>
         </button>
       </div>
       <div className="sm-menu__cols">
@@ -70,14 +71,14 @@ function Menu({ app, go, onClose }: { app: AppState; go: (v: View) => void; onCl
                     </button>
                   </li>
                 ))}
-                {mods.length === 0 && <li className="sm-menu__empty">Nic nie jest włączone</li>}
+                {mods.length === 0 && <li className="sm-menu__empty">{t('world.strumien.menu.empty')}</li>}
               </ul>
             </section>
           )
         })}
         <section className="sm-menu__col sm-field--index">
           <span className="sm-menu__folder sm-menu__folder--static">
-            <span>900</span>Aplikacja
+            <span>900</span>{t('nav.app')}
           </span>
           <ul>
             {APP_PAGES.map((p) => (
@@ -96,7 +97,7 @@ function Menu({ app, go, onClose }: { app: AppState; go: (v: View) => void; onCl
                   app.startTour()
                 }}
               >
-                <span>904</span>Samouczek
+                <span>904</span>{t('nav.tour')}
               </button>
             </li>
           </ul>
@@ -136,9 +137,9 @@ export function Shell({ app, settings }: ShellProps) {
         <button type="button" className="sm-brand" onClick={() => go({ kind: 'dashboard' })}>
           POSMA<small>Strumień</small>
         </button>
-        <nav className="sm-tabs" aria-label="Foldery">
+        <nav className="sm-tabs" aria-label={t('world.strumien.tabs')}>
           <button type="button" aria-current={tab === 'home' ? 'page' : undefined} onClick={() => go({ kind: 'dashboard' })}>
-            Wszystko
+            {t('world.strumien.tabs.all')}
           </button>
           {folders.map((f) => (
             <button
@@ -155,11 +156,11 @@ export function Shell({ app, settings }: ShellProps) {
         </nav>
         <div className="sm-top__right">
           <button type="button" className="sm-link" data-tour="tour" onClick={app.startTour}>
-            Samouczek
+            {t('nav.tour')}
           </button>
           <button type="button" className="sm-menu-btn" aria-haspopup="dialog" aria-expanded={menu} onClick={() => setMenu(true)}>
             <Glyph name="menu" />
-            Menu <kbd>Esc</kbd>
+            {t('world.strumien.menu')} <kbd>Esc</kbd>
           </button>
         </div>
       </header>

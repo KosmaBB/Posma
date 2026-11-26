@@ -1,5 +1,7 @@
 # Writing a module
 
+*[Polska wersja →](pl/writing-a-module.md)*
+
 A module is a standalone executable that reads one JSON request from stdin,
 writes one JSON response to stdout, and exits. That's the whole contract.
 

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { confirmAction } from '../../components/confirm'
 import type { ApiResponse } from '../../data/callModule'
+import { t } from '../../i18n'
 
 interface ExecResult {
   success: boolean
@@ -22,7 +23,7 @@ export function WinsxsView() {
     if (
       action === 'clean' &&
       !(await confirmAction(
-        'Usunąć zastąpione wersje składników Windows? Najpierw powstanie punkt przywracania. Czyszczenie trwa zwykle kilka do kilkunastu minut, a zainstalowanych aktualizacji nie da się potem odinstalować.',
+        t('view.winsxs.clean.confirm'),
       ))
     )
       return
@@ -44,17 +45,17 @@ export function WinsxsView() {
     <>
       <div className="glass xc-summary">
         <div>
-          <div className="xc-summary-value">Magazyn składników</div>
+          <div className="xc-summary-value">{t('view.winsxs.title')}</div>
           <div className="xc-summary-label">
-            Stare wersje plików systemowych, które Windows zostawia po aktualizacjach. Najpierw sprawdź, czy czyszczenie jest zalecane.
+            {t('view.winsxs.desc')}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-ghost" onClick={() => run('analyze')} disabled={busy !== null}>
-            {busy === 'analyze' ? 'Sprawdzam…' : 'Sprawdź'}
+            {busy === 'analyze' ? t('view.winsxs.analyzing') : t('view.winsxs.analyze')}
           </button>
           <button className="btn btn-primary" onClick={() => run('clean')} disabled={busy !== null}>
-            {busy === 'clean' ? 'Czyszczę…' : 'Wyczyść'}
+            {busy === 'clean' ? t('view.winsxs.cleaning') : t('view.winsxs.clean')}
           </button>
         </div>
       </div>

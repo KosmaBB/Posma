@@ -3,8 +3,9 @@
  * reading and at most one action; the side column carries notices that are
  * true right now and the folder ranking.
  */
-import { DISK_WARN_PCT, HISTORY, UP_TO_ONE, gb, plural, size, systemName, usedPct, type DiskInfo } from '../../state/machine'
+import { DISK_WARN_PCT, HISTORY, UP_TO_ONE, gb, size, systemName, usedPct, type DiskInfo } from '../../state/machine'
 import { folderNumber, folders, modulesInFolder, orderedModules } from '../../data/modules'
+import { locale, t } from '../../i18n'
 import { Bar, Box, installedIn, type Ctx } from './parts'
 
 const pct = (v: number) => `${v.toFixed(0)}%`
@@ -13,16 +14,20 @@ const real = (disks: DiskInfo[]) => disks.filter((d) => d.total_bytes > 0)
 
 function Waiting({ ctx }: { ctx: Ctx }) {
   const { error, info } = ctx.machine
-  return <p className="g-quiet">{error && !info ? `Brak odczytu: ${error}` : 'Czekam na pierwszy odczyt…'}</p>
+  return <p className="g-quiet">{error && !info ? t('world.gesto.home.no-reading', { error }) : t('world.gesto.home.waiting')}</p>
 }
 
-/** Mean load over the kept readings, its peak dashed, a quarter grid behind. */
-function Spark({ samples }: { samples: number[][] }) {
-  const means = samples.map(mean)
+/** Readings as polyline points in a 100 × 100 box, the newest at the right edge. */
+function linePoints(values: number[]): string {
   const step = 100 / (HISTORY - 1)
-  const start = 100 - (means.length - 1) * step
-  const points = means.map((v, i) => `${(start + i * step).toFixed(2)},${(100 - v).toFixed(2)}`).join(' ')
-  const peak = 100 - Math.max(...means)
+  const start = 100 - (values.length - 1) * step
+  return values.map((v, i) => `${(start + i * step).toFixed(2)},${(100 - v).toFixed(2)}`).join(' ')
+}
+
+/** Kept readings on a 0–100 scale as a line, their peak dashed, a quarter grid behind. */
+function Spark({ values }: { values: number[] }) {
+  const points = linePoints(values)
+  const peak = 100 - Math.max(...values)
   return (
     <svg className="g-spark" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
       {[25, 50, 75].map((y) => (
@@ -34,6 +39,20 @@ function Spark({ samples }: { samples: number[][] }) {
   )
 }
 
+/** A reading's recent history; the stylesheet shows it only in a wide window. */
+function History({ values, what }: { values: number[]; what: string }) {
+  if (values.length < 2) return null
+  return (
+    <div className="g-hist">
+      <Spark values={values} />
+      <p className="g-legend">
+        <span>{t('world.gesto.home.legend.line', { what })}</span>
+        <span>{t('world.gesto.home.legend.peak', { n: values.length })}</span>
+      </p>
+    </div>
+  )
+}
+
 function CpuBox({ ctx }: { ctx: Ctx }) {
   const { app, settings, machine } = ctx
   const { cpu, record, coreCount } = machine
@@ -42,35 +61,49 @@ function CpuBox({ ctx }: { ctx: Ctx }) {
   return (
     <Box
       no="001"
-      title="Procesor"
+      title={t('world.gesto.cpu')}
       className="g-a-cpu"
       tour="cpu"
-      meta={coreCount > 0 ? `${coreCount} ${plural(coreCount, 'rdzeń', 'rdzenie', 'rdzeni')} · co ${UP_TO_ONE.format(settings.settings.refreshMs / 1000)} s` : undefined}
-      more={health ? { label: 'Monitor zdrowia', onClick: () => app.setView({ kind: 'module', moduleId: 'health-monitor' }) } : undefined}
+      meta={coreCount > 0 ? t('world.gesto.home.cpu.meta', { cores: t('world.gesto.home.cores', { n: coreCount }), every: UP_TO_ONE.format(settings.settings.refreshMs / 1000) }) : undefined}
+      more={health ? { label: t('module.health-monitor.name'), onClick: () => app.setView({ kind: 'module', moduleId: 'health-monitor' }) } : undefined}
     >
       {cpu ? (
         <>
           <p className="g-fig">
             {pct(cpu.value)}
-            <span>obciążenie średnio</span>
+            <span>{t('world.gesto.home.cpu.load')}</span>
           </p>
           {last.length > 0 && (
             <div className="g-cores" aria-hidden="true">
               {last.map((v, i) => (
-                <i key={i} title={`Rdzeń ${i}: ${pct(v)}`} className={v >= 90 ? 'hot' : undefined}>
+                <i key={i} title={t('world.gesto.home.core', { i, pct: pct(v) })} className={v >= 90 ? 'hot' : undefined}>
                   <b style={{ height: `${Math.max(2, v)}%` }} />
                 </i>
               ))}
             </div>
           )}
           {record.samples.length > 1 ? (
-            <Spark samples={record.samples} />
+            <Spark values={record.samples.map(mean)} />
           ) : (
-            <p className="g-spark g-quiet">Zbieram odczyty do wykresu…</p>
+            <p className="g-spark g-quiet">{t('world.gesto.home.cpu.collecting')}</p>
+          )}
+          {/* Each core's own history; the stylesheet shows it only in a wide window. */}
+          {record.samples.length > 1 && (
+            <ol className="g-coregrid">
+              {last.map((v, i) => (
+                <li key={i} className={v >= 90 ? 'hot' : undefined} title={t('world.gesto.home.core', { i, pct: pct(v) })}>
+                  <b>{t('world.gesto.home.core-short', { i })}</b>
+                  <span>{pct(v)}</span>
+                  <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                    <polyline points={linePoints(record.samples.map((s) => s[i] ?? 0))} />
+                  </svg>
+                </li>
+              ))}
+            </ol>
           )}
           <p className="g-legend">
-            <span>linia: średnia ze wszystkich rdzeni</span>
-            <span>kreski: szczyt z {record.samples.length} odczytów</span>
+            <span>{t('world.gesto.home.cpu.legend')}</span>
+            <span>{t('world.gesto.home.legend.peak', { n: record.samples.length })}</span>
           </p>
         </>
       ) : (
@@ -81,17 +114,18 @@ function CpuBox({ ctx }: { ctx: Ctx }) {
 }
 
 function MemoryBox({ ctx }: { ctx: Ctx }) {
-  const { ram } = ctx.machine
+  const { ram, record } = ctx.machine
   return (
-    <Box no="002" title="Pamięć" className="g-a-mem">
+    <Box no="002" title={t('world.gesto.memory')} className="g-a-mem">
       {ram ? (
         <>
           <p className="g-fig">
             {pct(ram.value)}
-            <span>zajęte</span>
+            <span>{t('world.gesto.home.memory.used')}</span>
           </p>
           <Bar pct={ram.value} hot={ram.value >= DISK_WARN_PCT} />
           {ram.detail && <p className="g-sub-fig">{ram.detail}</p>}
+          <History values={record.ram} what={t('world.gesto.home.memory.history')} />
         </>
       ) : (
         <Waiting ctx={ctx} />
@@ -101,15 +135,15 @@ function MemoryBox({ ctx }: { ctx: Ctx }) {
 }
 
 function TempBox({ ctx }: { ctx: Ctx }) {
-  const { metrics, temp, info } = ctx.machine
+  const { metrics, temp, info, record } = ctx.machine
   const temps = metrics.filter((m) => m.kind === 'temperature')
   return (
-    <Box no="003" title="Temperatury" className="g-a-tmp">
+    <Box no="003" title={t('world.gesto.home.temp')} className="g-a-tmp">
       {temp && (
         <p className="g-fig">
           {temp.value.toFixed(0)}
           <small>°C</small>
-          <span>{temp.label.toLocaleLowerCase('pl')}</span>
+          <span>{temp.label.toLocaleLowerCase(locale())}</span>
         </p>
       )}
       {temps.length > 0 ? (
@@ -124,10 +158,11 @@ function TempBox({ ctx }: { ctx: Ctx }) {
             ))}
         </ul>
       ) : info ? (
-        <p className="g-quiet">Czujniki nie podają temperatury.</p>
+        <p className="g-quiet">{t('world.gesto.home.temp.none')}</p>
       ) : (
         <Waiting ctx={ctx} />
       )}
+      {temp && <History values={record.temp} what={t('world.gesto.home.temp.history', { label: temp.label.toLocaleLowerCase(locale()) })} />}
     </Box>
   )
 }
@@ -139,18 +174,23 @@ function DisksBox({ ctx }: { ctx: Ctx }) {
   return (
     <Box
       no="004"
-      title="Dyski"
+      title={t('world.gesto.disks')}
       className="g-a-dsk"
-      meta={disks.length ? `${disks.length} ${plural(disks.length, 'wolumin', 'woluminy', 'woluminów')}` : undefined}
-      more={mapOn ? { label: 'Mapa dysków', onClick: () => app.setView({ kind: 'module', moduleId: 'disk-map' }) } : undefined}
+      meta={disks.length ? t('world.gesto.home.volumes', { n: disks.length }) : undefined}
+      more={mapOn ? { label: t('module.disk-map.name'), onClick: () => app.setView({ kind: 'module', moduleId: 'disk-map' }) } : undefined}
     >
       {disks.length ? (
         <table className="g-disks">
           <thead>
             <tr>
-              <th scope="col">Punkt montowania</th>
-              <th scope="col">Zajęte</th>
-              <th scope="col">Wolne</th>
+              <th scope="col">{t('world.gesto.home.disks.mount')}</th>
+              {/* g-w columns appear only in a wide window. */}
+              <th scope="col" className="g-w g-w-dev">{t('world.gesto.home.disks.device')}</th>
+              <th scope="col" className="g-w g-w-model">{t('world.gesto.home.disks.model')}</th>
+              <th scope="col" className="g-w g-w-kind">{t('world.gesto.home.disks.type')}</th>
+              <th scope="col" className="g-w g-w-size">{t('world.gesto.home.disks.size')}</th>
+              <th scope="col">{t('world.gesto.home.disks.used')}</th>
+              <th scope="col">{t('world.gesto.home.disks.free')}</th>
             </tr>
           </thead>
           <tbody>
@@ -161,8 +201,12 @@ function DisksBox({ ctx }: { ctx: Ctx }) {
                 <tr key={`${d.name}${d.mount_point}`} className={full ? 'full' : undefined}>
                   <td title={[d.mount_point, d.model].filter(Boolean).join(' · ')}>
                     <span className="g-path">{d.mount_point}</span>
-                    {full && <span className="g-badge g-badge--warn">Uwaga</span>}
+                    {full && <span className="g-badge g-badge--warn">{t('world.gesto.badge.warn')}</span>}
                   </td>
+                  <td className="g-w">{d.name}</td>
+                  <td className="g-w">{d.model ?? '—'}</td>
+                  <td className="g-w">{d.solid_state === undefined ? '—' : d.solid_state ? 'SSD' : 'HDD'}</td>
+                  <td className="g-w">{gb(d.total_bytes)}</td>
                   <td>
                     <Bar pct={used} hot={full} />
                     <b>{pct(used)}</b>
@@ -186,15 +230,15 @@ function MachineBox({ ctx }: { ctx: Ctx }) {
   const os = app.onboarding?.os
   const available = os ? orderedModules(os, app.moduleOrder, app.linuxProfile).length : 0
   const rows: [string, string][] = [
-    ['System', systemName(app)],
-    ['Procesor', coreCount ? `${coreCount} ${plural(coreCount, 'rdzeń', 'rdzenie', 'rdzeni')}` : '—'],
-    ['Pamięć', ram?.detail?.split(' z ')[1] ?? '—'],
-    ['Dysk główny', mainDisk ? `${mainDisk.model ?? mainDisk.name} · ${gb(mainDisk.total_bytes)}` : '—'],
-    ['Dostęp', app.onboarding?.accessLevel === 'full' ? 'pełny' : 'wybiórczy'],
-    ['Moduły', `${app.installedSet.size} z ${available} włączonych`],
+    [t('world.gesto.home.machine.system'), systemName(app)],
+    [t('world.gesto.cpu'), coreCount ? t('world.gesto.home.cores', { n: coreCount }) : '—'],
+    [t('world.gesto.memory'), ram?.detail?.split(' z ')[1] ?? '—'],
+    [t('world.gesto.home.machine.main-disk'), mainDisk ? `${mainDisk.model ?? mainDisk.name} · ${gb(mainDisk.total_bytes)}` : '—'],
+    [t('world.gesto.home.machine.access'), t(app.onboarding?.accessLevel === 'full' ? 'nav.access.full' : 'nav.access.selective')],
+    [t('world.gesto.home.machine.modules'), t('world.gesto.home.machine.modules-value', { on: app.installedSet.size, total: available })],
   ]
   return (
-    <Box no="005" title="Ten komputer" className="g-a-mch" tour="machine">
+    <Box no="005" title={t('world.gesto.home.machine')} className="g-a-mch" tour="machine">
       <table className="g-spec">
         <tbody>
           {rows.map(([k, v]) => (
@@ -215,9 +259,9 @@ function ReclaimBody({ ctx }: { ctx: Ctx }) {
   if (sources.length === 0)
     return (
       <>
-        <p className="g-quiet">Żaden włączony moduł nie zwalnia miejsca na dysku.</p>
+        <p className="g-quiet">{t('world.gesto.home.reclaim.none')}</p>
         <button type="button" className="btn btn-ghost btn-mini" onClick={() => app.setView({ kind: 'manager' })}>
-          Zarządzanie modułami
+          {t('page.manager')}
         </button>
       </>
     )
@@ -225,7 +269,7 @@ function ReclaimBody({ ctx }: { ctx: Ctx }) {
     return (
       <div className="g-progress" role="status">
         <p>
-          Sprawdzam <b>{reclaim.done}</b> / {sources.length}
+          {t('world.gesto.home.reclaim.checking')} <b>{reclaim.done}</b> / {sources.length}
         </p>
         <Bar pct={(reclaim.done / sources.length) * 100} />
       </div>
@@ -233,17 +277,18 @@ function ReclaimBody({ ctx }: { ctx: Ctx }) {
   if (reclaim.kind === 'idle')
     return (
       <>
-        <p>Moduły czyszczące policzą, ile miejsca zwolnią ich domyślne wybory.</p>
+        <p>{t('world.gesto.home.reclaim.idle')}</p>
         <ul className="g-sources">
           {sources.map((m) => (
             <li key={m.id}>
               <b>{numbers.get(m.id)}</b>
               {m.name}
+              <small className="g-w">{m.desc}</small>
             </li>
           ))}
         </ul>
         <button type="button" className="btn btn-primary" onClick={r.check}>
-          Sprawdź, co da się odzyskać
+          {t('world.gesto.home.reclaim.check')}
         </button>
       </>
     )
@@ -252,7 +297,7 @@ function ReclaimBody({ ctx }: { ctx: Ctx }) {
     <>
       <p className="g-fig g-fig--hot" role="status">
         {size(r.total)}
-        <span>do odzyskania</span>
+        <span>{t('world.gesto.reclaim').toLocaleLowerCase(locale())}</span>
       </p>
       {ranked.length ? (
         <ol className="g-rank">
@@ -264,17 +309,17 @@ function ReclaimBody({ ctx }: { ctx: Ctx }) {
                   <i>{i + 1}</i>
                   <b>{numbers.get(row.id)}</b>
                   <span>{mod?.name ?? row.id}</span>
-                  {row.error ? <em title={row.error}>nie odczytano</em> : <strong>{size(row.bytes ?? 0)}</strong>}
+                  {row.error ? <em title={row.error}>{t('world.gesto.unread')}</em> : <strong>{size(row.bytes ?? 0)}</strong>}
                 </button>
               </li>
             )
           })}
         </ol>
       ) : (
-        <p className="g-quiet">Moduły nie znalazły nic do odzyskania.</p>
+        <p className="g-quiet">{t('world.gesto.home.reclaim.nothing')}</p>
       )}
       <button type="button" className="btn btn-ghost btn-mini" onClick={r.check}>
-        Sprawdź ponownie
+        {t('world.gesto.reclaim.check-again')}
       </button>
     </>
   )
@@ -285,14 +330,14 @@ function ReclaimBox({ ctx }: { ctx: Ctx }) {
   return (
     <Box
       no="006"
-      title="Do odzyskania"
+      title={t('world.gesto.reclaim')}
       className="g-a-rec"
       tour="reclaim"
       busy={reclaim.kind === 'scanning'}
-      meta={sources.length ? `${sources.length} ${plural(sources.length, 'moduł', 'moduły', 'modułów')}` : undefined}
+      meta={sources.length ? t('world.gesto.home.reclaim.modules', { n: sources.length }) : undefined}
     >
       <ReclaimBody ctx={ctx} />
-      <p className="g-note">Tylko odczyt. Usuwasz w module, po jego potwierdzeniu.</p>
+      <p className="g-note">{t('world.gesto.home.reclaim.note')}</p>
     </Box>
   )
 }
@@ -305,10 +350,10 @@ function IndexBox({ ctx }: { ctx: Ctx }) {
   return (
     <Box
       no="007"
-      title="Szybkie akcje"
+      title={t('world.gesto.home.quick')}
       className="g-a-idx"
       tour="index"
-      more={{ label: 'Wszystkie moduły', onClick: () => app.setView({ kind: 'manager' }) }}
+      more={{ label: t('world.gesto.home.quick.all'), onClick: () => app.setView({ kind: 'manager' }) }}
     >
       {actions.length ? (
         <ul className="g-links">
@@ -322,7 +367,7 @@ function IndexBox({ ctx }: { ctx: Ctx }) {
           ))}
         </ul>
       ) : (
-        <p className="g-quiet">Żaden włączony moduł nie ma szybkiej akcji.</p>
+        <p className="g-quiet">{t('world.gesto.home.quick.none')}</p>
       )}
     </Box>
   )
@@ -332,29 +377,32 @@ function Notices({ ctx }: { ctx: Ctx }) {
   const { app, machine, reclaim } = ctx
   const mapOn = app.installedSet.has('disk-map')
   const full = real(machine.disks).filter((d) => usedPct(d) >= DISK_WARN_PCT)
+  const badgeWarn = t('world.gesto.badge.warn')
+  const badgeInfo = t('world.gesto.badge.info')
+  const badgeNew = t('world.gesto.badge.new')
   const items = [
-    ...(machine.error && !machine.info ? [{ key: 'err', badge: 'Uwaga', warn: true, text: `Odczyt systemu nie działa: ${machine.error}`, go: undefined }] : []),
+    ...(machine.error && !machine.info ? [{ key: 'err', badge: badgeWarn, warn: true, text: t('world.gesto.home.notice.error', { error: machine.error }), go: undefined }] : []),
     ...full.map((d) => ({
       key: d.mount_point,
-      badge: 'Uwaga',
+      badge: badgeWarn,
       warn: true,
-      text: `${d.mount_point} zajęty w ${pct(usedPct(d))}, wolne ${gb(d.available_bytes)}.`,
+      text: t('world.gesto.home.notice.full', { mount: d.mount_point, pct: pct(usedPct(d)), free: gb(d.available_bytes) }),
       go: mapOn ? () => app.setView({ kind: 'module', moduleId: 'disk-map' }) : undefined,
     })),
     ...(reclaim.reclaim.kind === 'done' && reclaim.total > 0
-      ? [{ key: 'rec', badge: 'Info', warn: false, text: `Do odzyskania ${size(reclaim.total)} w modułach czyszczących.`, go: undefined }]
+      ? [{ key: 'rec', badge: badgeInfo, warn: false, text: t('world.gesto.home.notice.reclaim', { size: size(reclaim.total) }), go: undefined }]
       : []),
     ...(app.onboarding && !app.onboarding.tutorialDone
-      ? [{ key: 'tour', badge: 'Nowe', warn: false, text: 'Samouczek pokaże, gdzie co jest.', go: app.startTour }]
+      ? [{ key: 'tour', badge: badgeNew, warn: false, text: t('world.gesto.home.notice.tour'), go: app.startTour }]
       : []),
   ]
   return (
-    <Box no="008" title="Komunikaty" meta={items.length || undefined}>
+    <Box no="008" title={t('world.gesto.home.notices')} className="g-a-not" meta={items.length || undefined}>
       {items.length ? (
         <ul className="g-notices">
           {items.map((n) => (
             <li key={n.key}>
-              <span className={n.warn ? 'g-badge g-badge--warn' : n.badge === 'Nowe' ? 'g-badge g-badge--new' : 'g-badge'}>{n.badge}</span>
+              <span className={n.warn ? 'g-badge g-badge--warn' : n.badge === badgeNew ? 'g-badge g-badge--new' : 'g-badge'}>{n.badge}</span>
               {n.go ? (
                 <button type="button" className="g-link" onClick={n.go}>
                   {n.text}
@@ -366,7 +414,7 @@ function Notices({ ctx }: { ctx: Ctx }) {
           ))}
         </ul>
       ) : (
-        <p className="g-quiet">Brak komunikatów.</p>
+        <p className="g-quiet">{t('world.gesto.home.notices.none')}</p>
       )}
     </Box>
   )
@@ -376,7 +424,7 @@ function FoldersBox({ ctx }: { ctx: Ctx }) {
   const { app, reclaim } = ctx
   const done = reclaim.reclaim.kind === 'done'
   return (
-    <Box no="009" title="Foldery">
+    <Box no="009" title={t('world.gesto.home.folders')} className="g-a-fld">
       <ul className="g-folders">
         {folders.map((f) => {
           const on = installedIn(ctx, f.id)
@@ -412,7 +460,7 @@ export function Home({ ctx }: { ctx: Ctx }) {
         <DisksBox ctx={ctx} />
         <IndexBox ctx={ctx} />
       </div>
-      <aside className="g-side" aria-label="Komunikaty i foldery">
+      <aside className="g-side" aria-label={t('world.gesto.home.aside')}>
         <Notices ctx={ctx} />
         <FoldersBox ctx={ctx} />
       </aside>

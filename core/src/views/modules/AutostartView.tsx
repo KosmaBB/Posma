@@ -4,6 +4,7 @@ import { Modal } from '../../components/Modal'
 import { confirmAction } from '../../components/confirm'
 import { callModule } from '../../data/callModule'
 import { detectOs } from '../../state/appState'
+import { t } from '../../i18n'
 
 interface Entry {
   id: string
@@ -109,7 +110,7 @@ export function AutostartView() {
             ? { kind: 'loaded', entries: p.entries.map((e) => (e.id === entry.id ? { ...e, enabled: entry.enabled } : e)) }
             : p,
         )
-        window.alert(`Nie udało się zmienić: ${res.error}`)
+        window.alert(t('view.autostart.toggle-failed', { error: res.error }))
       }
     } catch (e) {
       setPhase((p) =>
@@ -117,7 +118,7 @@ export function AutostartView() {
           ? { kind: 'loaded', entries: p.entries.map((ent) => (ent.id === entry.id ? { ...ent, enabled: entry.enabled } : ent)) }
           : p,
       )
-      window.alert(`Nie udało się zmienić: ${String(e)}`)
+      window.alert(t('view.autostart.toggle-failed', { error: String(e) }))
     } finally {
       setPending((prev) => {
         const next = new Set(prev)
@@ -159,7 +160,7 @@ export function AutostartView() {
   }
 
   async function pickPath() {
-    const selected = await open({ multiple: false, directory: false, title: 'Wybierz aplikację lub skrypt' })
+    const selected = await open({ multiple: false, directory: false, title: t('view.autostart.pick-title') })
     if (typeof selected === 'string') {
       await setPathAndCheck(selected)
     }
@@ -168,7 +169,7 @@ export function AutostartView() {
   async function submitForm() {
     if (!form) return
     if (!form.name.trim() || !form.path.trim()) {
-      setFormError('Podaj nazwę i ścieżkę.')
+      setFormError(t('view.autostart.form.required'))
       return
     }
     setSaving(true)
@@ -198,16 +199,16 @@ export function AutostartView() {
   }
 
   async function handleDelete(entry: Entry) {
-    if (!(await confirmAction(`Usunąć wpis „${entry.name}"? Tej operacji nie można cofnąć.`))) return
+    if (!(await confirmAction(t('view.autostart.delete.confirm', { name: entry.name })))) return
     try {
       const res = await callModule<{ removed: boolean }>('autostart', { cmd: 'delete', id: entry.id })
       if (!res.ok) {
-        window.alert(`Nie udało się usunąć: ${res.error}`)
+        window.alert(t('view.autostart.delete.failed', { error: res.error }))
         return
       }
       await runScan()
     } catch (e) {
-      window.alert(`Nie udało się usunąć: ${String(e)}`)
+      window.alert(t('view.autostart.delete.failed', { error: String(e) }))
     }
   }
 
@@ -215,42 +216,41 @@ export function AutostartView() {
     <div>
       {phase.kind === 'idle' && (
         <div className="glass empty-state">
-          Przejrzyj programy uruchamiające się automatycznie po zalogowaniu (~/.config/autostart) i wyłącz te,
-          których nie potrzebujesz — nic nie jest usuwane, zawsze możesz włączyć z powrotem.
+          {t('view.autostart.intro')}
           <br />
-          <button className="btn btn-primary" onClick={runScan}>Wczytaj</button>
+          <button className="btn btn-primary" onClick={runScan}>{t('view.autostart.load')}</button>
         </div>
       )}
 
       {phase.kind === 'loading' && (
         <div className="glass empty-state">
           <span className="scan-spinner" aria-hidden />
-          Wczytywanie wpisów autostartu...
+          {t('view.autostart.loading')}
         </div>
       )}
 
       {phase.kind === 'error' && (
         <div className="glass empty-state" style={{ color: 'var(--critical)' }}>
-          Błąd: {phase.message}
+          {t('view.autostart.error', { error: phase.message })}
           <br />
-          <button className="btn btn-ghost" onClick={runScan}>Spróbuj ponownie</button>
+          <button className="btn btn-ghost" onClick={runScan}>{t('view.autostart.retry')}</button>
         </div>
       )}
 
       {phase.kind === 'loaded' && (
         <>
           <div className="section-head">
-            <h2>Programy startowe</h2>
+            <h2>{t('view.autostart.title')}</h2>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
               <span className="count">{phase.entries.length}</span>
-              <button className="btn btn-ghost btn-mini" onClick={runScan}>Odśwież</button>
+              <button className="btn btn-ghost btn-mini" onClick={runScan}>{t('view.autostart.refresh')}</button>
               {/* Na Windowsie programy same dopisują się do autostartu; tu tylko je przełączamy. */}
-              {detectOs() !== 'windows' && <button className="btn btn-primary btn-mini" onClick={openAddForm}>+ Dodaj własny wpis</button>}
+              {detectOs() !== 'windows' && <button className="btn btn-primary btn-mini" onClick={openAddForm}>{t('view.autostart.add')}</button>}
             </div>
           </div>
 
           {phase.entries.length === 0 ? (
-            <div className="glass empty-state">Brak wpisów autostartu w Twoim profilu.</div>
+            <div className="glass empty-state">{t('view.autostart.empty')}</div>
           ) : (
             <div className="autostart-list">
               {phase.entries.map((entry) => (
@@ -258,20 +258,20 @@ export function AutostartView() {
                   <div className="autostart-info">
                     <div className="autostart-name">
                       {entry.name}
-                      {entry.custom && <span className="chip os" style={{ marginLeft: 8 }}>Własny</span>}
+                      {entry.custom && <span className="chip os" style={{ marginLeft: 8 }}>{t('view.autostart.custom')}</span>}
                     </div>
                     {entry.comment && <div className="autostart-comment">{entry.comment}</div>}
                     <div className="autostart-exec mono">{entry.exec}</div>
                   </div>
                   {entry.custom && (
-                    <button className="btn btn-ghost btn-mini" onClick={() => openEditForm(entry)}>Edytuj</button>
+                    <button className="btn btn-ghost btn-mini" onClick={() => openEditForm(entry)}>{t('view.autostart.edit')}</button>
                   )}
                   {entry.custom && (
-                    <button className="btn btn-ghost btn-mini" onClick={() => handleDelete(entry)}>Usuń</button>
+                    <button className="btn btn-ghost btn-mini" onClick={() => handleDelete(entry)}>{t('common.remove')}</button>
                   )}
                   <button
                     className={`toggle${entry.enabled ? ' on' : ''}`}
-                    aria-label={`${entry.enabled ? 'Wyłącz' : 'Włącz'} ${entry.name}`}
+                    aria-label={t(entry.enabled ? 'view.autostart.disable' : 'view.autostart.enable', { name: entry.name })}
                     disabled={pending.has(entry.id)}
                     onClick={() => handleToggle(entry)}
                   />
@@ -284,10 +284,10 @@ export function AutostartView() {
 
       {form && (
         <Modal onClose={() => !saving && setForm(null)} cardClassName="glass modal-card">
-            <h3>{form.id ? 'Edytuj wpis' : 'Dodaj własny wpis'}</h3>
+            <h3>{form.id ? t('view.autostart.form.edit-title') : t('view.autostart.form.add-title')}</h3>
 
             <label className="form-field">
-              <span>Nazwa</span>
+              <span>{t('view.autostart.form.name')}</span>
               <input
                 type="text"
                 value={form.name}
@@ -296,7 +296,7 @@ export function AutostartView() {
             </label>
 
             <label className="form-field">
-              <span>Co uruchomić</span>
+              <span>{t('view.autostart.form.path')}</span>
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
                   type="text"
@@ -305,16 +305,16 @@ export function AutostartView() {
                   placeholder="/usr/bin/..."
                   onChange={(e) => setPathAndCheck(e.target.value)}
                 />
-                <button className="btn btn-ghost btn-mini" type="button" onClick={pickPath}>Przeglądaj...</button>
+                <button className="btn btn-ghost btn-mini" type="button" onClick={pickPath}>{t('view.autostart.form.browse')}</button>
               </div>
             </label>
 
             {form.pathCheck && !form.pathCheck.exists && form.path.trim() !== '' && (
-              <div className="form-warning">Nie znaleziono pliku pod tą ścieżką.</div>
+              <div className="form-warning">{t('view.autostart.form.not-found')}</div>
             )}
             {form.pathCheck?.exists && !form.pathCheck.executable && (
               <div className="form-warning">
-                Ten plik nie jest wykonywalny — bez tego wpis nie uruchomi się przy logowaniu.
+                {t('view.autostart.form.not-executable')}
                 <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>
                   <label className="form-check">
                     <input
@@ -324,7 +324,7 @@ export function AutostartView() {
                         setForm((f) => (f ? { ...f, makeExecutable: e.target.checked, wrapInShell: e.target.checked ? false : f.wrapInShell } : f))
                       }
                     />
-                    Nadaj uprawnienia wykonywania
+                    {t('view.autostart.form.make-executable')}
                   </label>
                   <label className="form-check">
                     <input
@@ -334,14 +334,14 @@ export function AutostartView() {
                         setForm((f) => (f ? { ...f, wrapInShell: e.target.checked, makeExecutable: e.target.checked ? false : f.makeExecutable } : f))
                       }
                     />
-                    Uruchom przez bash
+                    {t('view.autostart.form.run-with-bash')}
                   </label>
                 </div>
               </div>
             )}
 
             <label className="form-field">
-              <span>Argumenty (opcjonalnie)</span>
+              <span>{t('view.autostart.form.args')}</span>
               <input
                 type="text"
                 className="mono"
@@ -358,9 +358,9 @@ export function AutostartView() {
             {formError && <div className="form-warning" style={{ color: 'var(--critical)' }}>{formError}</div>}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <button className="btn btn-ghost" onClick={() => setForm(null)} disabled={saving}>Anuluj</button>
+              <button className="btn btn-ghost" onClick={() => setForm(null)} disabled={saving}>{t('common.cancel')}</button>
               <button className="btn btn-primary" onClick={submitForm} disabled={saving}>
-                {saving ? 'Zapisywanie...' : 'Zapisz'}
+                {saving ? t('view.autostart.form.saving') : t('view.autostart.form.save')}
               </button>
             </div>
         </Modal>

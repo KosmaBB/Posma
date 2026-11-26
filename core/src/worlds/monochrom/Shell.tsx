@@ -6,7 +6,7 @@ import { ModuleManager } from '../../views/ModuleManager'
 import { Settings } from '../../views/Settings'
 import { Links } from '../../views/Links'
 import { Tour } from '../../components/tour/Tour'
-import { plural } from '../../state/machine'
+import { t } from '../../i18n'
 import { Home } from './Home'
 import { Folder } from './Folder'
 import { ModuleFrame } from './ModuleFrame'
@@ -42,19 +42,19 @@ export function Shell({ app, settings }: ShellProps) {
   return (
     <div className="mono-shell">
       <header className="mono-bar">
-        <button className="mono-mark" onClick={() => setView({ kind: 'dashboard' })} aria-label="posma — przegląd">
+        <button className="mono-mark" onClick={() => setView({ kind: 'dashboard' })} aria-label={t('world.monochrom.bar.mark')}>
           posma
         </button>
         <span className="mono-sys">
           {system}
           <span className="mono-access">
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 5 6.3v5.2c0 4.3 3 7.6 7 9 4-1.4 7-4.7 7-9V6.3z" /></svg>
-            {onboarding?.accessLevel === 'full' ? 'pełny dostęp' : 'dostęp wybiórczy'}
+            {onboarding?.accessLevel === 'full' ? t('nav.access.full') : t('world.monochrom.bar.access-selective')}
           </span>
         </span>
-        <nav className="mono-tabs" aria-label="Sekcje">
+        <nav className="mono-tabs" aria-label={t('world.monochrom.bar.sections')}>
           <button aria-current={view.kind === 'dashboard' ? 'page' : undefined} onClick={() => setView({ kind: 'dashboard' })}>
-            Przegląd
+            {t('world.monochrom.overview')}
           </button>
           {tabs.map((f) => (
             <button
@@ -67,13 +67,13 @@ export function Shell({ app, settings }: ShellProps) {
             </button>
           ))}
           <button aria-current={appPage ? 'page' : undefined} onClick={() => setView({ kind: 'settings' })}>
-            Ustawienia
+            {t('page.settings')}
           </button>
         </nav>
         <div className="mono-bar__end">
           <Search app={app} />
           <button className="btn btn-ghost btn-mini mono-help" data-tour="tour" onClick={app.startTour}>
-            Samouczek
+            {t('nav.tour')}
           </button>
         </div>
       </header>
@@ -92,10 +92,10 @@ export function Shell({ app, settings }: ShellProps) {
   )
 }
 
-const APP_TABS = [
-  { kind: 'settings', name: 'Ustawienia' },
-  { kind: 'manager', name: 'Moduły' },
-  { kind: 'links', name: 'Linki' },
+const appTabs = () => [
+  { kind: 'settings', name: t('page.settings') },
+  { kind: 'manager', name: t('world.monochrom.app.tab.manager') },
+  { kind: 'links', name: t('page.links') },
 ] as const
 
 /** Settings, the module manager and links: a claim on top, the page itself as its proof. */
@@ -103,21 +103,21 @@ function AppPage({ app, settings, kind }: ShellProps & { kind: 'settings' | 'man
   const total = allModules(app)
   const on = total.filter((m) => app.installedSet.has(m.id)).length
   const claim = {
-    settings: { h: 'Ustawienia aplikacji.', p: 'Dostęp, czarna lista, wygląd i dane aplikacji. Każda zmiana działa od razu.' },
+    settings: { h: t('world.monochrom.app.settings.h'), p: t('world.monochrom.app.settings.p') },
     manager: {
-      h: `Włączone: ${on} z ${total.length} ${plural(total.length, 'modułu', 'modułów', 'modułów')}.`,
-      p: 'Wyłączony moduł znika z zakładek i skrótów, a jego numer w katalogu zostaje.',
+      h: t('world.monochrom.app.manager.h', { on, n: total.length }),
+      p: t('world.monochrom.app.manager.p'),
     },
-    links: { h: 'Projekt POSMA w sieci.', p: 'Repozytorium, dokumentacja i miejsce na zgłoszenia.' },
+    links: { h: t('world.monochrom.app.links.h'), p: t('world.monochrom.app.links.p') },
   }[kind]
 
   return (
     <div className="mono-pairs">
       <header className="mono-modhead">
-        <nav className="mono-subnav" aria-label="Aplikacja">
-          {APP_TABS.map((t) => (
-            <button key={t.kind} aria-current={t.kind === kind ? 'page' : undefined} onClick={() => app.setView({ kind: t.kind })}>
-              {t.name}
+        <nav className="mono-subnav" aria-label={t('nav.app')}>
+          {appTabs().map((tab) => (
+            <button key={tab.kind} aria-current={tab.kind === kind ? 'page' : undefined} onClick={() => app.setView({ kind: tab.kind })}>
+              {tab.name}
             </button>
           ))}
         </nav>

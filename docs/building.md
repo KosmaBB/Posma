@@ -1,5 +1,7 @@
 # Building and development
 
+*[Polska wersja →](pl/building.md)*
+
 ## Requirements
 
 - [Rust toolchain](https://rustup.rs) (stable)
@@ -279,6 +281,13 @@ UAC runs as administrator — in a folder the user's own programs can
 write, where anything could replace it and wait for the next consent. It is
 unsigned too, so SmartScreen warns on first start: *More info* → *Run
 anyway*.
+
+It speaks the system's language when that is Polish and English otherwise;
+NSIS translates its own pages, and Tauri's messages are in
+`src-tauri/nsis/Polish.nsh`. WebView2 is downloaded only on the rare
+Windows that lacks it. Uninstalling offers to delete the app's settings;
+the vault (`%APPDATA%\posma`) is never part of that — a password store
+goes only when its owner deletes it.
 
 ## Testing rules
 

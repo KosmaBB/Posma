@@ -7,6 +7,7 @@ import { MissingDependency } from '../../components/MissingDependency'
 import { confirmAction } from '../../components/confirm'
 import { callModule } from '../../data/callModule'
 import { Icon } from '../../components/Icons'
+import { t } from '../../i18n'
 
 interface ProcessInfo {
   pid: number
@@ -142,10 +143,10 @@ function formatUptime(secs: number): string {
   if (mins < 60) return `${mins} min`
   const hours = Math.floor(mins / 60)
   const remMins = mins % 60
-  if (hours < 24) return `${hours} godz ${remMins} min`
+  if (hours < 24) return t('view.health-monitor.uptime.hours', { h: hours, m: remMins })
   const days = Math.floor(hours / 24)
   const remHours = hours % 24
-  return `${days} dni ${remHours} godz`
+  return t('view.health-monitor.uptime.days', { d: days, h: remHours })
 }
 
 function Sparkline({
@@ -266,7 +267,7 @@ function StatTile({
         <div>
           <div className="hm-tile-label">
             {label}
-            {frozen !== undefined && <span className="hm-frozen">zatrzymany</span>}
+            {frozen !== undefined && <span className="hm-frozen">{t('view.health-monitor.frozen')}</span>}
           </div>
           <div className="hm-tile-value">{frozen ?? value}</div>
           {sub && <div className="hm-tile-sub">{sub}</div>}
@@ -352,10 +353,10 @@ export function HealthMonitorView({ app }: { app: AppState }) {
   }
 
   if (error && !snap) {
-    return <div className="glass empty-state" style={{ color: 'var(--critical)' }}>Błąd: {error}</div>
+    return <div className="glass empty-state" style={{ color: 'var(--critical)' }}>{t('view.health-monitor.error', { error })}</div>
   }
   if (!snap) {
-    return <Preparing title="Odpytuję podzespoły" note="Zbieram temperatury, obciążenie i stan dysków. Pierwszy odczyt trwa dłużej niż kolejne." />
+    return <Preparing title={t('view.health-monitor.loading.title')} note={t('view.health-monitor.loading.note')} />
   }
 
   const maxCoreUsage = 100
@@ -368,7 +369,7 @@ export function HealthMonitorView({ app }: { app: AppState }) {
   const pointed = hover !== null ? samples[hover] : null
 
   async function killProcess(pid: number, name: string) {
-    if (!(await confirmAction(`Zakończyć proces „${name}" (PID ${pid})? Niezapisane dane w nim przepadną.`))) return
+    if (!(await confirmAction(t('view.health-monitor.kill.confirm', { name, pid })))) return
     setKillResult(null)
     try {
       const res = await callModule<{ success: boolean; message: string }>('health-monitor', { cmd: 'kill', pid })
@@ -382,7 +383,7 @@ export function HealthMonitorView({ app }: { app: AppState }) {
     <div>
       <div className="hm-grid">
         <StatTile
-          label="Procesor"
+          label={t('view.health-monitor.cpu')}
           value={<SmoothValue target={latest?.cpu ?? 0} suffix="%" />}
           history={cpuHistory}
           max={100}
@@ -392,7 +393,7 @@ export function HealthMonitorView({ app }: { app: AppState }) {
           frozen={pointed ? `${pointed.cpu.toFixed(0)}%` : undefined}
         />
         <StatTile
-          label="Pamięć RAM"
+          label={t('view.health-monitor.ram')}
           value={<SmoothValue target={latest?.ram ?? 0} suffix="%" />}
           sub={`${formatBytes(snap.ram_used_bytes)} / ${formatBytes(snap.ram_total_bytes)}`}
           history={ramHistory}
@@ -403,10 +404,10 @@ export function HealthMonitorView({ app }: { app: AppState }) {
           frozen={pointed ? `${pointed.ram.toFixed(0)}%` : undefined}
         />
         <div className="glass hm-tile">
-          <div className="hm-tile-label">Czas działania</div>
+          <div className="hm-tile-label">{t('view.health-monitor.uptime')}</div>
           <div className="hm-tile-value">{formatUptime(snap.uptime_secs)}</div>
           {snap.swap_total_bytes > 0 && (
-            <div className="hm-tile-sub">Swap: {formatBytes(snap.swap_used_bytes)} / {formatBytes(snap.swap_total_bytes)}</div>
+            <div className="hm-tile-sub">{t('view.health-monitor.swap', { used: formatBytes(snap.swap_used_bytes), total: formatBytes(snap.swap_total_bytes) })}</div>
           )}
         </div>
       </div>
@@ -414,8 +415,8 @@ export function HealthMonitorView({ app }: { app: AppState }) {
       {sensors.length > 0 && (
         <>
           <div className="section-head">
-            <h2>Czujniki</h2>
-            <span className="count">{sensors.length} odczytów</span>
+            <h2>{t('view.health-monitor.sensors.title')}</h2>
+            <span className="count">{t('view.health-monitor.sensors.count', { n: sensors.length })}</span>
           </div>
           <div className="hm-sensors">
             {sensors.map((m) => (
@@ -437,30 +438,30 @@ export function HealthMonitorView({ app }: { app: AppState }) {
         </>
       )}
 
-      <div className="section-head"><h2>Rdzenie ({snap.cores.length})</h2></div>
+      <div className="section-head"><h2>{t('view.health-monitor.cores', { n: snap.cores.length })}</h2></div>
       <div className="hm-cores">
         {snap.cores.map((usage, i) => (
-          <div key={i} className="hm-core" title={`Rdzeń ${i}: ${usage.toFixed(0)}%`}>
+          <div key={i} className="hm-core" title={t('view.health-monitor.core-title', { i, pct: usage.toFixed(0) })}>
             <div className="hm-core-fill" style={{ height: `${Math.max(usage, 2)}%`, opacity: 0.35 + (usage / maxCoreUsage) * 0.65 }} />
           </div>
         ))}
       </div>
 
       <div className="section-head">
-        <h2>Najbardziej obciążające procesy</h2>
-        {pointed && <span className="count">z zatrzymanego odczytu</span>}
+        <h2>{t('view.health-monitor.top.title')}</h2>
+        {pointed && <span className="count">{t('view.health-monitor.top.frozen')}</span>}
       </div>
       {killResult && <div className="glass hm-killed">{killResult}</div>}
       {/* Without headings the four figures on each row are a guess — and
           CPU above 100% looks like a fault until you know it is summed
           across cores. */}
       <div className="hm-legend">
-        <span className="cr-path">Proces</span>
+        <span className="cr-path">{t('view.health-monitor.top.process')}</span>
         <span className="cr-files">PID</span>
-        <span className="cr-size" title="Suma po wszystkich rdzeniach — 150% to półtora rdzenia">
+        <span className="cr-size" title={t('view.health-monitor.top.cpu-hint')}>
           CPU Σ
         </span>
-        <span className="cr-size">Pamięć</span>
+        <span className="cr-size">{t('view.health-monitor.top.memory')}</span>
         <span className="hm-legend__gap" />
       </div>
       <div className="clean-list">
@@ -471,19 +472,19 @@ export function HealthMonitorView({ app }: { app: AppState }) {
             <span className="cr-size mono">{p.cpu_percent.toFixed(1)}%</span>
             <span className="cr-size mono">{formatBytes(p.mem_bytes)}</span>
             <button className="btn btn-ghost btn-mini" onClick={() => killProcess(p.pid, p.name)}>
-              Zakończ
+              {t('view.health-monitor.top.end')}
             </button>
           </div>
         ))}
       </div>
 
-      <div className="section-head"><h2>Dyski</h2></div>
+      <div className="section-head"><h2>{t('view.health-monitor.disks')}</h2></div>
       <div className="clean-list">
         {snap.disks.map((d) => (
           <button
             key={d.mount_point}
             className="glass clean-row hm-disk"
-            title={`Pokaż mapę dysku dla ${d.mount_point}`}
+            title={t('view.health-monitor.disk-map-title', { mount: d.mount_point })}
             onClick={() => app.setView({ kind: 'module', moduleId: 'disk-map', param: d.mount_point })}
           >
             <span className="cr-path mono">{d.mount_point}</span>
@@ -505,19 +506,19 @@ export function HealthMonitorView({ app }: { app: AppState }) {
                   <span className="cr-path mono">{d.device}</span>
                   <span className="cr-files">{d.size_bytes ? formatBytes(d.size_bytes) : ''}</span>
                   {s === 'loading' ? (
-                    <span className="cr-size">sprawdzanie...</span>
+                    <span className="cr-size">{t('view.health-monitor.smart.checking')}</span>
                   ) : s && s.available ? (
                     <>
-                      {s.passed != null && <span className={`chip ${s.passed ? 'low' : 'critical'}`}>{s.passed ? 'Sprawne' : 'Błędy'}</span>}
+                      {s.passed != null && <span className={`chip ${s.passed ? 'low' : 'critical'}`}>{s.passed ? t('view.health-monitor.smart.ok') : t('view.health-monitor.smart.errors')}</span>}
                       {s.temperature_c != null && <span className="cr-size mono">{s.temperature_c}°C</span>}
-                      {s.power_on_hours != null && <span className="cr-files">{s.power_on_hours} godz. pracy</span>}
+                      {s.power_on_hours != null && <span className="cr-files">{t('view.health-monitor.smart.hours', { n: s.power_on_hours })}</span>}
                     </>
                   ) : s && s.missing_tool ? (
                     <MissingDependency tool={s.missing_tool} installHint={s.install_hint ?? undefined} />
                   ) : s && s.error ? (
                     <span className="chip os">{s.error}</span>
                   ) : (
-                    <button className="btn btn-ghost btn-mini" onClick={() => checkSmart(d.device)}>Sprawdź</button>
+                    <button className="btn btn-ghost btn-mini" onClick={() => checkSmart(d.device)}>{t('view.health-monitor.smart.check')}</button>
                   )}
                 </div>
               )

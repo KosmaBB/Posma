@@ -3,6 +3,7 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { Icon } from '../../components/Icons'
 import { formatBytes } from './TempCleanView'
 import { callModule } from '../../data/callModule'
+import { t } from '../../i18n'
 
 interface ShredResult {
   freed_bytes: number
@@ -17,7 +18,6 @@ type Phase =
   | { kind: 'error'; message: string }
 
 const PASSES = 3
-const CONFIRM_WORD = 'USUŃ'
 
 export function ShredderView() {
   const [phase, setPhase] = useState<Phase>({ kind: 'idle' })
@@ -29,13 +29,13 @@ export function ShredderView() {
   }
 
   async function pickFiles() {
-    const result = await open({ multiple: true, directory: false, title: 'Wybierz pliki do zniszczenia' })
+    const result = await open({ multiple: true, directory: false, title: t('view.shredder.pick-files') })
     if (Array.isArray(result)) addPaths(result)
     else if (typeof result === 'string') addPaths([result])
   }
 
   async function pickFolder() {
-    const result = await open({ multiple: false, directory: true, title: 'Wybierz folder do zniszczenia' })
+    const result = await open({ multiple: false, directory: true, title: t('view.shredder.pick-folder') })
     if (typeof result === 'string') addPaths([result])
   }
 
@@ -60,34 +60,34 @@ export function ShredderView() {
     }
   }
 
-  const canConfirm = selected.length > 0 && confirmText.trim().toUpperCase() === CONFIRM_WORD
+  const confirmWord = t('view.shredder.confirm-word')
+  const canConfirm = selected.length > 0 && confirmText.trim().toUpperCase() === confirmWord
   const busy = phase.kind === 'shredding'
 
   return (
     <div>
       <div className="glass empty-state intro">
-        <div style={{ fontWeight: 700, color: 'var(--critical)', marginBottom: 8 }}>To działanie jest nieodwracalne.</div>
-        Wybrane pliki i foldery zostaną nadpisane losowymi danymi ({PASSES}&times;), zmienią nazwę i zostaną usunięte —
-        nie da się ich odzyskać z Kosza ani cofnąć.
+        <div style={{ fontWeight: 700, color: 'var(--critical)', marginBottom: 8 }}>{t('view.shredder.warning.title')}</div>
+        {t('view.shredder.warning.body', { passes: PASSES })}
       </div>
 
       <div className="section-head">
-        <h2>Do zniszczenia</h2>
+        <h2>{t('view.shredder.heading')}</h2>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-ghost btn-mini" onClick={pickFiles} disabled={busy}>Wybierz pliki...</button>
-          <button className="btn btn-ghost btn-mini" onClick={pickFolder} disabled={busy}>Wybierz folder...</button>
+          <button className="btn btn-ghost btn-mini" onClick={pickFiles} disabled={busy}>{t('view.shredder.choose-files')}</button>
+          <button className="btn btn-ghost btn-mini" onClick={pickFolder} disabled={busy}>{t('view.shredder.choose-folder')}</button>
         </div>
       </div>
 
       {selected.length === 0 ? (
-        <div className="glass empty-state">Nic nie wybrano.</div>
+        <div className="glass empty-state">{t('view.shredder.empty')}</div>
       ) : (
         <div className="clean-list">
           {selected.map((path) => (
             <div key={path} className="glass clean-row checked">
               <span className="cr-path mono">{path}</span>
               <button className="btn btn-ghost btn-mini" onClick={() => removeSelected(path)} disabled={busy}>
-                Usuń z listy
+                {t('view.shredder.remove')}
               </button>
             </div>
           ))}
@@ -97,7 +97,7 @@ export function ShredderView() {
       {selected.length > 0 && phase.kind !== 'done' && (
         <div className="glass" style={{ padding: 18, marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <label className="form-field">
-            <span>Wpisz „{CONFIRM_WORD}" aby potwierdzić</span>
+            <span>{t('view.shredder.confirm-label', { word: confirmWord })}</span>
             <input
               type="text"
               value={confirmText}
@@ -111,14 +111,14 @@ export function ShredderView() {
             disabled={!canConfirm || busy}
             onClick={runShred}
           >
-            {busy ? 'Niszczenie...' : `Zniszcz ${selected.length} pozycji`}
+            {busy ? t('view.shredder.shredding') : t('view.shredder.shred', { n: selected.length })}
           </button>
         </div>
       )}
 
       {phase.kind === 'error' && (
         <div className="glass empty-state" style={{ color: 'var(--critical)', marginTop: 12 }}>
-          Błąd: {phase.message}
+          {t('view.shredder.error', { message: phase.message })}
         </div>
       )}
 
@@ -128,18 +128,18 @@ export function ShredderView() {
             <Icon name="check" />
           </div>
           <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', fontFamily: 'var(--sans)' }}>
-            Zniszczono {phase.result.removed} pozycji ({formatBytes(phase.result.freed_bytes)})
+            {t('view.shredder.done', { n: phase.result.removed, size: formatBytes(phase.result.freed_bytes) })}
           </div>
           {phase.result.errors.length > 0 && (
             <div className="clean-errors mono">
               {phase.result.errors.slice(0, 8).map((err) => (
                 <div key={err}>{err}</div>
               ))}
-              {phase.result.errors.length > 8 && <div>... i {phase.result.errors.length - 8} więcej</div>}
+              {phase.result.errors.length > 8 && <div>{t('view.shredder.more-errors', { n: phase.result.errors.length - 8 })}</div>}
             </div>
           )}
           <br />
-          <button className="btn btn-primary" onClick={() => setPhase({ kind: 'idle' })}>Zamknij</button>
+          <button className="btn btn-primary" onClick={() => setPhase({ kind: 'idle' })}>{t('view.shredder.close')}</button>
         </div>
       )}
     </div>

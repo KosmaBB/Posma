@@ -2,13 +2,14 @@ import { useMemo, useState } from 'react'
 import { version } from '../../../package.json'
 import type { AppState } from '../../state/appState'
 import { applyOrder, catalogNumbers, folderNumber, folders, modulesInFolder } from '../../data/modules'
+import { t } from '../../i18n'
 import { Icon } from '../Icons'
 
 /** The app's own pages sit after the module folders, in their own hundred. */
 export const APP_PAGES = [
-  { kind: 'manager', no: '901', name: 'Zarządzanie modułami' },
-  { kind: 'settings', no: '902', name: 'Ustawienia' },
-  { kind: 'links', no: '903', name: 'Linki' },
+  { kind: 'manager', no: '901', get name() { return t('page.manager') } },
+  { kind: 'settings', no: '902', get name() { return t('page.settings') } },
+  { kind: 'links', no: '903', get name() { return t('page.links') } },
 ] as const
 
 export function Sidebar({ app }: { app: AppState }) {
@@ -38,7 +39,7 @@ export function Sidebar({ app }: { app: AppState }) {
         onClick={() => setView({ kind: 'dashboard' })}
       >
         <span className="nav-no">000</span>
-        Pulpit
+        {t('nav.dashboard')}
       </button>
 
       {folders.map((folder) => {
@@ -71,7 +72,7 @@ export function Sidebar({ app }: { app: AppState }) {
             </button>
             {open && (
               <div className="nav-children">
-                {items.length === 0 && <span className="nav-empty">brak włączonych</span>}
+                {items.length === 0 && <span className="nav-empty">{t('nav.none-enabled')}</span>}
                 {items.map((m) => (
                   <button
                     key={m.id}
@@ -90,7 +91,7 @@ export function Sidebar({ app }: { app: AppState }) {
 
       <div className="nav-folder nav-folder--static">
         <span className="nav-no">900</span>
-        <span className="nav-folder__name">Aplikacja</span>
+        <span className="nav-folder__name">{t('nav.app')}</span>
       </div>
       {APP_PAGES.map((p) => (
         <button key={p.kind} className={`nav-child${view.kind === p.kind ? ' active' : ''}`} onClick={() => setView({ kind: p.kind })}>
@@ -100,12 +101,12 @@ export function Sidebar({ app }: { app: AppState }) {
       ))}
       <button className="nav-child" data-tour="tour" onClick={app.startTour}>
         <span className="nav-no">904</span>
-        Samouczek
+        {t('nav.tour')}
       </button>
 
       <div className="sidebar-foot">
         <span>{os === 'linux' && linuxProfile ? linuxProfile.name : os ? { windows: 'Windows', linux: 'Linux', macos: 'macOS' }[os] : '—'}</span>
-        <span>{onboarding?.accessLevel === 'full' ? 'pełny dostęp' : 'wybiórczy'}</span>
+        <span>{t(onboarding?.accessLevel === 'full' ? 'nav.access.full' : 'nav.access.selective')}</span>
       </div>
     </aside>
   )

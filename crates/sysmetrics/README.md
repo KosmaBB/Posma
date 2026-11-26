@@ -1,5 +1,7 @@
 # sysmetrics
 
+*[Polska wersja →](README.pl.md)*
+
 Readings a machine will give up about itself, without any privilege.
 
 ## Adding a source

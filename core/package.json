@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "sidecars": "node ../scripts/sync-sidecars.mjs",
+    "check:translations": "node ../scripts/check-translations.mjs",
     "sidecars:release": "node ../scripts/sync-sidecars.mjs release",
     "dev:app": "npm run sidecars && npm run dev",
     "build:app": "npm run sidecars:release && npm run build"

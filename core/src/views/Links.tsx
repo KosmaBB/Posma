@@ -1,10 +1,11 @@
 import { Icon } from '../components/Icons'
+import { t } from '../i18n'
 
 const LINKS = [
-  { name: 'GitHub', desc: 'Repozytorium projektu', icon: 'github', g1: 'var(--g-violet-1)', g2: 'var(--g-violet-2)', href: '#' },
-  { name: 'Dokumentacja', desc: 'Instrukcje i opis modułów', icon: 'docs', g1: 'var(--g-blue-1)', g2: 'var(--g-blue-2)', href: '#' },
-  { name: 'Wsparcie', desc: 'Zgłoś błąd albo pomysł', icon: 'heart', g1: 'var(--g-red-1)', g2: 'var(--g-red-2)', href: '#' },
-  { name: 'Strona projektu', desc: 'posma — Personal OS Maintenance App', icon: 'web', g1: 'var(--g-teal-1)', g2: 'var(--g-teal-2)', href: '#' },
+  { name: 'GitHub', get desc() { return t('links.github.desc') }, icon: 'github', g1: 'var(--g-violet-1)', g2: 'var(--g-violet-2)', href: '#' },
+  { get name() { return t('links.docs.name') }, get desc() { return t('links.docs.desc') }, icon: 'docs', g1: 'var(--g-blue-1)', g2: 'var(--g-blue-2)', href: '#' },
+  { get name() { return t('links.support.name') }, get desc() { return t('links.support.desc') }, icon: 'heart', g1: 'var(--g-red-1)', g2: 'var(--g-red-2)', href: '#' },
+  { get name() { return t('links.site.name') }, get desc() { return t('links.site.desc') }, icon: 'web', g1: 'var(--g-teal-1)', g2: 'var(--g-teal-2)', href: '#' },
 ]
 
 export function Links() {
@@ -13,7 +14,7 @@ export function Links() {
       <div className="links-grid">
         {LINKS.map((l) => (
           <a
-            key={l.name}
+            key={l.icon}
             className="glass link-card"
             href={l.href}
             style={{ '--g1': l.g1, '--g2': l.g2 } as React.CSSProperties}

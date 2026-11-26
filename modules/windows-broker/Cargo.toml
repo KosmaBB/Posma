@@ -13,5 +13,5 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 [target.'cfg(windows)'.dependencies]
-# Reading the OEM code page console tools write.
-windows-sys = { version = "0.61", features = ["Win32_Globalization"] }
+# The OEM code page console tools write, and where Program Files is.
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Globalization", "Win32_System_Com", "Win32_UI_Shell"] }

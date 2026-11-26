@@ -22,14 +22,16 @@ import { UP_TO_ONE, size, systemName, useMachine, useReclaim, type ReclaimState 
 import { AccountPage } from './Account'
 import { LedgerPage } from './Ledger'
 import { Guilloche } from './Print'
+import { t } from '../../i18n'
 
 /** Off the home spread only the balance is on show; it need not be read as often as the CPU statement. */
 const QUIET_REFRESH_MS = 10_000
 
+// Getters, so the text follows the language at render time.
 const RISK_TERMS: Record<ModuleDef['risk'], string> = {
-  low: 'Moduł najpierw tylko czyta. Nic nie znika, dopóki tego nie potwierdzisz.',
-  medium: 'Zmienia ustawienia systemu. Przeczytaj pozycje, zanim je potwierdzisz.',
-  critical: 'Zmiana może utrudnić start systemu. POSMA zapyta więcej niż raz.',
+  get low() { return t('world.ksiazeczka.risk.low') },
+  get medium() { return t('world.ksiazeczka.risk.medium') },
+  get critical() { return t('world.ksiazeczka.risk.critical') },
 }
 
 function Bar({ app, refreshMs }: { app: AppState; refreshMs: number }) {
@@ -38,23 +40,23 @@ function Bar({ app, refreshMs }: { app: AppState; refreshMs: number }) {
     <header className="kz-bar">
       <b className="kz-bar__brand">POSMA</b>
       <span className="kz-bar__dim">{version}</span>
-      <span className="kz-bar__title">Książeczka wolnego miejsca</span>
+      <span className="kz-bar__title">{t('world.ksiazeczka.bar.title')}</span>
       <span className="kz-bar__dim kz-bar__sys">
-        {systemName(app)} · dostęp {onboarding?.accessLevel === 'full' ? 'pełny' : 'wybiórczy'}
+        {systemName(app)} · {t('world.ksiazeczka.bar.access', { level: t(onboarding?.accessLevel === 'full' ? 'world.ksiazeczka.card.access.full' : 'world.ksiazeczka.card.access.selective') })}
       </span>
       <span className="kz-bar__sp" />
       <span className="kz-bar__live">
         <i aria-hidden="true" />
-        odczyt co {UP_TO_ONE.format(refreshMs / 1000)} s
+        {t('world.ksiazeczka.bar.live', { s: UP_TO_ONE.format(refreshMs / 1000) })}
       </span>
-      <nav className="kz-bar__nav" aria-label="Aplikacja">
+      <nav className="kz-bar__nav" aria-label={t('nav.app')}>
         {APP_PAGES.map((p) => (
           <button key={p.kind} aria-current={view.kind === p.kind ? 'page' : undefined} onClick={() => setView({ kind: p.kind })}>
             <span className="kz-bar__no">{p.no}</span> {p.name}
           </button>
         ))}
         <button data-tour="tour" onClick={app.startTour}>
-          <span className="kz-bar__no">904</span> Samouczek
+          <span className="kz-bar__no">904</span> {t('nav.tour')}
         </button>
       </nav>
     </header>
@@ -67,13 +69,13 @@ function Tabs({ app, activeFolder }: { app: AppState; activeFolder: string | nul
   const os = onboarding?.os
   const numbers = useMemo(() => catalogNumbers(os, linuxProfile), [os, linuxProfile])
   return (
-    <nav className="kz-tabs" aria-label="Rachunek i dyspozycje">
+    <nav className="kz-tabs" aria-label={t('world.ksiazeczka.tabs.aria')}>
       <button
         className="kz-tab kz-tab--acct"
         aria-current={view.kind === 'dashboard' ? 'page' : undefined}
         onClick={() => setView({ kind: 'dashboard' })}
       >
-        000 · Rachunek
+        {t('world.ksiazeczka.tabs.account')}
       </button>
       {folders.map((f) => {
         const items = applyOrder(modulesInFolder(f.id, os, linuxProfile), moduleOrder[f.id]).filter((m) => installedSet.has(m.id))
@@ -119,8 +121,8 @@ function OrderForm({ app, mod, mount }: { app: AppState; mod: ModuleDef; mount: 
     <div className="kz-form" data-tour="module">
       <header className="kz-form__head" data-tour="module-hero">
         <div className="kz-head">
-          <span className="kz-pre">Polecenie · dyspozycja {no}</span>
-          <span className="kz-pre kz-pre--n">druk P-{no}</span>
+          <span className="kz-pre">{t('world.ksiazeczka.form.pre', { no })}</span>
+          <span className="kz-pre kz-pre--n">{t('world.ksiazeczka.form.print', { no })}</span>
         </div>
         <h1 className="kz-form__title">
           <span className="kz-mx">{no}</span> {mod.name}
@@ -128,21 +130,21 @@ function OrderForm({ app, mod, mount }: { app: AppState; mod: ModuleDef; mount: 
         <p className="kz-form__desc">{mod.desc}</p>
         <div className="kz-cells">
           <div className="kz-cell">
-            <span className="kz-lbl">Nr dyspozycji</span>
+            <span className="kz-lbl">{t('world.ksiazeczka.form.order-no')}</span>
             <b className="kz-mx">{no}</b>
           </div>
           <div className="kz-cell">
-            <span className="kz-lbl">Folder</span>
+            <span className="kz-lbl">{t('world.ksiazeczka.form.folder')}</span>
             <b>
               {folderNumber(folder.id)} {folder.name}
             </b>
           </div>
           <div className="kz-cell">
-            <span className="kz-lbl">Z rachunku</span>
+            <span className="kz-lbl">{t('world.ksiazeczka.form.from')}</span>
             <b className="kz-path">{mount}</b>
           </div>
           <div className="kz-cell">
-            <span className="kz-lbl">Ryzyko</span>
+            <span className="kz-lbl">{t('world.ksiazeczka.form.risk')}</span>
             <b>
               <span className={`kz-stamp kz-stamp--${mod.risk}`}>{riskLabel[mod.risk]}</span>
             </b>
@@ -159,16 +161,16 @@ function Terms({ mod, reclaim }: { mod: ModuleDef; reclaim: ReclaimState }) {
   const hit = reclaim.foundOf(mod.id)
   return (
     <div className="kz-terms">
-      <h2 className="kz-lbl">Warunki dyspozycji</h2>
+      <h2 className="kz-lbl">{t('world.ksiazeczka.terms.title')}</h2>
       <p>
-        <b>Co robi.</b> {mod.desc}
+        <b>{t('world.ksiazeczka.terms.what')}</b> {mod.desc}
       </p>
       <p>
         <b>{riskLabel[mod.risk]}.</b> {RISK_TERMS[mod.risk]}
       </p>
       {hit && hit.bytes !== null && (
         <p>
-          <b>Sprawdzenie z rachunku.</b> {size(hit.bytes)} do odzyskania przy domyślnym wyborze modułu.
+          <b>{t('world.ksiazeczka.terms.check')}</b> {t('world.ksiazeczka.terms.check-text', { size: size(hit.bytes) })}
         </p>
       )}
     </div>
@@ -179,15 +181,15 @@ function Terms({ mod, reclaim }: { mod: ModuleDef; reclaim: ReclaimState }) {
 function Contents({ app }: { app: AppState }) {
   const { view, setView } = app
   return (
-    <nav className="kz-contents" aria-label="Strony aplikacji">
-      <h2 className="kz-lbl">Strony 900 · aplikacja</h2>
+    <nav className="kz-contents" aria-label={t('world.ksiazeczka.contents.aria')}>
+      <h2 className="kz-lbl">{t('world.ksiazeczka.contents.title')}</h2>
       {APP_PAGES.map((p) => (
         <button key={p.kind} aria-current={view.kind === p.kind ? 'page' : undefined} onClick={() => setView({ kind: p.kind })}>
           <span className="kz-mx">{p.no}</span> {p.name}
         </button>
       ))}
       <button onClick={app.startTour}>
-        <span className="kz-mx">904</span> Samouczek
+        <span className="kz-mx">904</span> {t('nav.tour')}
       </button>
     </nav>
   )
@@ -225,27 +227,27 @@ export function Shell({ app, settings }: ShellProps) {
   let right: React.ReactNode
   switch (view.kind) {
     case 'dashboard':
-      left = <AccountPage {...account} full page="s. 1 · karta rachunku" />
+      left = <AccountPage {...account} full page={t('world.ksiazeczka.page.account')} />
       right = <LedgerPage app={app} machine={machine} reclaim={reclaim} />
       break
     case 'module': {
       const no = mod ? catalogNumbers(app.onboarding?.os, app.linuxProfile).get(mod.id) : undefined
       left = (
-        <AccountPage {...account} after={mod ? reclaim.foundOf(mod.id)?.bytes : null} page={`karta dyspozycji ${no ?? ''}`}>
+        <AccountPage {...account} after={mod ? reclaim.foundOf(mod.id)?.bytes : null} page={t('world.ksiazeczka.page.order-card', { no: no ?? '' })}>
           {mod && <Terms mod={mod} reclaim={reclaim} />}
         </AccountPage>
       )
       right = (
-        <section className="kz-page kz-page--r kz-page--form" aria-label={mod ? `Dyspozycja ${mod.name}` : 'Dyspozycja'}>
+        <section className="kz-page kz-page--r kz-page--form" aria-label={mod ? t('world.ksiazeczka.order.aria', { name: mod.name }) : t('world.ksiazeczka.order.aria-none')}>
           <div className="kz-pad">
             {mod ? (
               <OrderForm app={app} mod={mod} mount={mount} />
             ) : (
               <div className="glass empty-state">
-                Nie ma takiego druku.
+                {t('world.ksiazeczka.order.missing')}
                 <br />
                 <button className="btn btn-primary" onClick={() => app.setView({ kind: 'dashboard' })}>
-                  Wróć do rachunku
+                  {t('world.ksiazeczka.order.back')}
                 </button>
               </div>
             )}
@@ -256,9 +258,12 @@ export function Shell({ app, settings }: ShellProps) {
     }
     case 'folder': {
       const folder = folders.find((f) => f.id === view.folderId)
-      left = <AccountPage {...account} page={`subkonto ${folder ? folderNumber(folder.id) : ''}`} />
+      left = <AccountPage {...account} page={t('world.ksiazeczka.page.subaccount', { no: folder ? folderNumber(folder.id) : '' })} />
       right = (
-        <Sheet title={`Rejestr dyspozycji · ${folder?.name ?? 'folder'}`} page={folder ? `rejestr ${folderNumber(folder.id)}` : ''}>
+        <Sheet
+          title={t('world.ksiazeczka.register.title', { name: folder?.name ?? t('world.ksiazeczka.register.folder-fallback') })}
+          page={folder ? t('world.ksiazeczka.register.page', { no: folderNumber(folder.id) }) : ''}
+        >
           <FolderView app={app} folderId={view.folderId} />
         </Sheet>
       )
@@ -267,12 +272,12 @@ export function Shell({ app, settings }: ShellProps) {
     default: {
       const page = APP_PAGES.find((p) => p.kind === view.kind)!
       left = (
-        <AccountPage {...account} page={`s. ${page.no}`}>
+        <AccountPage {...account} page={t('world.ksiazeczka.page.app', { no: page.no })}>
           <Contents app={app} />
         </AccountPage>
       )
       right = (
-        <Sheet title={`${page.no} · ${page.name}`} page={`s. ${page.no}`}>
+        <Sheet title={`${page.no} · ${page.name}`} page={t('world.ksiazeczka.page.app', { no: page.no })}>
           {view.kind === 'manager' && <ModuleManager app={app} />}
           {view.kind === 'settings' && <Settings app={app} settings={settings} />}
           {view.kind === 'links' && <Links />}

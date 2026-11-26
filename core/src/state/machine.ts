@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { AppState } from './appState'
 import { catalogNumbers, moduleById, type ModuleDef } from '../data/modules'
 import { callModule } from '../data/callModule'
+import { formatNumber, t } from '../i18n'
 
 export interface DiskInfo {
   name: string
@@ -51,18 +52,12 @@ const JOURNAL_KEEP = 500 * 1024 ** 2
 
 const OS_NAME = { windows: 'Windows', linux: 'Linux', macos: 'macOS' } as const
 
-const ONE_DECIMAL = new Intl.NumberFormat('pl-PL', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
-export const UP_TO_ONE = new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 1 })
-const PLURAL = new Intl.PluralRules('pl')
-
-/** Polish noun form for a count: 1 rdzeń, 2 rdzenie, 5 rdzeni. */
-export function plural(n: number, one: string, few: string, many: string): string {
-  const form = PLURAL.select(n)
-  return form === 'one' ? one : form === 'few' ? few : many
-}
+const oneDecimal = (n: number) => formatNumber(n, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+/** Shaped like an Intl.NumberFormat so callers keep `.format()`, but in the current language. */
+export const UP_TO_ONE = { format: (n: number) => formatNumber(n, { maximumFractionDigits: 1 }) }
 
 export function gb(bytes: number): string {
-  return `${ONE_DECIMAL.format(bytes / 1024 ** 3)} GB`
+  return `${oneDecimal(bytes / 1024 ** 3)} GB`
 }
 
 export function size(bytes: number): string {
@@ -72,7 +67,7 @@ export function size(bytes: number): string {
 /** "341,0 z 512,0 GB · 67%" */
 export function fill(d: DiskInfo): string {
   const used = (d.total_bytes - d.available_bytes) / 1024 ** 3
-  return `${ONE_DECIMAL.format(used)} z ${gb(d.total_bytes)} · ${usedPct(d).toFixed(0)}%`
+  return t('dashboard.disk.fill', { used: oneDecimal(used), total: gb(d.total_bytes), pct: usedPct(d).toFixed(0) })
 }
 
 export function usedPct(d: DiskInfo): number {
@@ -92,7 +87,13 @@ export function systemName(app: AppState): string {
 export function useMachine(refreshMs: number) {
   const [info, setInfo] = useState<SystemInfo | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [record, setRecord] = useState<{ samples: number[][]; tick: number }>({ samples: [], tick: 0 })
+  // samples: per-core load per reading; ram and temp: their percent and °C per reading.
+  const [record, setRecord] = useState<{ samples: number[][]; ram: number[]; temp: number[]; tick: number }>({
+    samples: [],
+    ram: [],
+    temp: [],
+    tick: 0,
+  })
 
   useEffect(() => {
     let cancelled = false
@@ -112,7 +113,15 @@ export function useMachine(refreshMs: number) {
         setInfo(res.data)
         setError(null)
         const cores = res.data.cores
-        if (cores?.length) setRecord((r) => ({ samples: [...r.samples, cores].slice(-HISTORY), tick: r.tick + 1 }))
+        const ram = res.data.metrics.find((m) => m.id === 'ram')?.value
+        const temp = res.data.metrics.find((m) => m.id === 'temp-cpu')?.value
+        // tick counts core samples only: the charts that read it animate on a new one.
+        setRecord((r) => ({
+          samples: cores?.length ? [...r.samples, cores].slice(-HISTORY) : r.samples,
+          ram: ram === undefined ? r.ram : [...r.ram, ram].slice(-HISTORY),
+          temp: temp === undefined ? r.temp : [...r.temp, temp].slice(-HISTORY),
+          tick: cores?.length ? r.tick + 1 : r.tick,
+        }))
       } catch (e) {
         if (!cancelled) setError(String(e))
       } finally {

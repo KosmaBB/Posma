@@ -7,6 +7,7 @@
  * and otherwise lands on the root element as a data attribute that
  * styles/custom.css turns into tokens, so overrides survive a change of look.
  */
+import { t } from '../i18n'
 
 /**
  * A world is a whole app: its own navigation, home screen and way of drawing
@@ -22,12 +23,12 @@ export interface WorldInfo {
 }
 
 export const WORLDS: WorldInfo[] = [
-  { id: 'katalog', name: 'Katalog', desc: 'Numery katalogowe, pasek folderów, profil procesora. Ma pięć odmian.' },
-  { id: 'gesto', name: 'Gęsto', desc: 'Wszystko na jednym ekranie: mozaika modułów z czerwonymi zakładkami.' },
-  { id: 'kaseta', name: 'Kaseta', desc: 'Dysk jako taśma: półka kaset, wkładka ze stroną A i B.' },
-  { id: 'strumien', name: 'Strumień', desc: 'Jedna rzecz na cały ekran, następna o jedno przewinięcie.' },
-  { id: 'ksiazeczka', name: 'Książeczka', desc: 'Wolne miejsce jako saldo, każda operacja to wpis z pieczątką.' },
-  { id: 'monochrom', name: 'Monochrom', desc: 'Jedna skala szarości: każde zdanie z dowodem obok.' },
+  { id: 'katalog', name: 'Katalog', get desc() { return t('world-info.katalog.desc') } },
+  { id: 'gesto', name: 'Gęsto', get desc() { return t('world-info.gesto.desc') } },
+  { id: 'kaseta', name: 'Kaseta', get desc() { return t('world-info.kaseta.desc') } },
+  { id: 'strumien', name: 'Strumień', get desc() { return t('world-info.strumien.desc') } },
+  { id: 'ksiazeczka', name: 'Książeczka', get desc() { return t('world-info.ksiazeczka.desc') } },
+  { id: 'monochrom', name: 'Monochrom', get desc() { return t('world-info.monochrom.desc') } },
 ]
 
 export type Look = 'katalog' | 'systemowy' | 'plakat' | 'konsola' | 'kalkulator'
@@ -98,32 +99,32 @@ export const LOOKS: LookInfo[] = [
   {
     id: 'katalog',
     name: 'Katalog',
-    desc: 'Matowa czerń, szerokie wersaliki, numery katalogowe.',
-    own: { accent: 'kremowy', font: 'Archivo', numFont: 'Fragment Mono', labels: 'wersaliki', corners: 'ostre', lines: 'włosowe', density: 'normalna', chartGrid: 'widoczna', peakLine: 'przerywana' },
+    get desc() { return t('look.katalog.desc') },
+    get own() { return { accent: t('look.own.cream'), font: 'Archivo', numFont: 'Fragment Mono', labels: t('look.own.caps'), corners: t('look.own.sharp'), lines: t('look.own.hairline'), density: t('look.own.normal'), chartGrid: t('look.own.visible'), peakLine: t('look.own.dashed') } },
   },
   {
     id: 'systemowy',
     name: 'Systemowy',
-    desc: 'Krój systemu, karty i zaokrąglenia, jak natywna aplikacja.',
-    own: { accent: 'niebieski', font: 'systemowy', numFont: 'systemowy', labels: 'zwykłe', corners: 'okrągłe', lines: 'włosowe', density: 'normalna', chartGrid: 'widoczna', peakLine: 'przerywana' },
+    get desc() { return t('look.systemowy.desc') },
+    get own() { return { accent: t('look.own.blue'), font: t('look.own.system'), numFont: t('look.own.system'), labels: t('look.own.plain'), corners: t('look.own.round'), lines: t('look.own.hairline'), density: t('look.own.normal'), chartGrid: t('look.own.visible'), peakLine: t('look.own.dashed') } },
   },
   {
     id: 'plakat',
     name: 'Plakat',
-    desc: 'Styl szwajcarski: grube podziały, ogromne numery, czerwień.',
-    own: { accent: 'czerwony', font: 'Archivo', numFont: 'Fragment Mono', labels: 'zwykłe', corners: 'ostre', lines: 'grube podziały', density: 'normalna', chartGrid: 'widoczna', peakLine: 'przerywana' },
+    get desc() { return t('look.plakat.desc') },
+    get own() { return { accent: t('look.own.red'), font: 'Archivo', numFont: 'Fragment Mono', labels: t('look.own.plain'), corners: t('look.own.sharp'), lines: t('look.own.bold-dividers'), density: t('look.own.normal'), chartGrid: t('look.own.visible'), peakLine: t('look.own.dashed') } },
   },
   {
     id: 'konsola',
     name: 'Konsola',
-    desc: 'Wszystko w mono, kolory terminala, ramki jak w btop.',
-    own: { accent: 'żółty', font: 'JetBrains Mono', numFont: 'JetBrains Mono', labels: 'małe litery', corners: 'ostre', lines: 'włosowe', density: 'normalna', chartGrid: 'widoczna', peakLine: 'przerywana' },
+    get desc() { return t('look.konsola.desc') },
+    get own() { return { accent: t('look.own.yellow'), font: 'JetBrains Mono', numFont: 'JetBrains Mono', labels: t('look.own.lower'), corners: t('look.own.sharp'), lines: t('look.own.hairline'), density: t('look.own.normal'), chartGrid: t('look.own.visible'), peakLine: t('look.own.dashed') } },
   },
   {
     id: 'kalkulator',
     name: 'Kalkulator',
-    desc: 'Grafit i okrągłe klawisze, numer w okienku wyświetlacza.',
-    own: { accent: 'żółty', font: 'Albert Sans', numFont: 'Fragment Mono', labels: 'małe litery', corners: 'okrągłe', lines: 'włosowe', density: 'normalna', chartGrid: 'widoczna', peakLine: 'przerywana' },
+    get desc() { return t('look.kalkulator.desc') },
+    get own() { return { accent: t('look.own.yellow'), font: 'Albert Sans', numFont: 'Fragment Mono', labels: t('look.own.lower'), corners: t('look.own.round'), lines: t('look.own.hairline'), density: t('look.own.normal'), chartGrid: t('look.own.visible'), peakLine: t('look.own.dashed') } },
   },
 ]
 
@@ -135,49 +136,49 @@ export interface Choice<T extends string> {
 }
 
 export const FONTS: Choice<Exclude<TextFont, 'look'>>[] = [
-  { value: 'atkinson', label: 'Atkinson Hyperlegible (najczytelniejszy)' },
+  { value: 'atkinson', get label() { return t('look.font.atkinson') } },
   { value: 'archivo', label: 'Archivo' },
-  { value: 'system', label: 'Systemowy' },
+  { value: 'system', get label() { return t('look.font.system') } },
   { value: 'albert', label: 'Albert Sans' },
   { value: 'jetbrains', label: 'JetBrains Mono' },
 ]
 export const NUM_FONTS: Choice<Exclude<NumFont, 'look'>>[] = [
-  { value: 'atkinson', label: 'Atkinson Hyperlegible Mono (najczytelniejszy)' },
+  { value: 'atkinson', get label() { return t('look.numfont.atkinson') } },
   { value: 'fragment', label: 'Fragment Mono' },
   { value: 'jetbrains', label: 'JetBrains Mono' },
-  { value: 'system', label: 'Systemowy' },
+  { value: 'system', get label() { return t('look.numfont.system') } },
 ]
 export const LABEL_STYLES: Choice<Exclude<Labels, 'look'>>[] = [
-  { value: 'caps', label: 'Wersaliki' },
-  { value: 'plain', label: 'Zwykłe' },
-  { value: 'lower', label: 'Małe litery' },
+  { value: 'caps', get label() { return t('look.labels.caps') } },
+  { value: 'plain', get label() { return t('look.labels.plain') } },
+  { value: 'lower', get label() { return t('look.labels.lower') } },
 ]
 export const CORNERS: Choice<Exclude<Corners, 'look'>>[] = [
-  { value: 'sharp', label: 'Ostre' },
-  { value: 'soft', label: 'Lekko zaokrąglone' },
-  { value: 'round', label: 'Okrągłe' },
+  { value: 'sharp', get label() { return t('look.corners.sharp') } },
+  { value: 'soft', get label() { return t('look.corners.soft') } },
+  { value: 'round', get label() { return t('look.corners.round') } },
 ]
 export const LINES: Choice<Exclude<Lines, 'look'>>[] = [
-  { value: 'thin', label: 'Włosowe' },
-  { value: 'bold', label: 'Grube' },
+  { value: 'thin', get label() { return t('look.lines.thin') } },
+  { value: 'bold', get label() { return t('look.lines.bold') } },
 ]
 export const DENSITIES: Choice<Exclude<Density, 'look'>>[] = [
-  { value: 'compact', label: 'Zwarta' },
-  { value: 'normal', label: 'Normalna' },
-  { value: 'comfortable', label: 'Przestronna' },
+  { value: 'compact', get label() { return t('look.density.compact') } },
+  { value: 'normal', get label() { return t('look.density.normal') } },
+  { value: 'comfortable', get label() { return t('look.density.comfortable') } },
 ]
 export const MOTIONS: Choice<Motion>[] = [
-  { value: 'system', label: 'Jak w systemie' },
-  { value: 'reduced', label: 'Ograniczony' },
-  { value: 'off', label: 'Wyłączony' },
+  { value: 'system', get label() { return t('look.motion.system') } },
+  { value: 'reduced', get label() { return t('look.motion.reduced') } },
+  { value: 'off', get label() { return t('look.motion.off') } },
 ]
 export const GRIDS: Choice<Exclude<ChartGrid, 'look'>>[] = [
-  { value: 'on', label: 'Widoczna' },
-  { value: 'off', label: 'Ukryta' },
+  { value: 'on', get label() { return t('look.grid.on') } },
+  { value: 'off', get label() { return t('look.grid.off') } },
 ]
 export const PEAKS: Choice<Exclude<PeakLine, 'look'>>[] = [
-  { value: 'dashed', label: 'Przerywana' },
-  { value: 'solid', label: 'Ciągła' },
+  { value: 'dashed', get label() { return t('look.peak.dashed') } },
+  { value: 'solid', get label() { return t('look.peak.solid') } },
 ]
 
 export interface AccentPreset {
@@ -189,12 +190,12 @@ export interface AccentPreset {
 
 /** Pale on dark grounds, deep on light ones, so either mode keeps its contrast. */
 export const ACCENTS: AccentPreset[] = [
-  { id: 'cream', name: 'Kremowy', dark: '#ffe0a8', light: '#8a5f00' },
-  { id: 'blue', name: 'Niebieski', dark: '#a9bcff', light: '#2f55c4' },
-  { id: 'violet', name: 'Fioletowy', dark: '#d9c8ff', light: '#6a3fa8' },
-  { id: 'amber', name: 'Bursztynowy', dark: '#ffb15c', light: '#b4530a' },
-  { id: 'green', name: 'Zielony', dark: '#a8e0ae', light: '#2f6b3a' },
-  { id: 'red', name: 'Czerwony', dark: '#ff8a7a', light: '#c8352b' },
+  { id: 'cream', get name() { return t('look.accent.cream') }, dark: '#ffe0a8', light: '#8a5f00' },
+  { id: 'blue', get name() { return t('look.accent.blue') }, dark: '#a9bcff', light: '#2f55c4' },
+  { id: 'violet', get name() { return t('look.accent.violet') }, dark: '#d9c8ff', light: '#6a3fa8' },
+  { id: 'amber', get name() { return t('look.accent.amber') }, dark: '#ffb15c', light: '#b4530a' },
+  { id: 'green', get name() { return t('look.accent.green') }, dark: '#a8e0ae', light: '#2f6b3a' },
+  { id: 'red', get name() { return t('look.accent.red') }, dark: '#ff8a7a', light: '#c8352b' },
 ]
 
 function luminance(hex: unknown): number | null {

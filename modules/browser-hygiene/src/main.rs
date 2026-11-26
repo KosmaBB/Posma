@@ -237,6 +237,18 @@ fn browser_defs() -> Vec<BrowserDef> {
                 bases: vec![local.join("Microsoft/Edge/User Data")],
                 process_names: &["msedge.exe"],
             });
+            defs.push(BrowserDef {
+                name: "Chromium",
+                kind: Kind::Chromium,
+                bases: vec![local.join("Chromium/User Data")],
+                process_names: &["chrome.exe"],
+            });
+            defs.push(BrowserDef {
+                name: "Vivaldi",
+                kind: Kind::Chromium,
+                bases: vec![local.join("Vivaldi/User Data")],
+                process_names: &["vivaldi.exe"],
+            });
         }
     }
 

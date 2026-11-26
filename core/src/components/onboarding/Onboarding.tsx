@@ -8,6 +8,7 @@ import { folders, modulesForOs } from '../../data/modules'
 import type { LinuxProfile, ProfileOverrides } from '../../data/linuxProfile'
 import { Icon } from '../Icons'
 import { SystemProfileFields, profileSummary } from '../SystemProfile'
+import { t } from '../../i18n'
 
 const OS_LABEL: Record<Os, string> = { windows: 'Windows', linux: 'Linux', macos: 'macOS' }
 
@@ -89,26 +90,22 @@ export function Onboarding({ onDone, linuxProfile, onProfileChange }: Onboarding
 
         {step === 'consent' && (
           <>
-            <h1>Witaj w POSMA</h1>
-            <p className="lead">
-              POSMA to modularny opiekun systemu — czyszczenie, monitoring, autostart, bezpieczeństwo. Zanim
-              zaczniemy, potrzebujemy Twojej zgody na działanie aplikacji i wykonywanie operacji na tym komputerze.
-              Wszystkie ryzykowne akcje zawsze wymagają osobnego potwierdzenia.
-            </p>
+            <h1>{t('onboarding.welcome.title')}</h1>
+            <p className="lead">{t('onboarding.welcome.lead')}</p>
             <div className="onboarding-actions">
               <span />
-              <button className="btn btn-primary" onClick={() => setStep('os')}>Zgadzam się, zaczynamy</button>
+              <button className="btn btn-primary" onClick={() => setStep('os')}>{t('onboarding.welcome.agree')}</button>
             </div>
           </>
         )}
 
         {step === 'os' && (
           <>
-            <h2>Potwierdź swój system</h2>
+            <h2>{t('onboarding.os.title')}</h2>
             <p className="lead">
               {linuxProfile
-                ? 'Wykryliśmy dystrybucję. Od niej zależy, jak działają moduły: polecenia pakietów, wygląd pulpitu, rozruch. Czy to Twój system?'
-                : 'Wykryliśmy system operacyjny — od tego zależy, które moduły będą dostępne.'}
+                ? t('onboarding.os.lead.linux')
+                : t('onboarding.os.lead.other')}
             </p>
             <div className="os-row">
               <div className="ico-badge" style={{ '--g1': 'var(--g-blue-1)', '--g2': 'var(--g-blue-2)' } as React.CSSProperties}>
@@ -119,7 +116,7 @@ export function Onboarding({ onDone, linuxProfile, onProfileChange }: Onboarding
                 <div className="os-sub">
                   {linuxProfile
                     ? `${OS_LABEL[os]} · ${profileSummary(linuxProfile)}`
-                    : `Moduły ogólne + moduły dostępne tylko dla ${OS_LABEL[os]}`}
+                    : t('onboarding.os.sub.other', { os: OS_LABEL[os] })}
                 </div>
               </div>
             </div>
@@ -129,13 +126,13 @@ export function Onboarding({ onDone, linuxProfile, onProfileChange }: Onboarding
               </div>
             )}
             <div className="onboarding-actions">
-              <button className="btn btn-ghost" onClick={() => setStep('consent')}>Wstecz</button>
+              <button className="btn btn-ghost" onClick={() => setStep('consent')}>{t('onboarding.back')}</button>
               <div className="onboarding-actions-end">
                 {linuxProfile && !correcting && (
-                  <button className="btn btn-ghost" onClick={() => setCorrecting(true)}>Coś się nie zgadza</button>
+                  <button className="btn btn-ghost" onClick={() => setCorrecting(true)}>{t('onboarding.os.mismatch')}</button>
                 )}
                 <button className="btn btn-primary" onClick={() => setStep('access')}>
-                  {correcting ? 'Gotowe' : 'To mój system'}
+                  {correcting ? t('onboarding.os.done') : t('onboarding.os.confirm')}
                 </button>
               </div>
             </div>
@@ -144,33 +141,30 @@ export function Onboarding({ onDone, linuxProfile, onProfileChange }: Onboarding
 
         {step === 'access' && (
           <>
-            <h2>Poziom dostępu</h2>
-            <p className="lead">Możesz to później zmienić w ustawieniach.</p>
+            <h2>{t('onboarding.access.title')}</h2>
+            <p className="lead">{t('onboarding.access.lead')}</p>
             <div className="choice-cards">
               <button
                 className={`choice-card${accessLevel === 'full' ? ' selected' : ''}`}
                 onClick={() => setAccessLevel('full')}
               >
-                <h3>Pełny</h3>
-                <p>
-                  Aplikacja od razu zbiera dostęp do każdej możliwej funkcji — niezależnie od tego, czy moduł jest
-                  zainstalowany.
-                </p>
-                <span className="fine">Cel: minimum restartów i zgód. Efekt: brak restartów przy doinstalowywaniu modułów.</span>
+                <h3>{t('onboarding.access.full.title')}</h3>
+                <p>{t('onboarding.access.full.desc')}</p>
+                <span className="fine">{t('onboarding.access.full.fine')}</span>
               </button>
               <button
                 className={`choice-card${accessLevel === 'selective' ? ' selected' : ''}`}
                 onClick={() => setAccessLevel('selective')}
               >
-                <h3>Wybiórczy</h3>
-                <p>Aplikacja prosi o dostęp potrzebny tylko do modułów, które faktycznie wybierzesz.</p>
-                <span className="fine">Efekt: możliwy restart aplikacji/systemu przy doinstalowywaniu kolejnych modułów.</span>
+                <h3>{t('onboarding.access.selective.title')}</h3>
+                <p>{t('onboarding.access.selective.desc')}</p>
+                <span className="fine">{t('onboarding.access.selective.fine')}</span>
               </button>
             </div>
             <div className="onboarding-actions">
-              <button className="btn btn-ghost" onClick={() => setStep('os')}>Wstecz</button>
+              <button className="btn btn-ghost" onClick={() => setStep('os')}>{t('onboarding.back')}</button>
               <button className="btn btn-primary" disabled={!accessLevel} onClick={() => setStep('modules')}>
-                Dalej
+                {t('onboarding.next')}
               </button>
             </div>
           </>
@@ -178,13 +172,11 @@ export function Onboarding({ onDone, linuxProfile, onProfileChange }: Onboarding
 
         {step === 'modules' && (
           <>
-            <h2>Wybierz moduły</h2>
-            <p className="lead">
-              Zainstalujemy tylko to, co zaznaczysz — resztę możesz doinstalować później w zarządzaniu modułami.
-            </p>
+            <h2>{t('onboarding.modules.title')}</h2>
+            <p className="lead">{t('onboarding.modules.lead')}</p>
             <div className="module-pick-list">
               <div className="module-pick-group">
-                <span className="kicker">Ogólne</span>
+                <span className="kicker">{t('onboarding.modules.general')}</span>
                 {generalModules.map((m) => {
                   const folder = folders.find((f) => f.id === m.folder)!
                   return (
@@ -200,7 +192,7 @@ export function Onboarding({ onDone, linuxProfile, onProfileChange }: Onboarding
                         type="button"
                         className={`toggle${picked.has(m.id) ? ' on' : ''}`}
                         style={{ '--g1': folder.gradient.g1 } as React.CSSProperties}
-                        aria-label={`${picked.has(m.id) ? 'Odznacz' : 'Zaznacz'} ${m.name}`}
+                        aria-label={t(picked.has(m.id) ? 'onboarding.modules.unselect' : 'onboarding.modules.select', { name: m.name })}
                         onClick={() => togglePick(m.id)}
                       />
                     </label>
@@ -209,7 +201,7 @@ export function Onboarding({ onDone, linuxProfile, onProfileChange }: Onboarding
               </div>
               {osModules.length > 0 && (
                 <div className="module-pick-group">
-                  <span className="kicker">Tylko {OS_LABEL[os]}</span>
+                  <span className="kicker">{t('onboarding.modules.only-os', { os: OS_LABEL[os] })}</span>
                   {osModules.map((m) => {
                     const folder = folders.find((f) => f.id === m.folder)!
                     return (
@@ -225,7 +217,7 @@ export function Onboarding({ onDone, linuxProfile, onProfileChange }: Onboarding
                           type="button"
                           className={`toggle${picked.has(m.id) ? ' on' : ''}`}
                           style={{ '--g1': folder.gradient.g1 } as React.CSSProperties}
-                          aria-label={`${picked.has(m.id) ? 'Odznacz' : 'Zaznacz'} ${m.name}`}
+                          aria-label={t(picked.has(m.id) ? 'onboarding.modules.unselect' : 'onboarding.modules.select', { name: m.name })}
                           onClick={() => togglePick(m.id)}
                         />
                       </label>
@@ -235,9 +227,9 @@ export function Onboarding({ onDone, linuxProfile, onProfileChange }: Onboarding
               )}
             </div>
             <div className="onboarding-actions">
-              <button className="btn btn-ghost" onClick={() => setStep('access')}>Wstecz</button>
+              <button className="btn btn-ghost" onClick={() => setStep('access')}>{t('onboarding.back')}</button>
               <button className="btn btn-primary" onClick={() => setStep('tutorial')}>
-                {picked.size > 0 ? `Zainstaluj ${picked.size} ${picked.size === 1 ? 'moduł' : 'moduły'}` : 'Pomiń na razie'}
+                {picked.size > 0 ? t('onboarding.modules.install', { n: picked.size }) : t('onboarding.modules.skip')}
               </button>
             </div>
           </>
@@ -245,16 +237,14 @@ export function Onboarding({ onDone, linuxProfile, onProfileChange }: Onboarding
 
         {step === 'tutorial' && (
           <>
-            <h2>Prawie gotowe</h2>
-            <p className="lead">
-              Chcesz oprowadzenie po aplikacji? Kilkanaście krótkich kroków, około dwóch minut. Wrócisz do niego w każdej chwili pod 904 w pasku bocznym.
-            </p>
+            <h2>{t('onboarding.tutorial.title')}</h2>
+            <p className="lead">{t('onboarding.tutorial.lead')}</p>
             <div className="onboarding-actions">
               <button className="btn btn-ghost" onClick={() => finish(false)}>
-                Pomiń, zobaczę później
+                {t('onboarding.tutorial.later')}
               </button>
               <button className="btn btn-primary" onClick={() => finish(true)}>
-                Pokaż mi aplikację
+                {t('onboarding.tutorial.show')}
               </button>
             </div>
           </>

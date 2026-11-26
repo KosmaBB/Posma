@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { AppState } from '../state/appState'
 import { applyOrder, catalogNumbers, folderNumber, folders, modulesInFolder, riskLabel } from '../data/modules'
+import { t } from '../i18n'
 import { Icon } from '../components/Icons'
 
 /**
@@ -23,10 +24,10 @@ export function FolderView({ app, folderId }: { app: AppState; folderId: string 
   if (!folder) {
     return (
       <div className="glass empty-state">
-        Nie ma takiego folderu.
+        {t('folder-view.missing')}
         <br />
         <button className="btn btn-primary" onClick={() => setView({ kind: 'dashboard' })}>
-          Wróć na pulpit
+          {t('folder-view.back')}
         </button>
       </div>
     )
@@ -58,7 +59,7 @@ export function FolderView({ app, folderId }: { app: AppState; folderId: string 
         <span className="back-link__arrow" aria-hidden="true">
           <Icon name="chevron" />
         </span>
-        Pulpit
+        {t('nav.dashboard')}
       </button>
 
       <header className="folder-head glass">
@@ -69,14 +70,14 @@ export function FolderView({ app, folderId }: { app: AppState; folderId: string 
             {folder.name}
           </h1>
           <p className="folder-head__count">
-            Włączone: {installed.length} z {items.length}
+            {t('folder-view.enabled', { n: installed.length, total: items.length })}
           </p>
         </div>
       </header>
 
       {items.length === 0 ? (
         <div className="glass empty-state">
-          W tym folderze nie ma jeszcze modułów dla Twojego systemu.
+          {t('folder-view.empty')}
         </div>
       ) : (
         <div className="cat-list" data-tour="folder-list">
@@ -116,7 +117,7 @@ export function FolderView({ app, folderId }: { app: AppState; folderId: string 
                 // happen from a stray click on the body of a row.
                 onClick={on ? () => setView({ kind: 'module', moduleId: m.id }) : undefined}
               >
-                <span className="folder-card__grip" aria-hidden="true" title="Przeciągnij, aby zmienić kolejność" />
+                <span className="folder-card__grip" aria-hidden="true" title={t('folder-view.drag')} />
                 <span className="cat-row__no">{numbers.get(m.id)}</span>
                 <div>
                   <h2 className="cat-row__name">{m.name}</h2>
@@ -132,7 +133,7 @@ export function FolderView({ app, folderId }: { app: AppState; folderId: string 
                         setView({ kind: 'module', moduleId: m.id })
                       }}
                     >
-                      {m.quickAction ?? 'Otwórz'}
+                      {m.quickAction ?? t('common.open')}
                     </button>
                   ) : (
                     <button
@@ -142,7 +143,7 @@ export function FolderView({ app, folderId }: { app: AppState; folderId: string 
                         setModuleInstalled(m.id, true)
                       }}
                     >
-                      Włącz moduł
+                      {t('folder-view.enable')}
                     </button>
                   )}
                   {on && (
@@ -152,9 +153,9 @@ export function FolderView({ app, folderId }: { app: AppState; folderId: string 
                         e.stopPropagation()
                         setModuleInstalled(m.id, false)
                       }}
-                      title="Ukryj ten moduł — pliki zostają na dysku"
+                      title={t('folder-view.disable.title')}
                     >
-                      Wyłącz
+                      {t('folder-view.disable')}
                     </button>
                   )}
                 </div>

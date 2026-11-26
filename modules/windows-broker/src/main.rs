@@ -68,6 +68,36 @@ fn restore_point_script(description: &str) -> String {
     format!("Checkpoint-Computer -Description '{label}' -RestorePointType MODIFY_SETTINGS")
 }
 
+/// smartctl's name for \\.\PhysicalDrive0–25, the drives the health
+/// module lists: /dev/sda to /dev/sdz, nothing else.
+fn is_smartctl_drive(device: &str) -> bool {
+    device.strip_prefix("/dev/sd").is_some_and(|d| d.len() == 1 && d.bytes().all(|b| b.is_ascii_lowercase()))
+}
+
+/// Program Files as the system records it, not from the environment, where
+/// a variable of the user's could point it anywhere.
+#[cfg(windows)]
+fn program_files() -> Option<std::path::PathBuf> {
+    use std::os::windows::ffi::OsStringExt;
+    use windows_sys::Win32::System::Com::CoTaskMemFree;
+    use windows_sys::Win32::UI::Shell::{FOLDERID_ProgramFiles, SHGetKnownFolderPath};
+    let mut path = std::ptr::null_mut();
+    // SAFETY: on success the system allocates `path`, NUL-terminated, and it is freed below either way.
+    let found = unsafe { SHGetKnownFolderPath(&FOLDERID_ProgramFiles, 0, std::ptr::null_mut(), &mut path) } == 0;
+    let dir = found.then(|| {
+        // SAFETY: a NUL-terminated wide string the call just returned.
+        let len = (0..).take_while(|&i| unsafe { *path.add(i) } != 0).count();
+        std::path::PathBuf::from(std::ffi::OsString::from_wide(unsafe { std::slice::from_raw_parts(path, len) }))
+    });
+    unsafe { CoTaskMemFree(path as *const _) };
+    dir
+}
+
+#[cfg(not(windows))]
+fn program_files() -> Option<std::path::PathBuf> {
+    None
+}
+
 /// DISM's own wording, in the system's language: there is nothing to parse
 /// that the user would not read better as DISM wrote it.
 fn dism(args: &[&str]) -> ExecResult {
@@ -88,7 +118,25 @@ impl Broker for WindowsBroker {
             "create_restore_point",
             "analyze_component_store",
             "component_store_cleanup",
+            "smart_read",
         ]
+    }
+
+    /// Reading SMART opens the raw drive, which takes an administrator.
+    /// smartctl comes from where its installer puts it, never from PATH:
+    /// part of PATH is the user's to change, and this runs elevated.
+    fn smart_read(&self, device: String) -> ExecResult {
+        if !is_smartctl_drive(&device) {
+            return ExecResult::failed(format!("{device}: nieprawidłowa nazwa urządzenia"));
+        }
+        let Some(smartctl) = program_files().map(|dir| dir.join(r"smartmontools\bin\smartctl.exe")) else {
+            return ExecResult::failed("nie udało się ustalić katalogu Program Files");
+        };
+        if !smartctl.is_file() {
+            // Worded as a missing program reads everywhere else, which the module turns into an install hint.
+            return ExecResult::failed(std::io::Error::from_raw_os_error(2).to_string());
+        }
+        run(&smartctl.to_string_lossy(), &["-a".into(), "-j".into(), device])
     }
 
     /// The system temp folder and Windows Update's download cache, entries
@@ -170,6 +218,18 @@ mod tests {
             "Checkpoint-Computer -Description 'Przed usunięciem Remove-Item C' -RestorePointType MODIFY_SETTINGS"
         );
         assert_eq!(restore_point_script("';"), "Checkpoint-Computer -Description 'POSMA' -RestorePointType MODIFY_SETTINGS");
+    }
+
+    /// Only the names the health module lists reach smartctl: never a flag,
+    /// a path or another device's syntax.
+    #[test]
+    fn only_listed_drives_reach_smartctl() {
+        assert!(is_smartctl_drive("/dev/sda") && is_smartctl_drive("/dev/sdz"));
+        for bad in ["/dev/sd", "/dev/sdA", "/dev/sdaa", "-a", "/dev/sda -d", r"\\.\PhysicalDrive0", "/dev/../sda"] {
+            assert!(!is_smartctl_drive(bad), "{bad}");
+        }
+        let refused = WindowsBroker.smart_read("--scan".into());
+        assert!(!refused.success && refused.error.is_some_and(|e| e.contains("nieprawidłowa")));
     }
 
     /// A service off any profile is refused before sc.exe runs at all.

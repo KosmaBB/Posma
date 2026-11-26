@@ -2,16 +2,17 @@ import type { AppState } from '../../state/appState'
 import { catalogNumbers, folders, moduleById, riskLabel } from '../../data/modules'
 import { ModuleBody } from '../../views/ModuleView'
 import { Pair, PairRail } from './pairs'
+import { t } from '../../i18n'
 
-const STEPS = [
-  { name: 'Odczyt', text: 'Moduł zaczyna od odczytu: pokazuje, co znalazł, i niczego nie zmienia.' },
-  { name: 'Wybór', text: 'Ty decydujesz, których pozycji dotyczy zmiana.' },
-  { name: 'Potwierdzenie', text: 'Zmiana zachodzi dopiero po Twoim potwierdzeniu. Im wyższe ryzyko, tym więcej pytań.' },
+const steps = () => [
+  { name: t('world.monochrom.module.step.read'), text: t('world.monochrom.module.step.read.text') },
+  { name: t('world.monochrom.module.step.choose'), text: t('world.monochrom.module.step.choose.text') },
+  { name: t('world.monochrom.module.step.confirm'), text: t('world.monochrom.module.step.confirm.text') },
 ]
 
-const RAIL = [
-  { id: 'mono-module-top', label: 'Moduł' },
-  { id: 'mono-how', label: 'Jak działa' },
+const rail = () => [
+  { id: 'mono-module-top', label: t('world.monochrom.module.rail.module') },
+  { id: 'mono-how', label: t('world.monochrom.module.rail.how') },
 ]
 
 /** A module: its name as the claim, its own interface as the proof under it. */
@@ -21,9 +22,9 @@ export function ModuleFrame({ app, moduleId }: { app: AppState; moduleId: string
     return (
       <div className="mono-pairs">
         <header className="mono-modhead">
-          <h1>Nie znaleziono modułu.</h1>
+          <h1>{t('world.monochrom.module.missing')}</h1>
           <div className="mono-actions">
-            <button className="btn btn-ghost" onClick={() => app.setView({ kind: 'dashboard' })}>Wróć do przeglądu</button>
+            <button className="btn btn-ghost" onClick={() => app.setView({ kind: 'dashboard' })}>{t('world.monochrom.back')}</button>
           </div>
         </header>
       </div>
@@ -36,7 +37,7 @@ export function ModuleFrame({ app, moduleId }: { app: AppState; moduleId: string
     <>
       <div className="mono-pairs mono-module" data-tour="module">
         <header className="mono-modhead" id="mono-module-top" data-tour="module-hero">
-          <nav className="mono-crumbs" aria-label="Ścieżka">
+          <nav className="mono-crumbs" aria-label={t('world.monochrom.module.path')}>
             <button className="mono-link" onClick={() => app.setView({ kind: 'folder', folderId: folder.id })}>{folder.name}</button>
             <span aria-hidden="true">/</span>
             <b>{no} {mod.name}</b>
@@ -53,18 +54,18 @@ export function ModuleFrame({ app, moduleId }: { app: AppState; moduleId: string
           flip
           claim={
             <>
-              <h2>Nic nie znika bez potwierdzenia.</h2>
-              <p>Tak pracuje każdy moduł, także {mod.name}.</p>
+              <h2>{t('world.monochrom.module.claim')}</h2>
+              <p>{t('world.monochrom.module.claim-sub', { name: mod.name })}</p>
             </>
           }
           proof={
             <div className="mono-shot">
               <div className="mono-shot__head">
-                <h3>Jak pracuje moduł</h3>
-                <span>ryzyko: {riskLabel[mod.risk].toLowerCase()}</span>
+                <h3>{t('world.monochrom.module.how')}</h3>
+                <span>{t('world.monochrom.module.risk', { risk: riskLabel[mod.risk].toLowerCase() })}</span>
               </div>
               <dl className="mono-steps">
-                {STEPS.map((s) => (
+                {steps().map((s) => (
                   <div key={s.name}>
                     <dt>{s.name}</dt>
                     <dd>{s.text}</dd>
@@ -75,7 +76,7 @@ export function ModuleFrame({ app, moduleId }: { app: AppState; moduleId: string
           }
         />
       </div>
-      <PairRail items={RAIL} />
+      <PairRail items={rail()} />
     </>
   )
 }

@@ -75,6 +75,9 @@ pub enum UnlockResult {
     Success,
     WrongPin { attempts_remaining: u32 },
     LockedOut { retry_after_secs: u64 },
+    /// The PIN is right, but the system's store no longer has the key —
+    /// a reinstall keeps vault.db and loses the wallet. See `reset`.
+    KeyMissing,
 }
 
 const MAX_ATTEMPTS_BEFORE_LOCKOUT: u32 = 5;
@@ -205,7 +208,8 @@ impl Vault {
 
         if attempt_hash.as_slice() == stored_hash.as_slice() {
             self.conn.execute("UPDATE vault_meta SET failed_attempts = 0, locked_until_unix = NULL WHERE id = 1", []).map_err(|e| e.to_string())?;
-            self.encryption_key = Some(crate::os_keychain::load_key()?);
+            let Some(key) = crate::os_keychain::load_key()? else { return Ok(UnlockResult::KeyMissing) };
+            self.encryption_key = Some(key);
             return Ok(UnlockResult::Success);
         }
 
@@ -234,6 +238,7 @@ impl Vault {
             UnlockResult::Success => {}
             UnlockResult::WrongPin { .. } => return Err("obecny kod PIN jest nieprawidłowy".into()),
             UnlockResult::LockedOut { retry_after_secs } => return Err(format!("zbyt wiele prób — spróbuj ponownie za {retry_after_secs} s")),
+            UnlockResult::KeyMissing => return Err("klucza sejfu nie ma już w magazynie systemowym".into()),
         }
         validate_pin(new_pin)?;
 
@@ -247,6 +252,21 @@ impl Vault {
             )
             .map_err(|e| e.to_string())?;
         Ok(())
+    }
+
+    /// Starts over once the key is gone from the system's store. Without
+    /// the key nothing in here can be decrypted, so the wipe loses nothing
+    /// still readable; while the store holds the key — or cannot say
+    /// whether it does — this refuses.
+    pub fn reset(&mut self) -> Result<(), String> {
+        if let Some(mut key) = crate::os_keychain::load_key()? {
+            key.zeroize();
+            return Err("klucz sejfu wciąż jest w magazynie systemowym — sejf da się odblokować, więc nie zostanie usunięty".into());
+        }
+        self.lock();
+        self.conn
+            .execute_batch("DELETE FROM entries; DELETE FROM folders; DELETE FROM templates; DELETE FROM vault_meta; VACUUM;")
+            .map_err(|e| e.to_string())
     }
 
     fn require_key(&self) -> Result<[u8; KEY_LEN], String> {
@@ -417,4 +437,34 @@ pub struct AuditResult {
     pub weak: Vec<AuditHit>,
     pub reused_count: usize,
     pub reused: Vec<ReusedGroup>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A reinstall keeps vault.db and loses the wallet: the right PIN then
+    /// says so, reset is refused while the key exists and allowed once it
+    /// is gone, and a new vault can be made in the same file. Uses a
+    /// disposable keychain account, never the real one.
+    #[test]
+    #[ignore = "requires a real OS credential store; run on a desktop session"]
+    fn a_vault_whose_key_is_gone_starts_over() {
+        std::env::set_var("POSMA_VAULT_KEYCHAIN_ACCOUNT", "posma-vault-TEST-reset-delete-me");
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/test-vault-reset.db");
+        let _ = std::fs::remove_file(&path);
+        let mut vault = Vault::open(&path).unwrap();
+        vault.create("123456").unwrap();
+        vault.lock();
+
+        assert!(vault.reset().is_err(), "the key is still there");
+        crate::os_keychain::delete_key().unwrap();
+        assert!(matches!(vault.unlock("123456").unwrap(), UnlockResult::KeyMissing));
+        vault.reset().unwrap();
+        assert!(!vault.is_initialized());
+        vault.create("654321").unwrap();
+
+        crate::os_keychain::delete_key().unwrap();
+        std::fs::remove_file(&path).unwrap();
+    }
 }

@@ -8,6 +8,7 @@ import { Modal } from '../../components/Modal'
 import { formatBytes } from './TempCleanView'
 import { confirmAction } from '../../components/confirm'
 import { callModule } from '../../data/callModule'
+import { t } from '../../i18n'
 
 // ------------------------------------------------------------- shared types
 
@@ -31,10 +32,10 @@ type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: string }
 const RECENT_DAYS = 14
 
 function ageLabel(days: number | null): string {
-  if (days === null) return 'nieznany wiek'
-  if (days === 0) return 'dziś'
-  if (days === 1) return 'wczoraj'
-  return `${days} dni temu`
+  if (days === null) return t('view.uninstaller.age.unknown')
+  if (days === 0) return t('view.uninstaller.age.today')
+  if (days === 1) return t('view.uninstaller.age.yesterday')
+  return t('view.uninstaller.age.days', { n: days })
 }
 
 // ---------------------------------------------------------------- app list
@@ -90,7 +91,7 @@ function AppDetail({ app, onClose, onUninstalled }: { app: InstalledApp; onClose
   }, [])
 
   async function runUninstall() {
-    if (!(await confirmAction(`Odinstalować "${app.name}"? Ta operacja zmienia system i może wymagać uprawnień administratora.`))) return
+    if (!(await confirmAction(t('view.uninstaller.uninstall.confirm', { name: app.name })))) return
     setUninstallState('running')
     try {
       let res: ApiResponse<UninstallResult>
@@ -175,30 +176,30 @@ function AppDetail({ app, onClose, onUninstalled }: { app: InstalledApp; onClose
               {app.size_bytes ? ` · ${formatBytes(app.size_bytes)}` : ''}
             </div>
           </div>
-          <button className="btn btn-ghost btn-mini" onClick={onClose}>Zamknij</button>
+          <button className="btn btn-ghost btn-mini" onClick={onClose}>{t('view.uninstaller.close')}</button>
         </div>
         {app.description && <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 10 }}>{app.description}</div>}
 
         <div className="form-field" style={{ marginTop: 10 }}>
-          <span>Odinstalowanie programu</span>
+          <span>{t('view.uninstaller.uninstall.label')}</span>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <button
               className="btn btn-primary btn-danger"
               onClick={runUninstall}
               disabled={uninstallState === 'running'}
             >
-              {uninstallState === 'running' ? 'Odinstalowywanie...' : `Odinstaluj (${app.source})`}
+              {uninstallState === 'running' ? t('view.uninstaller.uninstall.running') : t('view.uninstaller.uninstall.button', { source: app.source })}
             </button>
             {typeof uninstallState === 'object' && uninstallState.success && (
-              <span className="chip low">Odinstalowano</span>
+              <span className="chip low">{t('view.uninstaller.uninstall.done')}</span>
             )}
           </div>
           {failedUninstall && typeof uninstallState === 'object' && (
             <div className="form-warning" style={{ marginTop: 4 }}>
-              Nie udało się: {uninstallState.error}
+              {t('view.uninstaller.uninstall.failed', { error: uninstallState.error ?? '' })}
               {uninstallState.install_hint && (
                 <div style={{ marginTop: 6 }}>
-                  <MissingDependency tool={`Uprawnienia do odinstalowania „${app.name}”`} installHint={uninstallState.install_hint} />
+                  <MissingDependency tool={t('view.uninstaller.uninstall.permission', { name: app.name })} installHint={uninstallState.install_hint} />
                 </div>
               )}
             </div>
@@ -206,27 +207,27 @@ function AppDetail({ app, onClose, onUninstalled }: { app: InstalledApp; onClose
         </div>
 
         <div className="section-head" style={{ marginTop: 18 }}>
-          <h2 style={{ fontSize: 14 }}>Powiązane pliki</h2>
+          <h2 style={{ fontSize: 14 }}>{t('view.uninstaller.leftovers.title')}</h2>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             {leftovers && leftovers.length > 1 && (
               <div className="diskmap-viewtabs">
-                <button className={`diskmap-viewtab ${sortMode === 'size' ? 'active' : ''}`} onClick={() => setSortMode('size')}>Rozmiar</button>
-                <button className={`diskmap-viewtab ${sortMode === 'age' ? 'active' : ''}`} onClick={() => setSortMode('age')}>Wiek</button>
+                <button className={`diskmap-viewtab ${sortMode === 'size' ? 'active' : ''}`} onClick={() => setSortMode('size')}>{t('view.uninstaller.leftovers.sort.size')}</button>
+                <button className={`diskmap-viewtab ${sortMode === 'age' ? 'active' : ''}`} onClick={() => setSortMode('age')}>{t('view.uninstaller.leftovers.sort.age')}</button>
               </div>
             )}
             <button className="btn btn-ghost btn-mini" onClick={loadLeftovers} disabled={leftoversLoading}>
-              {leftoversLoading ? 'Szukanie...' : 'Odśwież'}
+              {leftoversLoading ? t('view.uninstaller.leftovers.searching') : t('view.uninstaller.leftovers.refresh')}
             </button>
           </div>
         </div>
 
-        {leftoversLoading && leftovers === null && <div className="glass empty-state">Szukanie powiązanych plików...</div>}
-        {leftovers && leftovers.length === 0 && <div className="glass empty-state">Nie znaleziono powiązanych plików.</div>}
+        {leftoversLoading && leftovers === null && <div className="glass empty-state">{t('view.uninstaller.leftovers.searching-all')}</div>}
+        {leftovers && leftovers.length === 0 && <div className="glass empty-state">{t('view.uninstaller.leftovers.none')}</div>}
         {sortedLeftovers && sortedLeftovers.length > 0 && (
           <>
             {sortedLeftovers.length > 1 && (
               <button className="btn btn-ghost btn-mini" style={{ marginBottom: 8 }} onClick={toggleAll}>
-                {sortedLeftovers.every((e) => checked.has(e.path)) ? 'Odznacz wszystko' : 'Zaznacz wszystko'}
+                {sortedLeftovers.every((e) => checked.has(e.path)) ? t('view.uninstaller.leftovers.deselect-all') : t('view.uninstaller.leftovers.select-all')}
               </button>
             )}
             <div className="clean-list" style={{ maxHeight: 240, overflowY: 'auto' }}>
@@ -244,7 +245,7 @@ function AppDetail({ app, onClose, onUninstalled }: { app: InstalledApp; onClose
                     <span className="cr-size mono">{formatBytes(e.size_bytes)}</span>
                     <button
                       className="btn btn-ghost btn-mini cr-open-btn"
-                      title="Otwórz folder"
+                      title={t('view.uninstaller.leftovers.open-folder')}
                       onClick={(ev) => {
                         ev.preventDefault()
                         ev.stopPropagation()
@@ -259,14 +260,14 @@ function AppDetail({ app, onClose, onUninstalled }: { app: InstalledApp; onClose
             </div>
             <div style={{ marginTop: 10 }}>
               <button className="btn btn-primary" disabled={checked.size === 0 || cleaning} onClick={runClean}>
-                {cleaning ? 'Czyszczenie...' : `Wyczyść zaznaczone (${checked.size})`}
+                {cleaning ? t('view.uninstaller.clean.running') : t('view.uninstaller.clean.selected-count', { n: checked.size })}
               </button>
             </div>
           </>
         )}
         {cleanResult && (
           <div className="form-warning" style={{ marginTop: 10, color: 'var(--good)', background: 'color-mix(in srgb, var(--good) 10%, transparent)', borderColor: 'color-mix(in srgb, var(--good) 30%, transparent)' }}>
-            Odzyskano {formatBytes(cleanResult.freed_bytes)} ({cleanResult.removed} pozycji).
+            {t('view.uninstaller.leftovers.freed', { size: formatBytes(cleanResult.freed_bytes), n: cleanResult.removed })}
           </div>
         )}
     </Modal>
@@ -317,14 +318,14 @@ function AppsPanel() {
   if (error) {
     return (
       <div className="glass empty-state" style={{ color: 'var(--critical)' }}>
-        Błąd: {error}
+        {t('view.uninstaller.error', { error })}
         <br />
-        <button className="btn btn-ghost" onClick={load}>Spróbuj ponownie</button>
+        <button className="btn btn-ghost" onClick={load}>{t('view.uninstaller.retry')}</button>
       </div>
     )
   }
   if (!apps) {
-    return <Preparing title="Zbieram listę aplikacji" note="Pytam menedżer pakietów systemu, snap i flatpak po kolei. Każdy odpowiada we własnym tempie." />
+    return <Preparing title={t('view.uninstaller.apps.loading.title')} note={t('view.uninstaller.apps.loading.note')} />
   }
 
   return (
@@ -332,7 +333,7 @@ function AppsPanel() {
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 14, flexWrap: 'wrap' }}>
         <input
           type="text"
-          placeholder="Szukaj aplikacji..."
+          placeholder={t('view.uninstaller.apps.search')}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           style={{ flex: 1, minWidth: 200, padding: '9px 14px', background: 'var(--bg)', border: '1px solid var(--border-strong)', color: 'var(--ink)', fontSize: 13 }}
@@ -410,7 +411,7 @@ function BlindScanPanel() {
     const paths = [...checked]
     if (paths.length === 0) return
     const total = selectedBytes(scan)
-    if (!(await confirmAction(`Usunąć ${paths.length} pozycji (${formatBytes(total)})? Tej operacji nie można cofnąć.`))) return
+    if (!(await confirmAction(t('view.uninstaller.scan.confirm', { n: paths.length, size: formatBytes(total) })))) return
     setPhase({ kind: 'cleaning', scan })
     try {
       const res = await callModule<CleanData>('uninstaller', { cmd: 'clean', paths })
@@ -443,44 +444,43 @@ function BlindScanPanel() {
     <div>
       {phase.kind === 'idle' && (
         <div className="glass empty-state intro">
-          <div style={{ fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>Ogólne skanowanie</div>
-          Zamiast wybierać konkretną aplikację, przeszukaj <span className="mono">~/.config</span> i{' '}
-          <span className="mono">~/.cache</span> pod kątem folderów, które nie pasują do żadnego zainstalowanego
-          programu. Heurystyczne — wtyczki i AppImage mogą trafić na listę mimo że są używane, sprawdź zanim usuniesz.
+          <div style={{ fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>{t('view.uninstaller.scan.title')}</div>
+          {t('view.uninstaller.scan.intro.before')} <span className="mono">~/.config</span> {t('view.uninstaller.scan.intro.and')}{' '}
+          <span className="mono">~/.cache</span> {t('view.uninstaller.scan.intro.after')}
           <br />
           <br />
-          <button className="btn btn-primary" onClick={runScan}>Skanuj</button>
+          <button className="btn btn-primary" onClick={runScan}>{t('view.uninstaller.scan.start')}</button>
         </div>
       )}
       {phase.kind === 'scanning' && (
-        <Preparing title="Szukam pozostałości" note="Przeglądam katalogi konfiguracji, cache i danych w poszukiwaniu śladów po odinstalowanych programach." />
+        <Preparing title={t('view.uninstaller.scan.loading.title')} note={t('view.uninstaller.scan.loading.note')} />
       )}
       {phase.kind === 'error' && (
         <div className="glass empty-state" style={{ color: 'var(--critical)' }}>
-          Błąd: {phase.message}
+          {t('view.uninstaller.error', { error: phase.message })}
           <br />
-          <button className="btn btn-ghost" onClick={runScan}>Spróbuj ponownie</button>
+          <button className="btn btn-ghost" onClick={runScan}>{t('view.uninstaller.retry')}</button>
         </div>
       )}
       {scan && (
         <>
           {scan.entries.length === 0 ? (
-            <div className="glass empty-state">Nie znaleziono kandydatów.</div>
+            <div className="glass empty-state">{t('view.uninstaller.scan.none')}</div>
           ) : (
             <>
               <div className="clean-summary glass">
                 <div>
-                  <div className="cs-label">Potencjalnie do wyczyszczenia</div>
+                  <div className="cs-label">{t('view.uninstaller.scan.potential')}</div>
                   <div className="cs-value mono">{formatBytes(scan.total_bytes)}</div>
                 </div>
                 <div>
-                  <div className="cs-label">Zaznaczone</div>
+                  <div className="cs-label">{t('view.uninstaller.scan.selected')}</div>
                   <div className="cs-value mono" style={{ color: 'var(--accent)' }}>{formatBytes(selectedBytes(scan))}</div>
                 </div>
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
-                  <button className="btn btn-ghost" onClick={runScan} disabled={phase.kind === 'cleaning'}>Skanuj ponownie</button>
+                  <button className="btn btn-ghost" onClick={runScan} disabled={phase.kind === 'cleaning'}>{t('view.uninstaller.scan.again')}</button>
                   <button className="btn btn-primary" disabled={checked.size === 0 || phase.kind === 'cleaning'} onClick={() => runClean(scan)}>
-                    {phase.kind === 'cleaning' ? 'Czyszczenie...' : 'Wyczyść zaznaczone'}
+                    {phase.kind === 'cleaning' ? t('view.uninstaller.clean.running') : t('view.uninstaller.clean.selected')}
                   </button>
                 </div>
               </div>
@@ -495,7 +495,7 @@ function BlindScanPanel() {
                         <span className="mono" style={{ color: 'var(--muted)', marginLeft: 8, fontSize: 13 }}>{e.path}</span>
                       </span>
                       <span className="chip os">{e.source}</span>
-                      {recent && <span className="chip medium">{ageLabel(e.age_days)} — sprawdź uważnie</span>}
+                      {recent && <span className="chip medium">{t('view.uninstaller.scan.check-carefully', { age: ageLabel(e.age_days) })}</span>}
                       {!recent && <span className="cr-files">{ageLabel(e.age_days)}</span>}
                       <span className="cr-size mono">{formatBytes(e.size_bytes)}</span>
                     </label>
@@ -510,17 +510,17 @@ function BlindScanPanel() {
         <div className="glass empty-state">
           <div className="done-badge"><Icon name="check" /></div>
           <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', fontFamily: 'var(--sans)' }}>
-            Odzyskano {formatBytes(phase.result.freed_bytes)}
+            {t('view.uninstaller.scan.freed', { size: formatBytes(phase.result.freed_bytes) })}
           </div>
-          Usunięto {phase.result.removed} pozycji.
+          {t('view.uninstaller.scan.removed', { n: phase.result.removed })}
           {phase.result.errors.length > 0 && (
             <div className="clean-errors mono">
               {phase.result.errors.slice(0, 8).map((err) => <div key={err}>{err}</div>)}
-              {phase.result.errors.length > 8 && <div>... i {phase.result.errors.length - 8} więcej</div>}
+              {phase.result.errors.length > 8 && <div>{t('view.uninstaller.scan.more-errors', { n: phase.result.errors.length - 8 })}</div>}
             </div>
           )}
           <br />
-          <button className="btn btn-primary" onClick={runScan}>Skanuj ponownie</button>
+          <button className="btn btn-primary" onClick={runScan}>{t('view.uninstaller.scan.again')}</button>
         </div>
       )}
     </div>
@@ -535,8 +535,8 @@ export function UninstallerView() {
   return (
     <div>
       <div className="diskmap-viewtabs" style={{ marginBottom: 16 }}>
-        <button className={`diskmap-viewtab ${tab === 'apps' ? 'active' : ''}`} onClick={() => setTab('apps')}>Zainstalowane aplikacje</button>
-        <button className={`diskmap-viewtab ${tab === 'scan' ? 'active' : ''}`} onClick={() => setTab('scan')}>Ogólne skanowanie</button>
+        <button className={`diskmap-viewtab ${tab === 'apps' ? 'active' : ''}`} onClick={() => setTab('apps')}>{t('view.uninstaller.tab.apps')}</button>
+        <button className={`diskmap-viewtab ${tab === 'scan' ? 'active' : ''}`} onClick={() => setTab('scan')}>{t('view.uninstaller.scan.title')}</button>
       </div>
       {tab === 'apps' ? <AppsPanel /> : <BlindScanPanel />}
     </div>

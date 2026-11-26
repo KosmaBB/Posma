@@ -6,9 +6,11 @@
 //! Protocol (one JSON line on stdin -> one JSON line on stdout):
 //!   {"cmd":"scan","path":"/abs/path"}   // path omitted/null -> home directory
 //!
-//! Read-only: there is no delete/clean action here, so unlike the other
-//! fs-user modules there's no home-directory restriction — browsing anywhere
-//! the OS lets the user read (e.g. a picked external drive) is harmless.
+//!   {"cmd":"delete","path":"/abs/path"} // one entry, from the map's item menu
+//!
+//! Browsing has no home-directory restriction — anywhere the OS lets the
+//! user read (a picked external drive, say) is harmless to look at. The one
+//! delete is the exception, and `delete` explains what guards it.
 //!
 //! Symlinks are listed as small leaf entries (their own lstat size, never
 //! the target's) rather than followed — this avoids cycles and double-
@@ -94,7 +96,7 @@ fn dir_size(path: &Path, filter: &Filter) -> u64 {
             continue;
         } else if meta.is_dir() {
             total += dir_size(&entry.path(), filter);
-        } else {
+        } else if !scan_filter::is_cloud_only(&meta) {
             total += meta.len();
         }
     }
@@ -110,13 +112,24 @@ struct DeleteResult {
     freed_bytes: u64,
 }
 
+/// `canonicalize` writes C:\x on Windows as \\?\C:\x, which a blacklist
+/// entry written plainly would never match.
+fn plain(path: PathBuf) -> PathBuf {
+    match path.to_str().and_then(|s| s.strip_prefix(r"\\?\")) {
+        Some(rest) if rest.as_bytes().get(1) == Some(&b':') => PathBuf::from(rest),
+        _ => path,
+    }
+}
+
 /// Removes one entry the disk map is showing.
 ///
 /// The map can browse anywhere, which makes this the most dangerous delete
 /// in the application — the other scanners only ever offer files from
 /// directories they chose themselves. Three things are checked here, and
-/// the checks are done against the resolved path rather than the string
-/// that arrived, so a symlink cannot be used to point somewhere else:
+/// the checks are done against the resolved parent rather than the string
+/// that arrived, so a symlink above it cannot point somewhere else — while
+/// the entry itself is not resolved: a link is removed as a link, never
+/// followed to delete what it points at.
 ///
 /// 1. the shared exclusion list must allow it, which rules out the running
 ///    system and another operating system's volume;
@@ -127,13 +140,12 @@ fn delete(path: String, blacklist: Vec<String>) -> DeleteResult {
     let refuse = |m: String| DeleteResult { success: false, message: m, freed_bytes: 0 };
 
     let raw = PathBuf::from(&path);
-    let Ok(resolved) = raw.canonicalize() else {
+    let (Some(parent), Some(name)) = (raw.parent(), raw.file_name()) else {
+        return refuse("Odmowa: to katalog główny".into());
+    };
+    let Ok(resolved) = parent.canonicalize().map(|dir| plain(dir).join(name)) else {
         return refuse(format!("{path}: nie istnieje"));
     };
-
-    if resolved.parent().is_none() {
-        return refuse("Odmowa: to katalog główny".into());
-    }
 
     let filter = Filter::including_noise(blacklist);
     if !filter.allows(&resolved) {
@@ -152,6 +164,9 @@ fn delete(path: String, blacklist: Vec<String>) -> DeleteResult {
 
     let outcome = if meta.is_dir() {
         fs::remove_dir_all(&resolved)
+    } else if meta.file_type().is_symlink() {
+        // On Windows a link to a folder (or a junction) is a directory entry.
+        fs::remove_file(&resolved).or_else(|_| fs::remove_dir(&resolved))
     } else {
         fs::remove_file(&resolved)
     };
@@ -190,7 +205,14 @@ fn scan(path: Option<String>, blacklist: Vec<String>) -> ScanData {
                     continue;
                 };
                 let is_dir = meta.is_dir(); // false for symlinks — lstat metadata never reports symlink-to-dir as a dir
-                let size = if is_dir { dir_size(&p, &filter) } else { meta.len() };
+                // A cloud-only file occupies nothing on this disk.
+                let size = if is_dir {
+                    dir_size(&p, &filter)
+                } else if scan_filter::is_cloud_only(&meta) {
+                    0
+                } else {
+                    meta.len()
+                };
                 entries.push(Entry { name, path: Some(p.to_string_lossy().into_owned()), is_dir, size_bytes: size });
             }
         }
@@ -235,4 +257,50 @@ fn main() {
     };
     println!("{}", output.expect("response must serialize"));
     io::stdout().flush().ok();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn scratch(name: &str) -> PathBuf {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target").join(name);
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn only_a_drive_path_loses_its_verbatim_prefix() {
+        assert_eq!(plain(PathBuf::from(r"\\?\C:\Users\k")), PathBuf::from(r"C:\Users\k"));
+        assert_eq!(plain(PathBuf::from(r"\\?\UNC\server\share")), PathBuf::from(r"\\?\UNC\server\share"));
+        assert_eq!(plain(PathBuf::from("/home/k")), PathBuf::from("/home/k"));
+    }
+
+    /// Deleting a link takes the link: the folder it points at, and all in
+    /// it, stays where it was.
+    #[cfg(unix)]
+    #[test]
+    fn a_link_goes_and_what_it_points_at_stays() {
+        let dir = scratch("test-disk-map-link");
+        fs::create_dir(dir.join("real")).unwrap();
+        fs::write(dir.join("real/precious.txt"), "keep").unwrap();
+        std::os::unix::fs::symlink(dir.join("real"), dir.join("link")).unwrap();
+        let done = delete(dir.join("link").to_string_lossy().into_owned(), Vec::new());
+        assert!(done.success, "{}", done.message);
+        assert!(fs::symlink_metadata(dir.join("link")).is_err() && dir.join("real/precious.txt").is_file());
+        fs::remove_dir_all(&dir).unwrap();
+    }
+
+    /// A folder on the blacklist, written as a person picks it, holds on
+    /// Windows too, where a resolved path starts with \\?\.
+    #[test]
+    fn the_blacklist_holds_for_what_is_inside_it() {
+        let dir = scratch("test-disk-map-blacklist");
+        fs::write(dir.join("photo.jpg"), "x").unwrap();
+        let listed = dir.canonicalize().map(plain).unwrap().to_string_lossy().into_owned();
+        let done = delete(dir.join("photo.jpg").to_string_lossy().into_owned(), vec![listed]);
+        assert!(!done.success && dir.join("photo.jpg").is_file(), "{}", done.message);
+        fs::remove_dir_all(&dir).unwrap();
+    }
 }

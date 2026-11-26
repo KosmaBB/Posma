@@ -3,6 +3,7 @@ import { open } from '@tauri-apps/plugin-dialog'
 import { Icon } from '../../components/Icons'
 import { formatBytes } from './TempCleanView'
 import { callModule } from '../../data/callModule'
+import { t } from '../../i18n'
 
 interface MetaField {
   id: string
@@ -72,8 +73,8 @@ export function MetadataView() {
     const result = await open({
       multiple: true,
       directory: false,
-      title: 'Wybierz zdjęcia do sprawdzenia',
-      filters: [{ name: 'Obrazy', extensions: ['jpg', 'jpeg', 'png'] }],
+      title: t('view.metadata.pick-title'),
+      filters: [{ name: t('view.metadata.pick-filter'), extensions: ['jpg', 'jpeg', 'png'] }],
     })
     const picked = Array.isArray(result) ? result : typeof result === 'string' ? [result] : []
     if (picked.length === 0) return
@@ -156,24 +157,21 @@ export function MetadataView() {
   return (
     <div>
       <div className="glass empty-state intro">
-        <div style={{ fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>Ukryte dane w zdjęciach</div>
-        Zdjęcia z telefonów i aparatów często zawierają w sobie EXIF (model urządzenia, data, czasem dokładna
-        lokalizacja GPS) oraz komentarze czy tagi tekstowe. Wybierz pliki JPEG lub PNG, rozwiń pozycję żeby zobaczyć
-        dokładnie co w nich siedzi, i wybierz co ma zostać usunięte — resztę (np. samą datę zrobienia) możesz
-        zachować.
+        <div style={{ fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>{t('view.metadata.intro.title')}</div>
+        {t('view.metadata.intro.body')}
       </div>
 
       <div className="section-head">
-        <h2>Do sprawdzenia</h2>
-        <button className="btn btn-ghost btn-mini" onClick={pickFiles} disabled={busy}>Wybierz pliki...</button>
+        <h2>{t('view.metadata.heading')}</h2>
+        <button className="btn btn-ghost btn-mini" onClick={pickFiles} disabled={busy}>{t('view.metadata.choose')}</button>
       </div>
 
       {items.length === 0 && phase.kind !== 'inspecting' ? (
-        <div className="glass empty-state">Nic nie wybrano.</div>
+        <div className="glass empty-state">{t('view.metadata.empty')}</div>
       ) : (
         <div className="clean-list">
           {phase.kind === 'inspecting' && items.length === 0 && (
-            <div className="glass empty-state">Sprawdzanie...</div>
+            <div className="glass empty-state">{t('view.metadata.inspecting')}</div>
           )}
           {items.map((f) => {
             const canSelect = f.supported && f.metadata_bytes > 0
@@ -198,9 +196,9 @@ export function MetadataView() {
                   {f.error ? (
                     <span className="chip critical">{f.error}</span>
                   ) : !f.supported ? (
-                    <span className="chip os">nieobsługiwany format</span>
+                    <span className="chip os">{t('view.metadata.unsupported')}</span>
                   ) : f.fields.length === 0 ? (
-                    <span className="chip low">czysty</span>
+                    <span className="chip low">{t('view.metadata.clean')}</span>
                   ) : (
                     f.fields.map((field) => (
                       <span key={field.id} className={`chip ${field.id === 'gps' ? 'critical' : 'medium'}`}>{field.label}</span>
@@ -216,7 +214,7 @@ export function MetadataView() {
                       }}
                       disabled={busy}
                     >
-                      {isExpanded ? 'Zwiń' : 'Szczegóły'}
+                      {isExpanded ? t('view.metadata.collapse') : t('view.metadata.details')}
                     </button>
                   )}
                   <button
@@ -227,13 +225,13 @@ export function MetadataView() {
                     }}
                     disabled={busy}
                   >
-                    Usuń z listy
+                    {t('view.metadata.remove')}
                   </button>
                 </div>
                 {isExpanded && f.fields.length > 0 && (
                   <div style={{ padding: '10px 16px 14px 44px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-                      Zaznacz co zachować — reszta zostanie usunięta przy czyszczeniu.
+                      {t('view.metadata.keep-hint')}
                     </div>
                     {f.fields.map((field) => (
                       <label key={field.id} className="form-check" style={{ alignItems: 'flex-start' }}>
@@ -260,14 +258,14 @@ export function MetadataView() {
       {items.length > 0 && phase.kind !== 'done' && (
         <div style={{ marginTop: 12 }}>
           <button className="btn btn-primary" disabled={selected.size === 0 || busy} onClick={runClean}>
-            {phase.kind === 'cleaning' ? 'Czyszczenie...' : `Wyczyść metadane (${selected.size}/${selectableCount})`}
+            {phase.kind === 'cleaning' ? t('view.metadata.cleaning') : t('view.metadata.clean-button', { selected: selected.size, total: selectableCount })}
           </button>
         </div>
       )}
 
       {phase.kind === 'error' && (
         <div className="glass empty-state" style={{ color: 'var(--critical)', marginTop: 12 }}>
-          Błąd: {phase.message}
+          {t('view.metadata.error', { message: phase.message })}
         </div>
       )}
 
@@ -277,14 +275,14 @@ export function MetadataView() {
             <Icon name="check" />
           </div>
           <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', fontFamily: 'var(--sans)' }}>
-            Wyczyszczono {phase.result.entries.filter((e) => e.cleaned).length} plików ({formatBytes(phase.result.total_freed)})
+            {t('view.metadata.done', { n: phase.result.entries.filter((e) => e.cleaned).length, size: formatBytes(phase.result.total_freed) })}
           </div>
           <div className="clean-errors mono" style={{ color: 'var(--muted)', background: 'none', border: 'none', textAlign: 'left' }}>
             {phase.result.entries
               .filter((e) => e.cleaned && e.removed_fields.length > 0)
               .map((e) => (
                 <div key={e.path} style={{ marginBottom: 4 }}>
-                  {fileName(e.path)} — plik zawierał: {e.removed_fields.join(', ')}
+                  {t('view.metadata.contained', { name: fileName(e.path), fields: e.removed_fields.join(', ') })}
                 </div>
               ))}
           </div>
@@ -299,7 +297,7 @@ export function MetadataView() {
             </div>
           )}
           <br />
-          <button className="btn btn-primary" onClick={() => setPhase({ kind: 'idle' })}>Zamknij</button>
+          <button className="btn btn-primary" onClick={() => setPhase({ kind: 'idle' })}>{t('view.metadata.close')}</button>
         </div>
       )}
     </div>

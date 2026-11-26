@@ -7,6 +7,7 @@ import { confirmAction } from '../components/confirm'
 import { SettingRow as Row } from '../components/SettingRow'
 import { SystemProfileFields, profileSummary } from '../components/SystemProfile'
 import { AppearanceSection } from './Appearance'
+import { languages, t } from '../i18n'
 
 /**
  * macOS grants Full Disk Access only by hand, in System Settings. This can
@@ -37,17 +38,17 @@ export function FullDiskAccessRow() {
   return (
     <>
       <Row
-        name="Pełny dostęp do dysku"
+        name={t('settings.disk-access')}
         desc={
           granted
-            ? 'Nadany — moduły widzą też katalogi, które macOS chroni (Poczta, Wiadomości, Safari).'
-            : 'Bez niego macOS ukrywa przed POSMA Pocztę, Wiadomości i Safari. Nadaje się go tylko w Ustawieniach systemowych: zaznacz tam POSMA, a ten wiersz sam to zauważy.'
+            ? t('settings.disk-access.granted.desc')
+            : t('settings.disk-access.missing.desc')
         }
       >
         {granted ? (
-          <span className="chip low">Nadany</span>
+          <span className="chip low">{t('settings.disk-access.granted')}</span>
         ) : (
-          <button className="btn btn-ghost" onClick={openSettings}>Otwórz Ustawienia</button>
+          <button className="btn btn-ghost" onClick={openSettings}>{t('settings.disk-access.open')}</button>
         )}
       </Row>
       {error && <div className="form-warning">{error}</div>}
@@ -84,22 +85,22 @@ export function Settings({ app, settings }: { app: AppState; settings: SettingsS
     const dir = await open({
       directory: true,
       multiple: false,
-      title: 'Wybierz folder, którego skanery mają nigdy nie pokazywać',
+      title: t('settings.blacklist.pick'),
     })
     if (typeof dir === 'string') addToBlacklist(dir)
   }
 
   return (
     <div className="view-enter">
-      <div className="section-head"><h2>Aplikacja</h2></div>
+      <div className="section-head"><h2>{t('settings.section.app')}</h2></div>
       <div className="settings-list">
         <Row
-          name="Poziom dostępu" tour="access"
-          desc="Pełny zbiera wszystkie zgody z góry i zapamiętuje je. Wybiórczy nadaje uprawnienia na jedno uruchomienie i pyta ponownie po restarcie."
+          name={t('settings.access')} tour="access"
+          desc={t('settings.access.desc')}
         >
           <select value={accessLevel} onChange={(e) => changeAccessLevel(e.target.value as 'full' | 'selective')}>
-            <option value="full">Pełny</option>
-            <option value="selective">Wybiórczy</option>
+            <option value="full">{t('settings.access.full')}</option>
+            <option value="selective">{t('settings.access.selective')}</option>
           </select>
         </Row>
         {accessError && <div className="form-warning">{accessError}</div>}
@@ -109,8 +110,8 @@ export function Settings({ app, settings }: { app: AppState; settings: SettingsS
         {linuxProfile && (
           <>
             <Row
-              name={`System: ${linuxProfile.name}`}
-              desc={`${profileSummary(linuxProfile)}. Zmiana poniżej trafia do wszystkich modułów.`}
+              name={t('settings.system', { name: linuxProfile.name })}
+              desc={t('settings.system.desc', { summary: profileSummary(linuxProfile) })}
             >
               {null}
             </Row>
@@ -119,10 +120,10 @@ export function Settings({ app, settings }: { app: AppState; settings: SettingsS
         )}
 
         <Row
-          name="Czarna lista skanerów" tour="blacklist"
-          desc="Ścieżki, których skanery nigdy nie wylistują ani nie zaproponują do usunięcia — dyski innego systemu, archiwum zdjęć, dokumenty klienta."
+          name={t('settings.blacklist')} tour="blacklist"
+          desc={t('settings.blacklist.desc')}
         >
-          <button className="btn btn-ghost" onClick={pickBlacklistPath}>Dodaj folder</button>
+          <button className="btn btn-ghost" onClick={pickBlacklistPath}>{t('settings.blacklist.add')}</button>
         </Row>
 
         {s.blacklist.length > 0 && (
@@ -134,7 +135,7 @@ export function Settings({ app, settings }: { app: AppState; settings: SettingsS
                   className="btn btn-ghost btn-mini"
                   onClick={() => removeFromBlacklist(path)}
                 >
-                  Usuń
+                  {t('common.remove')}
                 </button>
               </div>
             ))}
@@ -142,32 +143,30 @@ export function Settings({ app, settings }: { app: AppState; settings: SettingsS
         )}
 
         <Row
-          name="Częstotliwość odświeżania"
-          desc="Jak często widoki na żywo pytają o nowe dane. Rzadziej znaczy mniej pracy w tle; płynność wykresów nie zależy od tej wartości."
+          name={t('settings.refresh')}
+          desc={t('settings.refresh.desc')}
         >
           <select value={s.refreshMs} onChange={(e) => set('refreshMs', Number(e.target.value))}>
-            <option value={1000}>Co sekundę</option>
-            <option value={2000}>Co 2 sekundy</option>
-            <option value={5000}>Co 5 sekund</option>
-            <option value={10000}>Co 10 sekund</option>
+            {[1000, 2000, 5000, 10000].map((ms) => (
+              <option key={ms} value={ms}>{t('settings.refresh.every', { n: ms / 1000 })}</option>
+            ))}
           </select>
         </Row>
 
         <Row
-          name="Inteligentne przypominanie"
-          desc="Dyskretne powiadomienia o potrzebie czyszczenia (np. dysk > 85%)."
+          name={t('settings.reminders')}
+          desc={t('settings.reminders.desc')}
         >
           <select value={s.reminders} onChange={(e) => set('reminders', e.target.value as typeof s.reminders)}>
-            <option value="off">Wyłączone</option>
-            <option value="normal">Normalne</option>
-            <option value="aggressive">Częste</option>
+            <option value="off">{t('settings.reminders.off')}</option>
+            <option value="normal">{t('settings.reminders.normal')}</option>
+            <option value="aggressive">{t('settings.reminders.aggressive')}</option>
           </select>
         </Row>
 
-        <Row name="Język" desc="Język interfejsu aplikacji.">
-          <select value={s.language} onChange={(e) => set('language', e.target.value as typeof s.language)}>
-            <option value="pl">Polski</option>
-            <option value="en">English</option>
+        <Row name={t('settings.language')} desc={t('settings.language.desc')}>
+          <select value={s.language} onChange={(e) => set('language', e.target.value)}>
+            {languages().map((l) => <option key={l.code} value={l.code}>{l.name}</option>)}
           </select>
         </Row>
 
@@ -175,23 +174,23 @@ export function Settings({ app, settings }: { app: AppState; settings: SettingsS
 
       <AppearanceSection settings={settings} />
 
-      <div className="section-head"><h2>Dane aplikacji</h2></div>
+      <div className="section-head"><h2>{t('settings.section.data')}</h2></div>
       <div className="settings-list">
         <Row
-          name="Absolutne odinstalowanie aplikacji"
-          desc="Usuwa aplikację razem ze wszystkimi modułami, ustawieniami i danymi. Na razie: resetuje stan aplikacji (onboarding od nowa)."
+          name={t('settings.reset')}
+          desc={t('settings.reset.desc')}
           danger
         >
           <button
             className="btn btn-ghost"
             style={{ borderColor: 'color-mix(in srgb, var(--critical) 50%, transparent)', color: 'var(--critical)' }}
             onClick={async () => {
-              if (await confirmAction('Na pewno? To wyczyści stan aplikacji i uruchomi konfigurację od nowa.')) {
+              if (await confirmAction(t('settings.reset.confirm'))) {
                 resetOnboarding()
               }
             }}
           >
-            Resetuj aplikację
+            {t('settings.reset.button')}
           </button>
         </Row>
       </div>

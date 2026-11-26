@@ -4,7 +4,8 @@
  * one thing to do with it.
  */
 import { applyOrder, folderNumber, folders, modulesInFolder, riskLabel, type FolderId } from '../../data/modules'
-import { plural, size } from '../../state/machine'
+import { size } from '../../state/machine'
+import { t } from '../../i18n'
 import { Box, Crumbs, readingOf, type Ctx } from './parts'
 
 export function Folder({ ctx, folderId }: { ctx: Ctx; folderId: FolderId }) {
@@ -14,23 +15,23 @@ export function Folder({ ctx, folderId }: { ctx: Ctx; folderId: FolderId }) {
   const on = mods.filter((m) => app.installedSet.has(m.id))
   const bytes = on.reduce((acc, m) => acc + (reclaim.foundOf(m.id)?.bytes ?? 0), 0)
   const home = () => app.setView({ kind: 'dashboard' })
-  if (!folder) return <p className="g-page g-quiet">Nie ma takiego folderu.</p>
+  if (!folder) return <p className="g-page g-quiet">{t('world.gesto.folder.missing')}</p>
 
   return (
     <div className="g-page g-split">
       <div className="g-main">
-        <Crumbs items={[{ label: 'Pulpit', onClick: home }, { label: folder.name }]} />
+        <Crumbs items={[{ label: t('nav.dashboard'), onClick: home }, { label: folder.name }]} />
         <header className="g-phead">
           <span className="g-tag g-tag--big">{folderNumber(folderId)}</span>
           <div>
             <h1>{folder.name}</h1>
             <p>
-              {mods.length} {plural(mods.length, 'moduł', 'moduły', 'modułów')} dla tego systemu, {on.length} {plural(on.length, 'włączony', 'włączone', 'włączonych')}
+              {t('world.gesto.folder.summary', { modules: t('world.gesto.folder.modules', { n: mods.length }), enabled: t('world.gesto.folder.enabled', { n: on.length }) })}
             </p>
           </div>
         </header>
 
-        <Box no={folderNumber(folderId)} title="Moduły w folderze" meta={`${mods.length} ${plural(mods.length, 'wynik', 'wyniki', 'wyników')}`}>
+        <Box no={folderNumber(folderId)} title={t('world.gesto.folder.box')} meta={t('world.gesto.folder.results', { n: mods.length })}>
           {mods.length ? (
             <ul className="g-rows" data-tour="folder-list">
               {mods.map((m) => {
@@ -51,20 +52,20 @@ export function Folder({ ctx, folderId }: { ctx: Ctx; folderId: FolderId }) {
                       <p>{m.desc}</p>
                     </div>
                     <span className={`chip ${m.risk}`}>{riskLabel[m.risk]}</span>
-                    <span className={r?.hot ? 'g-row__fig hot' : 'g-row__fig'}>{isOn ? r?.text ?? '' : 'wyłączony'}</span>
+                    <span className={r?.hot ? 'g-row__fig hot' : 'g-row__fig'}>{isOn ? r?.text ?? '' : t('world.gesto.folder.off')}</span>
                     <div className="g-row__act">
                       {isOn ? (
                         <>
                           <button type="button" className="btn btn-primary btn-mini" onClick={open}>
-                            {m.quickAction ?? 'Otwórz'}
+                            {m.quickAction ?? t('common.open')}
                           </button>
                           <button type="button" className="btn btn-ghost btn-mini" onClick={() => app.setModuleInstalled(m.id, false)}>
-                            Wyłącz
+                            {t('world.gesto.folder.disable')}
                           </button>
                         </>
                       ) : (
                         <button type="button" className="btn btn-ghost btn-mini" onClick={() => app.setModuleInstalled(m.id, true)}>
-                          Włącz moduł
+                          {t('world.gesto.folder.enable')}
                         </button>
                       )}
                     </div>
@@ -74,35 +75,35 @@ export function Folder({ ctx, folderId }: { ctx: Ctx; folderId: FolderId }) {
             </ul>
           ) : (
             <p className="g-quiet" data-tour="folder-list">
-              W tym folderze nie ma modułów dla tego systemu.
+              {t('world.gesto.folder.none')}
             </p>
           )}
         </Box>
       </div>
 
-      <aside className="g-side" aria-label="O folderze">
-        <Box no={folderNumber(folderId)} title="Ten folder">
+      <aside className="g-side" aria-label={t('world.gesto.folder.aside')}>
+        <Box no={folderNumber(folderId)} title={t('world.gesto.folder.this')}>
           <table className="g-spec">
             <tbody>
               <tr>
-                <th scope="row">Włączone</th>
+                <th scope="row">{t('world.gesto.folder.enabled-head')}</th>
                 <td>
-                  {on.length} z {mods.length}
+                  {t('world.gesto.folder.enabled-of', { on: on.length, total: mods.length })}
                 </td>
               </tr>
               {reclaim.sources.some((m) => m.folder === folderId) && (
                 <tr>
-                  <th scope="row">Do odzyskania</th>
-                  <td className={bytes > 0 ? 'hot' : undefined}>{reclaim.reclaim.kind === 'done' ? size(bytes) : 'nie sprawdzono'}</td>
+                  <th scope="row">{t('world.gesto.reclaim')}</th>
+                  <td className={bytes > 0 ? 'hot' : undefined}>{reclaim.reclaim.kind === 'done' ? size(bytes) : t('world.gesto.folder.not-checked')}</td>
                 </tr>
               )}
             </tbody>
           </table>
         </Box>
-        <Box no="?" title="Pomoc">
-          <p>Wyłączony moduł znika z menu i z pulpitu. Włączysz go z powrotem tutaj albo w zarządzaniu modułami.</p>
+        <Box no="?" title={t('world.gesto.folder.help')}>
+          <p>{t('world.gesto.folder.help.text')}</p>
           <button type="button" className="g-link" onClick={() => app.setView({ kind: 'manager' })}>
-            901 Zarządzanie modułami
+            {t('world.gesto.folder.manager-link')}
           </button>
         </Box>
       </aside>

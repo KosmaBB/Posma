@@ -12,6 +12,11 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+# Read-only unless a job asks for more: a build step or a third-party action
+# never holds a token that can push or publish.
+permissions:
+  contents: read
+
 jobs:
   linux:
     name: Linux — .deb and .rpm

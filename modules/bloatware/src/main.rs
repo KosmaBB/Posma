@@ -123,7 +123,10 @@ fn powershell(script: &str) -> Result<String, String> {
     let script = format!("[Console]::OutputEncoding = [Text.Encoding]::UTF8; {script}");
     match Command::new("powershell.exe").args(["-NoProfile", "-NonInteractive", "-Command", &script]).output() {
         Ok(out) if out.status.success() => Ok(String::from_utf8_lossy(&out.stdout).into_owned()),
-        Ok(out) => Err(String::from_utf8_lossy(&out.stderr).trim().to_string()),
+        Ok(out) => Err(match String::from_utf8_lossy(&out.stderr).trim() {
+            "" => format!("powershell.exe zakończył się kodem {}", out.status.code().unwrap_or(-1)),
+            stderr => stderr.to_string(),
+        }),
         Err(e) => Err(format!("powershell.exe: {e}")),
     }
 }
@@ -221,5 +224,14 @@ mod tests {
         let read = read_removal("ok\tA_1_x64__p\r\nerr\tB_2_x64__p\tDeployment failed: 0x80073CFA\r\n");
         assert_eq!(read.removed, ["A_1_x64__p"]);
         assert_eq!(read.errors, ["B_2_x64__p: Deployment failed: 0x80073CFA"]);
+    }
+
+    /// The listing script itself, on a real Windows (CI's Windows Server):
+    /// it runs and its answer reads, whatever apps the machine has.
+    #[cfg(windows)]
+    #[test]
+    fn the_scan_reads_this_windows() {
+        let scanned = scan();
+        assert!(scanned.error.is_none(), "{:?}", scanned.error);
     }
 }

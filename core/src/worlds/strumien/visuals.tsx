@@ -5,6 +5,7 @@
  */
 import type { CSSProperties } from 'react'
 import { HISTORY } from '../../state/machine'
+import { formatNumber } from '../../i18n'
 import { squarify, type TreemapRect } from '../../views/modules/diskmapTreemap'
 
 /** Ceilings the history may use; the smallest that holds the record wins. */
@@ -57,7 +58,7 @@ export function CpuField({ samples, watched }: { samples: number[][]; watched: n
       </svg>
       {grid.map((g) => (
         <span key={g} className="sm-cpu__label" style={{ top: `${y(g) / 10}%` }}>
-          {g} %
+          {formatNumber(g)} %
         </span>
       ))}
     </div>

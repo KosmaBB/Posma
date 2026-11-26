@@ -4,6 +4,7 @@
  */
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { motionReduced } from '../../state/looks'
+import { t } from '../../i18n'
 
 /** The page's scroll container; every pair and the rail measure against it. */
 const scrollRoot = () => document.querySelector<HTMLElement>('.mono-page')
@@ -111,7 +112,7 @@ export function PairRail({ items }: { items: RailItem[] }) {
 
   if (items.length < 2) return null
   return (
-    <nav className="mono-rail" aria-label="Na tej stronie">
+    <nav className="mono-rail" aria-label={t('world.monochrom.rail.aria')}>
       <ol>
         {items.map((it) => (
           <li key={it.id}>

@@ -195,6 +195,7 @@
 }
 [data-world='ksiazeczka'] .kz-pre {
   font: 700 13px/1.25 var(--sans); letter-spacing: 0.14em; text-transform: uppercase; color: var(--kz-print);
+  text-wrap: balance;
 }
 [data-world='ksiazeczka'] .kz-pre--n { font-family: var(--kz-matrix); font-weight: 900; font-size: 15px; letter-spacing: 0.04em; white-space: nowrap; }
 [data-world='ksiazeczka'] .kz-foot {
@@ -266,7 +267,8 @@
   font: 600 14px/1.5 var(--sans); color: var(--kz-debit); max-width: 52ch;
   padding-left: 12px; border-left: 3px solid var(--kz-debit);
 }
-@container (max-width: 560px) {
+/* The figure never wraps; beside the notes it needs about 700 px, or it runs over them. */
+@container (max-width: 720px) {
   [data-world='ksiazeczka'] .kz-balance { grid-template-columns: 1fr; }
   [data-world='ksiazeczka'] .kz-balance__side { text-align: left; }
 }
@@ -484,9 +486,8 @@
 [data-world='ksiazeczka'] .form-field input:focus, [data-world='ksiazeczka'] .form-field textarea:focus { border-bottom-color: var(--kz-stamp); }
 
 /* Settings, manager, folder register. */
-[data-world='ksiazeczka'] .settings-list { max-width: none; border: 0; border-top: var(--rule) solid var(--kz-print); border-radius: 0; }
+[data-world='ksiazeczka'] .settings-list { border: 0; border-top: var(--rule) solid var(--kz-print); border-bottom: var(--hair) solid var(--kz-rule); border-radius: 0; }
 [data-world='ksiazeczka'] .settings-list > .glass { background: transparent; border-color: var(--kz-rule); }
-[data-world='ksiazeczka'] .settings-list > .glass:last-child { border-bottom: var(--hair) solid var(--kz-rule); }
 [data-world='ksiazeczka'] .cat-list { border-top: var(--rule) solid var(--kz-print); }
 [data-world='ksiazeczka'] .cat-row { border-bottom-color: var(--kz-tint-rule, var(--kz-rule)); padding-left: 8px; }
 [data-world='ksiazeczka'] .cat-row:hover { background: var(--kz-hover); }
@@ -588,6 +589,13 @@
 
 
 /* ---------- less motion ---------- */
+
+/* width ≥ 3200px after UI scaling (data-wide): a book does not grow with the desk.
+   The spread and its tabs stop at 2800px and lie in the middle of the cover. */
+[data-world='ksiazeczka']:where([data-wide~='3200']) :is(.kz-tabs, .kz-book) { justify-self: center; width: min(2800px, 100% - 40px); }
+[data-world='ksiazeczka']:where([data-wide~='3200']) .kz-book { margin-inline: 0; }
+[data-world='ksiazeczka']:where([data-wide~='3200']) .kz-tabs { padding-inline: 6px; }
+
 @media (prefers-reduced-motion: reduce) {
   [data-world='ksiazeczka'] :is(.kz-row--new td, .scan-spinner::after) { animation: none; }
   [data-world='ksiazeczka'] :is(.kz-tab, .kz-head-run i) { transition: none; }

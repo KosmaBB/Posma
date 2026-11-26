@@ -5,6 +5,7 @@
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { motionReduced } from '../../state/looks'
+import { t } from '../../i18n'
 import { Glyph, type GlyphName } from './glyphs'
 
 export interface FeedNav {
@@ -60,7 +61,7 @@ function More({ children }: { children: ReactNode }) {
       </p>
       {(cut || open) && (
         <button type="button" className="sm-more" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-          {open ? 'mniej' : 'więcej'}
+          {open ? t('world.strumien.feed.less') : t('world.strumien.feed.more')}
         </button>
       )}
     </div>
@@ -69,7 +70,7 @@ function More({ children }: { children: ReactNode }) {
 
 export function Rail({ actions, nav }: { actions: FeedAction[]; nav: FeedNav }) {
   return (
-    <div className="sm-rail" role="group" aria-label="Działania">
+    <div className="sm-rail" role="group" aria-label={t('world.strumien.feed.actions')}>
       {actions.map((a) => (
         <button
           key={a.key}
@@ -261,7 +262,7 @@ export function Feed({
             key={it.id}
             item={it}
             nav={nav}
-            label={`${i + 1} z ${n}: ${it.peek}`}
+            label={t('world.strumien.feed.item-label', { i: i + 1, n, peek: it.peek })}
             state={i === index ? 'now' : i === index + 1 ? 'next' : undefined}
           />
         ))}
@@ -273,10 +274,10 @@ export function Feed({
           ))}
         </div>
         <span className="sm-count">
-          <b>{index + 1}</b> z {n}
+          <b>{index + 1}</b> {t('world.strumien.feed.count', { n })}
         </span>
       </div>
-      <nav className="sm-pos" aria-label={`Pozycja w strumieniu: ${index + 1} z ${n}`}>
+      <nav className="sm-pos" aria-label={t('world.strumien.feed.position', { i: index + 1, n })}>
         {items.slice(0, MAX_SEGMENTS).map((it, i) => (
           <button
             key={it.id}

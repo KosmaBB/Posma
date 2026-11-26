@@ -71,10 +71,15 @@ enum Response<T: Serialize> {
 /// they are; no double quotes, which Windows PowerShell 5.1 reads back
 /// unreliably from its command line. UTF-8, or a translated display name
 /// arrives in the OEM code page.
+///
+/// Every service, filtered here: `Get-Service -Name` with a name this
+/// edition lacks (Fax on Home) records an error even when silenced, and
+/// that error ends the script with exit code 1 and an empty stderr.
 fn list_script() -> String {
     let names: Vec<String> = PROFILES.iter().flat_map(|p| p.services).map(|s| format!("'{}'", s.name)).collect();
     format!(
-        "[Console]::OutputEncoding = [Text.Encoding]::UTF8; Get-Service -Name {} -ErrorAction SilentlyContinue | Select-Object Name, DisplayName, \
+        "[Console]::OutputEncoding = [Text.Encoding]::UTF8; $names = @({}); Get-Service | Where-Object {{ $names -contains $_.Name }} \
+         | Select-Object Name, DisplayName, \
          @{{n='Running';e={{$_.Status -eq 'Running'}}}}, @{{n='Disabled';e={{$_.StartType -eq 'Disabled'}}}} \
          | ConvertTo-Json -Compress",
         names.join(",")
@@ -119,7 +124,10 @@ fn scan() -> ScanResult {
     let listed = Command::new("powershell.exe").args(["-NoProfile", "-NonInteractive", "-Command", &list_script()]).output();
     let read = match listed {
         Ok(out) if out.status.success() => parse(&String::from_utf8_lossy(&out.stdout)).map_err(|e| format!("nie udało się odczytać usług: {e}")),
-        Ok(out) => Err(String::from_utf8_lossy(&out.stderr).trim().to_string()),
+        Ok(out) => Err(match String::from_utf8_lossy(&out.stderr).trim() {
+            "" => format!("powershell.exe zakończył się kodem {}", out.status.code().unwrap_or(-1)),
+            stderr => stderr.to_string(),
+        }),
         Err(e) => Err(format!("powershell.exe: {e}")),
     };
     match read {
@@ -160,5 +168,15 @@ mod tests {
         assert!(by_id("xbox").is_none());
         assert_eq!(parse(r#"{"Name":"Fax","DisplayName":"Fax","Running":false,"Disabled":false}"#).unwrap().len(), 1);
         assert!(parse("").unwrap().is_empty() && !list_script().contains('"'));
+    }
+
+    /// The script itself, on a real Windows: CI runs it on Windows Server,
+    /// where Print and Telemetry exist and Fax may not.
+    #[cfg(windows)]
+    #[test]
+    fn the_scan_reads_this_windows() {
+        let scanned = scan();
+        assert!(scanned.error.is_none(), "{:?}", scanned.error);
+        assert!(scanned.profiles.iter().any(|p| p.id == "print"), "the print spooler is on every Windows");
     }
 }

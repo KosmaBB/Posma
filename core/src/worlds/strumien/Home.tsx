@@ -8,8 +8,9 @@ import type { AppState } from '../../state/appState'
 import type { SettingsState } from '../../state/settings'
 import { catalogNumbers, moduleById, orderedModules, type ModuleDef } from '../../data/modules'
 import {
-  DISK_WARN_PCT, UP_TO_ONE, gb, plural, size, systemName, useMachine, usedPct, type DiskInfo, type ReclaimState,
+  DISK_WARN_PCT, UP_TO_ONE, gb, size, systemName, useMachine, usedPct, type DiskInfo, type ReclaimState,
 } from '../../state/machine'
+import { t } from '../../i18n'
 import { Feed, type FeedAction, type FeedItem } from './Feed'
 import { CpuField, FillField, SquareField, StripeField, Waffle, cpuScale } from './visuals'
 
@@ -46,7 +47,7 @@ export function Home({
   const system = systemName(app)
   const last = m.record.samples[m.record.samples.length - 1] ?? []
   const busiest = last.length ? last.indexOf(Math.max(...last)) : -1
-  const every = `odczyt co ${UP_TO_ONE.format(s.refreshMs / 1000)} s`
+  const every = t('world.strumien.home.every', { every: UP_TO_ONE.format(s.refreshMs / 1000) })
 
   function toggleCore(c: number) {
     const w = s.watchedCores
@@ -55,50 +56,50 @@ export function Home({
 
   // ------------------------------------------------------------- 1 machine
   const machineText = (() => {
-    if (!m.info && m.error) return `Moduł system-info nie odpowiada: ${m.error}`
-    if (!m.info) return 'Czekam na pierwszy odczyt.'
-    const parts = [m.ram?.detail && `Pamięć ${m.ram.detail}.`]
+    if (!m.info && m.error) return t('world.strumien.home.machine.text.error', { error: m.error })
+    if (!m.info) return t('world.strumien.home.machine.text.waiting')
+    const parts = [m.ram?.detail && t('world.strumien.home.machine.text.memory', { detail: m.ram.detail })]
     const full = m.disks.filter((d) => usedPct(d) >= DISK_WARN_PCT)
-    if (full.length) parts.push(`Dysk ${full[0].mount_point} jest zajęty w ${pct(usedPct(full[0]))} — przewiń w dół, a strumień pokaże go z bliska.`)
-    else parts.push('Przewiń w dół: po kolei to, co da się odzyskać, dyski i pamięć.')
+    if (full.length) parts.push(t('world.strumien.home.machine.text.disk-full', { mount: full[0].mount_point, pct: pct(usedPct(full[0])) }))
+    else parts.push(t('world.strumien.home.machine.text.scroll'))
     return parts.filter(Boolean).join(' ')
   })()
 
   const machine: FeedItem = {
     id: 'machine',
     field: 'machine',
-    peek: 'Ta maszyna',
-    source: '000 · Ta maszyna',
-    note: m.error && m.info ? `ostatni odczyt się nie udał` : `na żywo, ${every}`,
+    peek: t('world.strumien.home.machine.peek'),
+    source: t('world.strumien.home.machine.source'),
+    note: m.error && m.info ? t('world.strumien.home.machine.note.failed') : t('world.strumien.home.machine.note.live', { every }),
     figure: m.cpu ? pct(m.cpu.value) : '—',
-    figureNote: m.coreCount ? `procesor, średnio z ${m.coreCount} ${plural(m.coreCount, 'rdzenia', 'rdzeni', 'rdzeni')}` : 'procesor',
+    figureNote: m.coreCount ? t('world.strumien.home.machine.figure-note', { n: m.coreCount }) : t('world.strumien.home.machine.figure-note.plain'),
     title: m.info
-      ? [system, m.cpu && `procesor ${pct(m.cpu.value)}`, m.ram && `pamięć ${pct(m.ram.value)}`, m.temp && `${Math.round(m.temp.value)} °C`]
+      ? [system, m.cpu && t('world.strumien.home.machine.title.cpu', { pct: pct(m.cpu.value) }), m.ram && t('world.strumien.home.machine.title.memory', { pct: pct(m.ram.value) }), m.temp && `${Math.round(m.temp.value)} °C`]
           .filter(Boolean)
           .join(' · ')
       : m.error
-        ? 'Nie udało się odczytać stanu maszyny'
+        ? t('world.strumien.home.machine.title.failed')
         : system,
     text: machineText,
     visual: <CpuField samples={m.record.samples} watched={s.watchedCores} />,
     overlay: last.length > 0 && (
       <>
         <div className="sm-legend">
-          <span><i className="sm-key sm-key--mean" />średnia <b>{m.cpu ? pct(m.cpu.value) : '—'}</b></span>
+          <span><i className="sm-key sm-key--mean" />{t('world.strumien.home.machine.legend.mean')} <b>{m.cpu ? pct(m.cpu.value) : '—'}</b></span>
           {busiest >= 0 && (
-            <span><i className="sm-key sm-key--peak" />najbardziej zajęty, rdzeń {pad2(busiest)} <b>{pct(last[busiest])}</b></span>
+            <span><i className="sm-key sm-key--peak" />{t('world.strumien.home.machine.legend.busiest', { core: pad2(busiest) })} <b>{pct(last[busiest])}</b></span>
           )}
-          <span>skala 0–{cpuScale(m.record.samples)} %</span>
+          <span>{t('world.strumien.home.machine.legend.scale', { max: cpuScale(m.record.samples) })}</span>
         </div>
-        <div className="sm-cores" role="group" aria-label="Rdzenie teraz — kliknij, by obserwować">
+        <div className="sm-cores" role="group" aria-label={t('world.strumien.home.machine.cores-group')}>
           {last.map((v, c) => (
             <button
               key={c}
               type="button"
               className="sm-core"
               aria-pressed={s.watchedCores.includes(c)}
-              aria-label={`Rdzeń ${pad2(c)}: ${pct(v)}`}
-              title={`Rdzeń ${pad2(c)}: ${pct(v)}`}
+              aria-label={t('world.strumien.home.machine.core', { core: pad2(c), pct: pct(v) })}
+              title={t('world.strumien.home.machine.core', { core: pad2(c), pct: pct(v) })}
               onClick={() => toggleCore(c)}
             >
               <i style={{ height: `${Math.max(2, v)}%` }} />
@@ -110,7 +111,7 @@ export function Home({
     actions: [
       {
         key: 's',
-        label: 'Sprawdź, co da się odzyskać',
+        label: t('world.strumien.home.check'),
         glyph: 'search',
         primary: true,
         disabled: reclaim.sources.length === 0 || reclaim.reclaim.kind === 'scanning',
@@ -119,8 +120,8 @@ export function Home({
           nav.goTo('reclaim')
         },
       },
-      ...(has('health-monitor') ? [{ key: 'd', label: 'Szczegóły', glyph: 'pulse', run: () => open('health-monitor') } as FeedAction] : []),
-      { key: 'y', label: 'Dyski', glyph: 'diskmap', count: String(volumes(m.disks).length || '—'), run: (nav) => nav.goTo('disk-0') },
+      ...(has('health-monitor') ? [{ key: 'd', label: t('world.strumien.home.machine.details'), glyph: 'pulse', run: () => open('health-monitor') } as FeedAction] : []),
+      { key: 'y', label: t('world.strumien.home.disks'), glyph: 'diskmap', count: String(volumes(m.disks).length || '—'), run: (nav) => nav.goTo('disk-0') },
     ],
     tour: { caption: 'machine', overlay: 'cpu' },
   }
@@ -134,19 +135,19 @@ export function Home({
     const full = used >= DISK_WARN_PCT
     const kind = d.solid_state === undefined ? null : d.solid_state ? 'SSD' : 'HDD'
     const actions: FeedAction[] = []
-    if (has('disk-map')) actions.push({ key: 'm', label: 'Mapa dysków', glyph: 'diskmap', primary: full, run: () => open('disk-map', d.mount_point) })
-    if (has('big-files')) actions.push({ key: 'l', label: 'Duże pliki', glyph: 'search', run: () => open('big-files') })
-    actions.push({ key: 'n', label: 'Dalej', glyph: 'down', run: (nav) => nav.next() })
+    if (has('disk-map')) actions.push({ key: 'm', label: t('module.disk-map.name'), glyph: 'diskmap', primary: full, run: () => open('disk-map', d.mount_point) })
+    if (has('big-files')) actions.push({ key: 'l', label: t('world.strumien.home.disk.big-files'), glyph: 'search', run: () => open('big-files') })
+    actions.push({ key: 'n', label: t('world.strumien.next'), glyph: 'down', run: (nav) => nav.next() })
     return {
       id: `disk-${i}`,
       field: full ? 'full' : 'disk',
-      peek: `Dysk ${d.mount_point}`,
-      source: `Dysk ${i + 1} z ${volumes(m.disks).length}`,
-      note: full ? 'prawie pełny' : [kind, d.model].filter(Boolean).join(' · ') || undefined,
+      peek: t('world.strumien.home.disk.peek', { mount: d.mount_point }),
+      source: t('world.strumien.home.disk.source', { i: i + 1, n: volumes(m.disks).length }),
+      note: full ? t('world.strumien.home.disk.note.full') : [kind, d.model].filter(Boolean).join(' · ') || undefined,
       figure: pct(used),
-      figureNote: 'zajęte',
+      figureNote: t('world.strumien.home.disk.figure-note'),
       title: <span className="sm-path">{d.mount_point}</span>,
-      text: `${gb(d.available_bytes)} wolnego z ${gb(d.total_bytes)}.${full ? ' Mapa dysków pokaże, co zajmuje miejsce.' : ''}`,
+      text: t(full ? 'world.strumien.home.disk.text.full' : 'world.strumien.home.disk.text', { free: gb(d.available_bytes), total: gb(d.total_bytes) }),
       visual: <FillField pct={used} />,
       actions,
     }
@@ -155,13 +156,13 @@ export function Home({
     disks.push({
       id: 'disk-0',
       field: 'disk',
-      peek: 'Dyski',
-      source: 'Dyski',
+      peek: t('world.strumien.home.disks'),
+      source: t('world.strumien.home.disks'),
       figure: '—',
-      title: m.error ? 'Brak odczytu dysków' : 'Czekam na odczyt dysków',
-      text: m.error ? `system-info nie odpowiada: ${m.error}` : undefined,
+      title: m.error ? t('world.strumien.home.disk.none.title') : t('world.strumien.home.disk.none.waiting'),
+      text: m.error ? t('world.strumien.home.disk.none.error', { error: m.error }) : undefined,
       visual: <FillField pct={0} />,
-      actions: [{ key: 'n', label: 'Dalej', glyph: 'down', run: (nav) => nav.next() }],
+      actions: [{ key: 'n', label: t('world.strumien.next'), glyph: 'down', run: (nav) => nav.next() }],
     })
   }
 
@@ -171,17 +172,17 @@ export function Home({
         {
           id: 'memory',
           field: 'mem',
-          peek: 'Pamięć',
-          source: 'Pamięć',
+          peek: t('world.strumien.home.memory'),
+          source: t('world.strumien.home.memory'),
           note: every,
           figure: pct(m.ram.value),
-          figureNote: 'pamięci zajęte',
-          title: m.ram.detail ?? 'Pamięć operacyjna',
-          text: 'Każda kratka to pół procenta pamięci. Zajęte zapalają się od dołu.',
+          figureNote: t('world.strumien.home.memory.figure-note'),
+          title: m.ram.detail ?? t('world.strumien.home.memory.title'),
+          text: t('world.strumien.home.memory.text'),
           visual: <Waffle pct={m.ram.value} />,
           actions: has('health-monitor')
-            ? [{ key: 'd', label: 'Procesy', glyph: 'pulse', run: () => open('health-monitor') }]
-            : [{ key: 'n', label: 'Dalej', glyph: 'down', run: (nav) => nav.next() }],
+            ? [{ key: 'd', label: t('world.strumien.home.memory.processes'), glyph: 'pulse', run: () => open('health-monitor') }]
+            : [{ key: 'n', label: t('world.strumien.next'), glyph: 'down', run: (nav) => nav.next() }],
         },
       ]
     : []
@@ -193,12 +194,12 @@ export function Home({
   const shortcuts: FeedItem = {
     id: 'index',
     field: 'index',
-    peek: 'Skróty',
-    source: 'Skróty',
-    note: off > 0 ? `${off} ${plural(off, 'moduł niewłączony', 'moduły niewłączone', 'modułów niewłączonych')}` : undefined,
+    peek: t('world.strumien.home.shortcuts'),
+    source: t('world.strumien.home.shortcuts'),
+    note: off > 0 ? t('world.strumien.home.shortcuts.off', { n: off }) : undefined,
     figure: String(quick.length),
-    figureNote: plural(quick.length, 'skrót', 'skróty', 'skrótów'),
-    title: quick.length ? 'Główne akcje włączonych modułów' : 'Nie masz jeszcze włączonych modułów z szybkimi akcjami',
+    figureNote: t('world.strumien.home.shortcuts.figure-note', { n: quick.length }),
+    title: quick.length ? t('world.strumien.home.shortcuts.title') : t('world.strumien.home.shortcuts.title.none'),
     body: quick.length > 0 && (
       <ul className="sm-quick" data-tour="index">
         {quick.map((q) => (
@@ -213,12 +214,12 @@ export function Home({
       </ul>
     ),
     visual: <StripeField fields={quick.length ? quick.map((q) => q.folder) : ['index']} />,
-    actions: [{ key: 'z', label: 'Zarządzanie modułami', glyph: 'manager', primary: quick.length === 0, run: () => setView({ kind: 'manager' }) }],
+    actions: [{ key: 'z', label: t('page.manager'), glyph: 'manager', primary: quick.length === 0, run: () => setView({ kind: 'manager' }) }],
     tour: quick.length ? undefined : { caption: 'index' },
   }
 
   const items = [machine, ...reclaimItems, ...disks, ...memory, shortcuts]
-  return <Feed items={items} label="Strumień: wszystko" paused={paused} />
+  return <Feed items={items} label={t('world.strumien.home.feed-label')} paused={paused} />
 }
 
 function buildReclaim(
@@ -232,7 +233,7 @@ function buildReclaim(
   const names = sources.map((s) => s.name).join(', ')
   const check: FeedAction = {
     key: 's',
-    label: reclaim.kind === 'scanning' ? 'Sprawdzam' : reclaim.kind === 'done' ? 'Sprawdź ponownie' : 'Sprawdź, co da się odzyskać',
+    label: reclaim.kind === 'scanning' ? t('world.strumien.home.reclaim.checking') : reclaim.kind === 'done' ? t('world.strumien.home.reclaim.check-again') : t('world.strumien.home.check'),
     glyph: reclaim.kind === 'done' ? 'refresh' : 'search',
     primary: reclaim.kind !== 'done',
     disabled: reclaim.kind === 'scanning',
@@ -244,13 +245,13 @@ function buildReclaim(
       {
         id: 'reclaim',
         field: 'data',
-        peek: 'Ile da się odzyskać',
-        source: 'Ile da się odzyskać',
+        peek: t('world.strumien.home.reclaim.peek'),
+        source: t('world.strumien.home.reclaim.peek'),
         figure: '—',
-        title: 'Żaden włączony moduł nie zwalnia miejsca na dysku',
-        text: 'Włącz Czyszczenie Temp, cache pakietów albo przycinanie logów, a strumień zapyta je o miejsce.',
+        title: t('world.strumien.home.reclaim.none.title'),
+        text: t('world.strumien.home.reclaim.none.text'),
         visual: <StripeField fields={['data']} />,
-        actions: [{ key: 'z', label: 'Zarządzanie modułami', glyph: 'manager', primary: true, run: manage }],
+        actions: [{ key: 'z', label: t('page.manager'), glyph: 'manager', primary: true, run: manage }],
         tour: { group: 'reclaim' },
       },
     ]
@@ -262,13 +263,13 @@ function buildReclaim(
       {
         id: 'reclaim',
         field: 'data',
-        peek: 'Ile da się odzyskać',
-        source: 'Ile da się odzyskać',
-        note: 'tylko odczyt',
+        peek: t('world.strumien.home.reclaim.peek'),
+        source: t('world.strumien.home.reclaim.peek'),
+        note: t('world.strumien.home.reclaim.note'),
         figure: scanning ? `${reclaim.done} / ${sources.length}` : String(sources.length),
-        figureNote: scanning ? 'modułów odpowiedziało' : `${plural(sources.length, 'moduł', 'moduły', 'modułów')} do zapytania`,
-        title: scanning ? 'Sprawdzam, ile miejsca zwolnią moduły' : 'Ile da się odzyskać?',
-        text: `Jeden przycisk pyta: ${names}. To tylko odczyt — usuwasz zawsze w module, po jego potwierdzeniu.`,
+        figureNote: scanning ? t('world.strumien.home.reclaim.figure-note.scanning') : t('world.strumien.home.reclaim.figure-note.idle', { n: sources.length }),
+        title: scanning ? t('world.strumien.home.reclaim.title.scanning') : t('world.strumien.home.reclaim.title.idle'),
+        text: t('world.strumien.home.reclaim.text.idle', { names }),
         visual: (
           <SquareField
             tiles={sources.map((s, i) => ({
@@ -293,7 +294,7 @@ function buildReclaim(
       key: f.id,
       size: Math.max(f.bytes ?? 0, floor),
       label: mod(f.id)?.name ?? f.id,
-      sub: f.error ? 'nie odczytano' : size(f.bytes ?? 0),
+      sub: f.error ? t('world.strumien.home.reclaim.unread') : size(f.bytes ?? 0),
       hot: hot === undefined ? !f.error : f.id === hot,
       quiet: hot !== undefined && f.id !== hot,
     }))
@@ -301,19 +302,19 @@ function buildReclaim(
   const summary: FeedItem = {
     id: 'reclaim',
     field: 'data',
-    peek: 'Ile da się odzyskać',
-    source: 'Ile da się odzyskać',
-    note: 'tylko odczyt',
+    peek: t('world.strumien.home.reclaim.peek'),
+    source: t('world.strumien.home.reclaim.peek'),
+    note: t('world.strumien.home.reclaim.note'),
     figure: size(total),
-    figureNote: 'do odzyskania',
+    figureNote: t('world.strumien.home.reclaim.figure-note.done'),
     title:
       found.length === 0
-        ? 'Żaden moduł nie znalazł nic do zwolnienia'
-        : `${readable.length} ${plural(readable.length, 'moduł znalazł', 'moduły znalazły', 'modułów znalazło')} miejsce do zwolnienia`,
-    text: 'Przewiń w dół: każdy moduł po kolei, od największego. Nic nie znika, dopóki nie potwierdzisz w module.',
+        ? t('world.strumien.home.reclaim.title.zero')
+        : t('world.strumien.home.reclaim.title.found', { n: readable.length }),
+    text: t('world.strumien.home.reclaim.text.done'),
     visual: <SquareField tiles={tiles()} />,
     actions: [
-      ...(found.length ? [{ key: 'n', label: 'Po kolei', glyph: 'down', primary: true, run: (nav) => nav.next() } as FeedAction] : []),
+      ...(found.length ? [{ key: 'n', label: t('world.strumien.home.reclaim.one-by-one'), glyph: 'down', primary: true, run: (nav) => nav.next() } as FeedAction] : []),
       check,
     ],
     tour: { group: 'reclaim' },
@@ -328,15 +329,15 @@ function buildReclaim(
         field: def?.folder ?? 'data',
         peek: `${numbers.get(f.id)} ${def?.name ?? f.id}`,
         source: `${numbers.get(f.id)} · ${def?.name ?? f.id}`,
-        note: 'z ostatniego sprawdzenia',
+        note: t('world.strumien.home.reclaim.note.last'),
         figure: f.error ? '—' : size(f.bytes ?? 0),
-        figureNote: f.error ? 'nie odczytano' : 'do odzyskania',
+        figureNote: f.error ? t('world.strumien.home.reclaim.unread') : t('world.strumien.home.reclaim.figure-note.done'),
         title: def?.quickAction ?? def?.name ?? f.id,
-        text: f.error ? `Moduł nie odpowiedział: ${f.error}` : def?.desc,
+        text: f.error ? t('world.strumien.home.reclaim.text.error', { error: f.error }) : def?.desc,
         visual: <SquareField tiles={tiles(f.id)} />,
         actions: [
-          { key: 'o', label: 'Otwórz moduł', glyph: 'open', primary: true, run: () => open(f.id) },
-          { key: 'p', label: 'Później', glyph: 'clock', run: (nav) => nav.next() },
+          { key: 'o', label: t('world.strumien.home.reclaim.open'), glyph: 'open', primary: true, run: () => open(f.id) },
+          { key: 'p', label: t('world.strumien.home.reclaim.later'), glyph: 'clock', run: (nav) => nav.next() },
         ],
       }
     })

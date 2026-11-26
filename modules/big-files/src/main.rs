@@ -98,7 +98,7 @@ fn scan(min_size_mb: Option<u64>, max_results: Option<usize>, blacklist: Vec<Str
             continue;
         }
         let Ok(meta) = entry.metadata() else { continue };
-        if meta.len() < min_size {
+        if meta.len() < min_size || scan_filter::is_cloud_only(&meta) {
             continue;
         }
         files.push(FileEntry { path: entry.path().to_string_lossy().into_owned(), size_bytes: meta.len() });

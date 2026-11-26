@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { t } from '../i18n'
 import {
   BOOTLOADER_LABEL,
   DESKTOP_LABEL,
@@ -11,8 +12,8 @@ import {
 /** One line naming what the system is made of. */
 export function profileSummary(p: LinuxProfile): string {
   return [
-    p.like.length > 0 ? `bazuje na: ${p.like.join(', ')}` : null,
-    p.family ?? (p.immutable ? 'system niemutowalny' : 'brak obsługiwanego menedżera pakietów'),
+    p.like.length > 0 ? t('profile.summary.like', { list: p.like.join(', ') }) : null,
+    p.family ?? (p.immutable ? t('profile.summary.immutable') : t('profile.summary.no-manager')),
     label(DESKTOP_LABEL, p.desktop),
     label(BOOTLOADER_LABEL, p.bootloader),
   ]
@@ -59,52 +60,55 @@ export function SystemProfileFields({ profile: p, onSave }: FieldsProps) {
   }
 
   const detected = (map: Record<string, string>, id: string | null, none: string) =>
-    `Wykryte: ${label(map, id) ?? none}`
+    t('profile.detected', { value: label(map, id) ?? none })
 
   // The broker picks the package manager by the same rule, so a family
   // os-release declares is not the user's to change here.
   const familyDesc = p.immutable
     ? (p.family_unavailable ?? '')
     : p.family_declared
-      ? `Wyznacza ją /etc/os-release (${p.like.length > 0 ? `ID_LIKE: ${p.like.join(' ')}` : `ID: ${p.id}`}) i zainstalowany ${p.family}. Tak samo wybierają operacje administratora, więc tu się jej nie zmienia.`
-      : 'System nie deklaruje rodziny — wybierz, którego z zainstalowanych menedżerów pakietów używa.'
+      ? t('profile.family.declared', {
+          source: p.like.length > 0 ? `ID_LIKE: ${p.like.join(' ')}` : `ID: ${p.id}`,
+          family: p.family ?? '',
+        })
+      : t('profile.family.undeclared')
 
   return (
     <>
-      <Field name="Rodzina systemu" desc={familyDesc}>
+      <Field name={t('profile.family.name')} desc={familyDesc}>
         <select
-          aria-label="Rodzina systemu"
+          aria-label={t('profile.family.name')}
           value={p.overrides.pkg_manager ?? ''}
           disabled={saving || p.family_declared || p.immutable}
           onChange={(e) => change('pkg_manager', e.target.value)}
         >
-          <option value="">{detected(FAMILY_LABEL, p.family_detected, 'brak')}</option>
+          <option value="">{detected(FAMILY_LABEL, p.family_detected, t('profile.none'))}</option>
           {p.managers.map((m) => (
             <option key={m} value={m}>{FAMILY_LABEL[m]}</option>
           ))}
         </select>
       </Field>
-      <Field name="Środowisko graficzne" desc="Od niego zależy, jak moduł wyglądu zmienia motywy, ikony, kursory i czcionki.">
+      <Field name={t('profile.desktop.name')} desc={t('profile.desktop.desc')}>
         <select
-          aria-label="Środowisko graficzne"
+          aria-label={t('profile.desktop.name')}
           value={p.overrides.desktop ?? ''}
           disabled={saving}
           onChange={(e) => change('desktop', e.target.value)}
         >
-          <option value="">{detected(DESKTOP_LABEL, p.desktop_detected, 'nie wykryto')}</option>
+          <option value="">{detected(DESKTOP_LABEL, p.desktop_detected, t('profile.not-detected'))}</option>
           {Object.entries(DESKTOP_LABEL).map(([id, name]) => (
             <option key={id} value={id}>{name}</option>
           ))}
         </select>
       </Field>
-      <Field name="Program rozruchowy" desc="Od niego zależy, który edytor rozruchu się otworzy: GRUB, Limine, systemd-boot czy rEFInd.">
+      <Field name={t('profile.bootloader.name')} desc={t('profile.bootloader.desc')}>
         <select
-          aria-label="Program rozruchowy"
+          aria-label={t('profile.bootloader.name')}
           value={p.overrides.bootloader ?? ''}
           disabled={saving}
           onChange={(e) => change('bootloader', e.target.value)}
         >
-          <option value="">{detected(BOOTLOADER_LABEL, p.bootloader_detected, 'nie wykryto')}</option>
+          <option value="">{detected(BOOTLOADER_LABEL, p.bootloader_detected, t('profile.not-detected'))}</option>
           {Object.entries(BOOTLOADER_LABEL).map(([id, name]) => (
             <option key={id} value={id}>{name}</option>
           ))}

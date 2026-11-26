@@ -125,6 +125,9 @@ export const icons: Record<string, (props: IconProps) => ReactElement> = {
   check: (p) => (
     <svg {...base} {...p}><path d="M5 12l5 5 9-10" /></svg>
   ),
+  more: (p) => (
+    <svg {...base} strokeWidth={3} strokeLinecap="round" {...p}><path d="M5.5 12h.01M12 12h.01M18.5 12h.01" /></svg>
+  ),
   alert: (p) => (
     <svg {...base} {...p}><path d="M12 4l9 15H3z" /><path d="M12 10v4M12 17.2v.3" /></svg>
   ),

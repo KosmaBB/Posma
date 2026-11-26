@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { confirmAction } from '../../components/confirm'
 import { BOOTLOADER_LABEL } from '../../data/linuxProfile'
+import { t, locale } from '../../i18n'
 
 export interface BackupEntry {
   filename: string
@@ -29,19 +30,19 @@ interface ExecResult {
 type ApiResponse<T> = { ok: true; data: T } | { ok: false; error: string }
 
 /** What each loader accepts in its two settings, as its own documentation puts it. */
-const HINTS: Record<string, { default: string; timeout: string }> = {
-  limine: {
-    default: 'Ścieżka wpisu z listy (np. CachyOS/linux-cachyos) albo jego numer, licząc od 1. Gdy plik ustawia remember_last_entry: yes, Limine woli ostatnio uruchomiony wpis.',
-    timeout: 'Sekundy; „no” — czekaj na wybór, 0 — bez menu.',
-  },
-  'systemd-boot': {
-    default: 'Identyfikator wpisu z listy (np. arch.conf), wzorzec z * albo @saved — ostatnio wybrany. Wpis ustawiony w samym menu klawiszem d ma pierwszeństwo.',
-    timeout: 'Sekundy; menu-force — czekaj na wybór, menu-hidden — menu tylko po wciśnięciu klawisza.',
-  },
-  refind: {
-    default: 'Fragment nazwy wpisu albo jego numer od 1. rEFInd większość systemów znajduje sam przy starcie, więc lista ma tylko wpisy zapisane w refind.conf.',
-    timeout: 'Sekundy; 0 — czekaj na wybór, -1 — uruchom od razu.',
-  },
+const HINTS: Record<string, () => { default: string; timeout: string }> = {
+  limine: () => ({
+    default: t('view.boot-loader.hint.limine.default'),
+    timeout: t('view.boot-loader.hint.limine.timeout'),
+  }),
+  'systemd-boot': () => ({
+    default: t('view.boot-loader.hint.systemd-boot.default'),
+    timeout: t('view.boot-loader.hint.systemd-boot.timeout'),
+  }),
+  refind: () => ({
+    default: t('view.boot-loader.hint.refind.default'),
+    timeout: t('view.boot-loader.hint.refind.timeout'),
+  }),
 }
 
 const failed = (error: string): ExecResult => ({ success: false, output: '', error })
@@ -61,7 +62,7 @@ interface Props {
  */
 export function BootLoaderEditor({ loader, backups, keepBackups, onChanged }: Props) {
   const name = BOOTLOADER_LABEL[loader] ?? loader
-  const hint = HINTS[loader]
+  const hint = HINTS[loader]?.()
   const [menu, setMenu] = useState<BootMenu | null>(null)
   const [defaultEntry, setDefaultEntry] = useState('')
   const [timeout, setTimeoutValue] = useState('')
@@ -75,7 +76,7 @@ export function BootLoaderEditor({ loader, backups, keepBackups, onChanged }: Pr
       const res = await invoke<ApiResponse<BootMenu>>('read_boot_entries')
       if (!res.ok) return setResult(failed(res.error))
       // The broker looks as root; where it sees GRUB, the profile was set by hand.
-      if (!res.data.options) return setResult(failed(`Jako administrator ten system nie wygląda na uruchamiany przez ${name} — sprawdź „Program rozruchowy” w ustawieniach.`))
+      if (!res.data.options) return setResult(failed(t('view.boot-loader.error.not-this-loader', { name })))
       setMenu(res.data)
       setDefaultEntry(res.data.options.default_entry ?? '')
       setTimeoutValue(res.data.options.timeout ?? '')
@@ -106,14 +107,14 @@ export function BootLoaderEditor({ loader, backups, keepBackups, onChanged }: Pr
   }
 
   const save = () =>
-    run('save', `Zapisać ustawienia ${name}? Poprzednia konfiguracja zostanie zachowana jako kopia zapasowa.`, () =>
+    run('save', t('view.boot-loader.save.confirm', { name }), () =>
       invoke('set_boot_options', { defaultEntry: defaultEntry.trim() || null, timeout: timeout.trim() || null, keepBackups }),
     )
 
   async function restore(filename: string) {
     if (!menu?.options) return
     const path = menu.options.path
-    const restored = await run('restore:' + filename, 'Przywrócić tę kopię zapasową? Bieżąca konfiguracja też zostanie zapisana jako kopia.', () =>
+    const restored = await run('restore:' + filename, t('view.boot-loader.restore.confirm'), () =>
       invoke('restore_grub_backup', { filename, keepBackups, path }),
     )
     if (restored) load()
@@ -122,17 +123,17 @@ export function BootLoaderEditor({ loader, backups, keepBackups, onChanged }: Pr
   return (
     <div>
       <div className="section-head">
-        <h2 style={{ fontSize: 14 }}>Rozruch: {name}</h2>
+        <h2 style={{ fontSize: 14 }}>{t('view.boot-loader.title', { name })}</h2>
       </div>
       <div className="glass" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {!menu ? (
           <>
             <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-              {name} czyta konfigurację z partycji rozruchowej, którą odczytuje tylko administrator — dlatego już podgląd ustawień prosi o zgodę.
+              {t('view.boot-loader.intro', { name })}
             </div>
             <div>
               <button className="btn btn-primary" onClick={() => { setResult(null); load() }} disabled={busy !== null}>
-                {busy === 'load' ? 'Wczytywanie...' : 'Wczytaj ustawienia'}
+                {busy === 'load' ? t('view.boot-loader.loading') : t('view.boot-loader.load')}
               </button>
             </div>
           </>
@@ -140,7 +141,7 @@ export function BootLoaderEditor({ loader, backups, keepBackups, onChanged }: Pr
           <>
             <div className="mono" style={{ fontSize: 13, color: 'var(--muted)' }}>{menu.options?.path}</div>
             <label className="form-field">
-              <span>Domyślny wpis</span>
+              <span>{t('view.boot-loader.default-entry')}</span>
               <input list="boot-loader-entries" type="text" value={defaultEntry} onChange={(e) => setDefaultEntry(e.target.value)} />
               <datalist id="boot-loader-entries">
                 {menu.entries.map((entry) => <option key={entry} value={entry} />)}
@@ -148,41 +149,41 @@ export function BootLoaderEditor({ loader, backups, keepBackups, onChanged }: Pr
               <div style={{ fontSize: 13, color: 'var(--muted)' }}>{hint?.default}</div>
             </label>
             <label className="form-field">
-              <span>Czas oczekiwania</span>
+              <span>{t('view.boot-loader.timeout')}</span>
               <input type="text" value={timeout} onChange={(e) => setTimeoutValue(e.target.value)} style={{ maxWidth: 160 }} />
-              <div style={{ fontSize: 13, color: 'var(--muted)' }}>{hint?.timeout} Puste pole zostawia ustawienie bez zmian.</div>
+              <div style={{ fontSize: 13, color: 'var(--muted)' }}>{hint?.timeout} {t('view.boot-loader.empty-keeps')}</div>
             </label>
             <div>
               <button className="btn btn-primary" onClick={save} disabled={busy !== null}>
-                {busy === 'save' ? 'Zapisywanie...' : 'Zapisz ustawienia'}
+                {busy === 'save' ? t('view.boot-loader.saving') : t('view.boot-loader.save')}
               </button>
             </div>
           </>
         )}
         {result && (
           <div className="form-warning" style={{ color: result.success ? 'var(--good)' : 'var(--critical)' }}>
-            {result.success ? 'Zapisano — zmiana zadziała przy następnym uruchomieniu.' : `Nie udało się: ${result.error}`}
+            {result.success ? t('view.boot-loader.saved') : t('view.boot-loader.failed', { error: result.error ?? '' })}
           </div>
         )}
       </div>
 
       <div className="section-head" style={{ marginTop: 20 }}>
-        <h2 style={{ fontSize: 14 }}>Kopie zapasowe</h2>
+        <h2 style={{ fontSize: 14 }}>{t('view.boot-loader.backups')}</h2>
       </div>
       {backups.length === 0 ? (
-        <div className="glass empty-state">Brak kopii zapasowych — pojawią się po pierwszym zapisie.</div>
+        <div className="glass empty-state">{t('view.boot-loader.backups.empty')}</div>
       ) : (
         <div className="clean-list">
           {backups.map((b) => (
             <div key={b.filename} className="glass clean-row" style={{ cursor: 'default', opacity: 1 }}>
-              <span className="cr-path mono">{new Date(b.created_unix * 1000).toLocaleString('pl-PL')}</span>
+              <span className="cr-path mono">{new Date(b.created_unix * 1000).toLocaleString(locale())}</span>
               <button
                 className="btn btn-ghost btn-mini"
                 disabled={!menu || busy !== null}
-                title={menu ? undefined : 'Najpierw wczytaj ustawienia'}
+                title={menu ? undefined : t('view.boot-loader.load-first')}
                 onClick={() => restore(b.filename)}
               >
-                {busy === 'restore:' + b.filename ? 'Przywracanie...' : 'Przywróć'}
+                {busy === 'restore:' + b.filename ? t('view.boot-loader.restoring') : t('view.boot-loader.restore')}
               </button>
             </div>
           ))}

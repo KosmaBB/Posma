@@ -8,6 +8,7 @@ import type { AppState } from '../../state/appState'
 import { catalogNumbers, folderNumber, folders, moduleById, riskLabel } from '../../data/modules'
 import { size, type ReclaimState } from '../../state/machine'
 import { motionReduced } from '../../state/looks'
+import { t } from '../../i18n'
 import { ModuleBody } from '../../views/ModuleView'
 import { Item, type FeedItem, type FeedNav } from './Feed'
 import { RISK_DENSITY } from './Folder'
@@ -55,9 +56,9 @@ export function ModuleFrame({
     return (
       <div className="sm-page">
         <div className="empty-state">
-          Nie znaleziono modułu.
+          {t('world.strumien.module.missing')}
           <br />
-          <button className="btn btn-primary" onClick={() => setView({ kind: 'dashboard' })}>Wróć do strumienia</button>
+          <button className="btn btn-primary" onClick={() => setView({ kind: 'dashboard' })}>{t('world.strumien.back')}</button>
         </div>
       </div>
     )
@@ -75,7 +76,7 @@ export function ModuleFrame({
     source: `${folderNumber(folder.id)} · ${folder.name}`,
     note: <span className={`chip ${mod.risk}`}>{riskLabel[mod.risk]}</span>,
     figure: no,
-    figureNote: hit?.bytes != null ? `${size(hit.bytes)} do odzyskania według ostatniego sprawdzenia` : undefined,
+    figureNote: hit?.bytes != null ? t('world.strumien.module.figure-note', { size: size(hit.bytes) }) : undefined,
     title: mod.name,
     text: mod.desc,
     visual:
@@ -93,7 +94,7 @@ export function ModuleFrame({
         <PatternField seed={mod.id} density={RISK_DENSITY[mod.risk]} />
       ),
     actions: [
-      { key: 'o', label: 'Otwórz moduł', glyph: 'down', primary: true, run: toBody },
+      { key: 'o', label: t('world.strumien.module.open'), glyph: 'down', primary: true, run: toBody },
       { key: 'b', label: folder.name, glyph: 'back', run: back },
     ],
     tour: { caption: 'module-hero' },
@@ -101,13 +102,13 @@ export function ModuleFrame({
 
   return (
     <div className="sm-module" ref={wrap} data-tour="module">
-      <Item item={cover} nav={nav} label={`${no} ${mod.name}: okładka modułu`} state="now" />
-      <section className="sm-body" ref={body} aria-label={`${mod.name} — moduł`}>
+      <Item item={cover} nav={nav} label={t('world.strumien.module.cover-label', { no, name: mod.name })} state="now" />
+      <section className="sm-body" ref={body} aria-label={t('world.strumien.module.label', { name: mod.name })}>
         <header className="sm-body__head">
           <span className="sm-body__no">{no}</span>
           <h1>{mod.name}</h1>
           <span className={`chip ${mod.risk}`}>{riskLabel[mod.risk]}</span>
-          <button type="button" className="btn btn-ghost btn-mini" onClick={toCover}>Okładka</button>
+          <button type="button" className="btn btn-ghost btn-mini" onClick={toCover}>{t('world.strumien.module.cover')}</button>
         </header>
         <div className="sm-body__inner">
           <ModuleBody app={app} mod={mod} />

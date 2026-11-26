@@ -1,5 +1,7 @@
 # Writing a theme
 
+*[Polska wersja →](pl/writing-a-theme.md)*
+
 A theme in POSMA changes the whole app, not only its colours: the
 navigation, the home screen, the folder pages, the frame around each module,
 and the way shared pieces such as buttons and lists are drawn. In the code,
@@ -24,7 +26,7 @@ apply on top of whichever world is chosen.
 | Code | TypeScript and React 19, as in the rest of `core/src` |
 | Styles | One plain CSS file per theme, more if you split it. No CSS framework, no CSS-in-JS |
 | Fonts | npm packages (`@fontsource/*`, `@fontsource-variable/*`) imported in your `index.tsx`. They are bundled and load only when the theme is chosen. Nothing is fetched at runtime — POSMA works offline, so no Google Fonts and no CDN |
-| Interface text | Polish, like the rest of the app. Counts go through `plural(n, one, few, many)`; sizes and numbers through the helpers in `state/machine.ts`, which use the Polish decimal comma |
+| Interface text | Keys in `core/src/i18n/pl.json` and `en.json`, shown with `t('key')` — see [Writing a translation](writing-a-translation.md). The shipped worlds are still being moved over and write Polish directly, with counts through `plural(n, one, few, many)`. Sizes and numbers go through the helpers in `state/machine.ts`, which still use the Polish decimal comma |
 | Code comments and identifiers | English |
 
 ## Start from the starter
@@ -37,7 +39,7 @@ reshape it rather than starting from an empty file.
 
 ```sh
 cp -r templates/world core/src/worlds/mytheme
-rm core/src/worlds/mytheme/README.md
+rm core/src/worlds/mytheme/README*.md
 # rename the CSS scope (on macOS: sed -i '' …)
 sed -i 's/starter/mytheme/g' core/src/worlds/mytheme/*.css core/src/worlds/mytheme/*.tsx
 ```
@@ -192,7 +194,7 @@ do nothing in your theme.
 | Siatka wykresu, Linia szczytu | `data-chart-grid`, `data-peak` | `--chart-grid-opacity`, `--chart-peak-dash` |
 
 Other attributes on `<html>`: `data-world` (your id), `data-theme`
-(`light` or `dark`), `data-fit` and `data-fit-h` (below). `data-look` is set
+(`light` or `dark`), `data-fit`, `data-fit-h` and `data-wide` (below). `data-look` is set
 only in Katalog.
 
 ## The specificity contract
@@ -215,7 +217,7 @@ uses `st-`) so they never meet another world's, and never style outside
 
 ## Less space: `data-fit`, never `@media`
 
-The window is at least 1600 × 900, and UI scaling (90–150 %) works through
+The window is at least 1600 × 900, and UI scaling (90–300 %) works through
 `zoom`, which media queries cannot see: at 150 % a 1600 px window leaves
 about 1067 px, while `@media (max-width: …)` still measures 1600. So
 `state/settings.ts` puts the space left after scaling on the root as steps:
@@ -230,6 +232,24 @@ about 1067 px, while `@media (max-width: …)` still measures 1600. So
 `:where()` keeps the specificity of the rule inside. Need a step that is not
 listed? Add it to `FIT_WIDTHS` or `FIT_HEIGHTS` in `settings.ts` — a step
 that exists only in CSS never matches.
+
+## More space: `data-wide`
+
+The other way round for large screens: `data-wide~='N'` for N in 1900, 2400,
+3200, while at least N px are left after scaling. Automatic scaling grows
+with the window and keeps about 1700 × 950: a 1440p or 4K screen shows the
+same layout larger. It reads both sides of the window, so a 21:9 or 32:9
+screen keeps its height and its extra width reaches these steps, as does a
+small scale picked by hand on a large screen. They are for what the extra
+width can hold: more columns, a wider chart, two halves of something side by
+side. Pages fill the window: give a list more columns rather than a fixed
+`max-width`, so there is neither an empty band nor one row across 4000 px.
+
+```css
+[data-world='mytheme']:where([data-wide~='2400']) .my-home { grid-template-columns: repeat(4, 1fr); }
+```
+
+New steps go into `WIDE_WIDTHS` in `settings.ts`.
 
 ## Motion
 

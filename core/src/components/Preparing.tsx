@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Icon } from './Icons'
+import { t } from '../i18n'
 
 /**
  * Waiting state for work that genuinely takes a while. Names the job, says
@@ -61,7 +62,7 @@ export function Preparing({
       {/* Only appears once the wait is long enough that silence would read
           as a hang. Before that it would just add noise. */}
       <p className="preparing__timer" data-visible={showTimer}>
-        {showTimer ? `trwa ${elapsed} s — to normalne przy większych dyskach` : ' '}
+        {showTimer ? t('preparing.timer', { n: elapsed }) : ' '}
       </p>
     </div>
   )

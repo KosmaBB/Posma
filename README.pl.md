@@ -2,7 +2,7 @@
 
 **P**ersonal **O**perating **S**ystem **M**aintenance **A**pp
 
-*[English version of this document →](README.md)* · *[Dokumentacja →](https://kosmabb.github.io/Posma/)* · *[Discord →](https://discord.gg/sUanwMhk4q)*
+*[English version of this document →](README.md)* · *[Dokumentacja →](https://kosmabb.github.io/Posma/pl/)* · *[Discord →](https://discord.gg/sUanwMhk4q)*
 
 Aplikacja do konserwacji systemu na Windows, macOS i Linux, której całe
 źródło jest jawne — łącznie z każdą linijką, która sięga do systemu z
@@ -79,7 +79,7 @@ Kolejne będzie można znaleźć i doinstalować: motyw zainstaluje się tak sam
 jak moduł i tak samo da się go usunąć — pojawi się to razem z dystrybucją
 modułów w [1.0](#10--dystrybucja-modułów). Do tego czasu motyw jest
 wbudowany w aplikację, a napisać go może każdy:
-[Pisanie motywu](https://kosmabb.github.io/Posma/writing-a-theme.html)
+[Pisanie motywu](https://kosmabb.github.io/Posma/pl/writing-a-theme.html)
 opisuje język, nazwy zmiennych i podstawkę do skopiowania.
 
 ## Moduły
@@ -126,7 +126,7 @@ aplikacja się uruchamia, co nie mówi jeszcze nic o żadnym module.
 dwadzieścia domowych i trzy serwerowe — są sprawdzane w kontenerach każdej z
 nich, co dowodzi mniej; na Archu aplikacja uruchomiła się też na prawdziwej
 maszynie, choć jej modułów nie sprawdzono tam jeszcze po kolei.
-[Co uruchomiono gdzie, a czego nie](docs/distributions.md) jest spisane
+[Co uruchomiono gdzie, a czego nie](docs/pl/distributions.md) jest spisane
 osobno dla każdej dystrybucji.
 
 ### Obsługiwane dystrybucje Linuksa
@@ -313,7 +313,7 @@ rodzinach menedżerów pakietów (apt, pacman, dnf, zypper) i mówią wprost, gd
 system nie daje im nic do zrobienia, jak na dystrybucjach opartych na obrazie.
 Sprawdzane jest to w kontenerze każdej dystrybucji, a nie na zainstalowanych
 systemach — na Archu na prawdziwej maszynie widać było na razie tylko
-uruchomienie aplikacji; strona [Linux distributions](docs/distributions.md) rozdziela te
+uruchomienie aplikacji; strona [Dystrybucje Linuksa](docs/pl/distributions.md) rozdziela te
 dwie rzeczy.
 
 ### W trakcie testów — macOS
@@ -434,7 +434,7 @@ to nie są rzeczy, które dokleja się do projektu jednoosobowego.
   innego, z ekranem zgody pokazującym dokładnie, o jakie uprzywilejowane
   możliwości prosi.
 - **Instalatory** — `.deb`, `.rpm`, uniwersalny `.dmg` i `.exe` dla Windows
-  buduje [workflow wydań](docs/building.md#installers), bez podpisu, dopóki
+  buduje [workflow wydań](docs/pl/building.md#instalatory), bez podpisu, dopóki
   nie ma certyfikatów. Bez AppImage: z jego wnętrza nie da się uruchomić
   brokera jako root.
 - **Sejf haseł — świadomie na koniec.** Moduł działa i jest wieloplatformowy
@@ -458,7 +458,9 @@ crates/
   sysmetrics/    Odczyt czujników, temperatur i kart graficznych — bez uprawnień
 modules/         Po jednym crate na moduł, plus brokery per system
 templates/world/ Minimalny motyw do skopiowania do core/src/worlds — patrz Pisanie motywu
+templates/translation/ Wszystkie teksty interfejsu po angielsku, do przetłumaczenia — patrz Pisanie tłumaczenia
 scripts/         sync-sidecars.mjs — buduje moduły dla tego systemu i wgrywa je do aplikacji
+                 check-translations.mjs — sprawdza każdy plik językowy z polskimi kluczami
                  distro-check.sh — uruchamia moduły w kontenerze każdej dystrybucji
 ```
 ## Budowanie ze źródeł
@@ -468,7 +470,7 @@ tych, którzy wolą sami zbudować to, co zaudytowali.
 
 Wymagane: [Rust](https://rustup.rs), Node.js 20+ oraz
 [zależności systemowe Tauri](https://tauri.app/start/prerequisites/) dla
-Twojego systemu — [nazwy pakietów dla każdej rodziny Linuksa](docs/building.md#requirements)
+Twojego systemu — [nazwy pakietów dla każdej rodziny Linuksa](docs/pl/building.md#wymagania)
 są spisane przy opisie budowania.
 
 ```bash
@@ -560,12 +562,13 @@ dokumentacja i odnośnik z powrotem tutaj.
 
 | | |
 |---|---|
-| [Architektura](https://kosmabb.github.io/Posma/architecture.html) | Jak rdzeń, moduły i brokery łączą się w całość i dlaczego podział wygląda właśnie tak |
-| [Model bezpieczeństwa](https://kosmabb.github.io/Posma/security-model.html) | Co może sięgnąć do roota, co go przed tym powstrzymuje i jawna lista tego, co **nie** jest chronione |
-| [Pisanie modułu](https://kosmabb.github.io/Posma/writing-a-module.html) | Kontrakt modułu — protokół, manifest, uprawnienia, logika per system, zasady bezpieczeństwa |
-| [Pisanie motywu](https://kosmabb.github.io/Posma/writing-a-theme.html) | Własny wygląd całej aplikacji — język, nazwy zmiennych, podstawka do skopiowania, zasady |
-| [Budowanie i praca z kodem](https://kosmabb.github.io/Posma/building.html) | Wymagania, kolejność budowania, krok synchronizacji modułów, testowanie |
-| [Dystrybucje Linuksa](https://kosmabb.github.io/Posma/distributions.html) | Na których dystrybucjach POSMA działa, co każdy moduł tam robi i co faktycznie uruchomiono, żeby to ustalić |
+| [Architektura](https://kosmabb.github.io/Posma/pl/architecture.html) | Jak rdzeń, moduły i brokery łączą się w całość i dlaczego podział wygląda właśnie tak |
+| [Model bezpieczeństwa](https://kosmabb.github.io/Posma/pl/security-model.html) | Co może sięgnąć do roota, co go przed tym powstrzymuje i jawna lista tego, co **nie** jest chronione |
+| [Pisanie modułu](https://kosmabb.github.io/Posma/pl/writing-a-module.html) | Kontrakt modułu — protokół, manifest, uprawnienia, logika per system, zasady bezpieczeństwa |
+| [Pisanie motywu](https://kosmabb.github.io/Posma/pl/writing-a-theme.html) | Własny wygląd całej aplikacji — język, nazwy zmiennych, podstawka do skopiowania, zasady |
+| [Pisanie tłumaczenia](https://kosmabb.github.io/Posma/pl/writing-a-translation.html) | POSMA w twoim języku — format pliku, formy liczby mnogiej, wzór, sprawdzanie |
+| [Budowanie i praca z kodem](https://kosmabb.github.io/Posma/pl/building.html) | Wymagania, kolejność budowania, krok synchronizacji modułów, testowanie |
+| [Dystrybucje Linuksa](https://kosmabb.github.io/Posma/pl/distributions.html) | Na których dystrybucjach POSMA działa, co każdy moduł tam robi i co faktycznie uruchomiono, żeby to ustalić |
 | [`Access_plan.md`](Access_plan.md) | Pierwotny projekt systemu uprawnień (po polsku) |
 
 | | |
@@ -575,10 +578,11 @@ dokumentacja i odnośnik z powrotem tutaj.
 | [LICENSE.md](LICENSE.md) | Wiążące warunki niekomercyjne (tekst angielski) |
 | [COMMERCIAL-LICENSE.pl.md](COMMERCIAL-LICENSE.pl.md) · [English](COMMERCIAL-LICENSE.md) | Kto płaci, kto nie i jak to uzgodnić |
 
-Dokumentacja techniczna prowadzona jest po angielsku, żeby pozostała
-użyteczna dla osób, które nie czytają po polsku. Wszystko, czego potrzebuje
-*użytkownik* — to README, polityka bezpieczeństwa, przewodnik dla
-współtwórców i wyjaśnienia licencji — istnieje w obu językach.
+Dokumentacja istnieje po polsku i po
+[angielsku](https://kosmabb.github.io/Posma/), tak samo jak wszystko, czego
+potrzebuje *użytkownik* — to README, polityka bezpieczeństwa, przewodnik dla
+współtwórców i wyjaśnienia licencji. Tylko wiążący tekst licencji jest
+wyłącznie po angielsku.
 
 ## Licencja
 

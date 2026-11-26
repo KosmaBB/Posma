@@ -12,8 +12,9 @@ import type { AppState } from '../../state/appState'
 import { catalogNumbers, moduleById, orderedModules, type ModuleDef } from '../../data/modules'
 import { gb, size, usedPct, type Machine, type ReclaimState } from '../../state/machine'
 import { Guilloche } from './Print'
+import { locale, t } from '../../i18n'
 
-const DAY = new Intl.DateTimeFormat('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+const dayFormat = () => new Intl.DateTimeFormat(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' })
 const pos = (i: number) => String(i + 1).padStart(2, '0')
 
 interface LedgerProps {
@@ -37,40 +38,40 @@ export function LedgerPage({ app, machine, reclaim }: LedgerProps) {
   /** What a template can already say about its module before anything is asked of it. */
   function reading(m: ModuleDef): string | null {
     const hit = foundOf(m.id)
-    if (hit && hit.bytes !== null) return `${size(hit.bytes)} do odzyskania`
-    if (m.id === 'disk-map' && machine.mainDisk) return `${mount} zajęty w ${usedPct(machine.mainDisk).toFixed(0)} %`
+    if (hit && hit.bytes !== null) return t('world.ksiazeczka.ledger.reclaimable', { size: size(hit.bytes) })
+    if (m.id === 'disk-map' && machine.mainDisk) return t('world.ksiazeczka.ledger.map-reading', { mount, pct: usedPct(machine.mainDisk).toFixed(0) })
     if (m.id === 'health-monitor' && machine.cpu)
-      return [`procesor ${machine.cpu.value.toFixed(0)} %`, machine.temp && `${machine.temp.value.toFixed(0)} °C`].filter(Boolean).join(' · ')
+      return [t('world.ksiazeczka.ledger.cpu-reading', { pct: machine.cpu.value.toFixed(0) }), machine.temp && `${machine.temp.value.toFixed(0)} °C`].filter(Boolean).join(' · ')
     return null
   }
 
   return (
-    <section className="kz-page kz-page--r" aria-label="Obroty na rachunku">
+    <section className="kz-page kz-page--r" aria-label={t('world.ksiazeczka.ledger.aria')}>
       <Guilloche side="right" />
       <div className="kz-pad">
         <div className="kz-head">
-          <span className="kz-pre">Obroty na rachunku {mount}</span>
-          <span className="kz-pre kz-pre--n">{DAY.format(new Date())}</span>
+          <span className="kz-pre">{t('world.ksiazeczka.ledger.head', { mount })}</span>
+          <span className="kz-pre kz-pre--n">{dayFormat().format(new Date())}</span>
         </div>
 
         <div className="kz-ledger-wrap" data-tour="reclaim">
           <table className="kz-table kz-ledger">
             <thead>
               <tr>
-                <th className="kz-c-pos">Poz.</th>
-                <th>Operacja · dowód</th>
-                <th className="kz-c-mod">Moduł</th>
-                <th className="n">Uznanie</th>
-                <th className="n">Saldo</th>
-                <th className="kz-c-sig">Podpis</th>
+                <th className="kz-c-pos">{t('world.ksiazeczka.ledger.col.pos')}</th>
+                <th>{t('world.ksiazeczka.ledger.col.operation')}</th>
+                <th className="kz-c-mod">{t('world.ksiazeczka.ledger.col.module')}</th>
+                <th className="n">{t('world.ksiazeczka.ledger.col.credit')}</th>
+                <th className="n">{t('world.ksiazeczka.ledger.col.balance')}</th>
+                <th className="kz-c-sig">{t('world.ksiazeczka.ledger.col.signature')}</th>
               </tr>
             </thead>
             <tbody>
               <tr className="kz-row kz-row--carry">
                 <td className="kz-mx">—</td>
                 <td>
-                  <span className="kz-op">Saldo otwarcia</span>
-                  <span className="kz-proof">wolne miejsce na {mount}, odczytane teraz</span>
+                  <span className="kz-op">{t('world.ksiazeczka.ledger.opening')}</span>
+                  <span className="kz-proof">{t('world.ksiazeczka.ledger.opening-proof', { mount })}</span>
                 </td>
                 <td />
                 <td />
@@ -88,13 +89,13 @@ export function LedgerPage({ app, machine, reclaim }: LedgerProps) {
                       <td className="kz-mx">{pos(i)}</td>
                       <td>
                         <span className="kz-op">{name}</span>
-                        <span className="kz-proof">odczyt się nie udał: {r.error}</span>
+                        <span className="kz-proof">{t('world.ksiazeczka.ledger.failed', { error: r.error })}</span>
                       </td>
                       <td className="kz-mx">{numbers.get(r.id)}</td>
                       <td className="n kz-mx">—</td>
                       <td className="n" />
                       <td>
-                        <span className="kz-stamp kz-stamp--debit">odrzucone</span>
+                        <span className="kz-stamp kz-stamp--debit">{t('world.ksiazeczka.ledger.rejected')}</span>
                       </td>
                     </tr>
                   )
@@ -108,7 +109,7 @@ export function LedgerPage({ app, machine, reclaim }: LedgerProps) {
                       <button className="kz-op kz-op--link" onClick={() => open(r.id)}>
                         {name}
                       </button>
-                      <span className="kz-proof">{empty ? 'nic do odzyskania' : 'do odzyskania · tylko odczyt, nic nie usunięto'}</span>
+                      <span className="kz-proof">{t(empty ? 'world.ksiazeczka.ledger.empty' : 'world.ksiazeczka.ledger.pending')}</span>
                     </td>
                     <td className="kz-mx">{numbers.get(r.id)}</td>
                     <td className="n kz-mx kz-credit">{size(r.bytes ?? 0)}</td>
@@ -118,7 +119,7 @@ export function LedgerPage({ app, machine, reclaim }: LedgerProps) {
                         <span className="kz-proof">—</span>
                       ) : (
                         <button className="kz-sign" onClick={() => open(r.id)}>
-                          do podpisu
+                          {t('world.ksiazeczka.ledger.to-sign')}
                         </button>
                       )}
                     </td>
@@ -130,7 +131,7 @@ export function LedgerPage({ app, machine, reclaim }: LedgerProps) {
                 <tr className="kz-row kz-row--done">
                   <td className="kz-mx">—</td>
                   <td colSpan={5}>
-                    <span className="kz-op">Żaden moduł nie ma nic do odzyskania</span>
+                    <span className="kz-op">{t('world.ksiazeczka.ledger.none-found')}</span>
                   </td>
                 </tr>
               )}
@@ -139,8 +140,8 @@ export function LedgerPage({ app, machine, reclaim }: LedgerProps) {
                 <tr className="kz-row kz-row--total">
                   <td />
                   <td colSpan={2}>
-                    <span className="kz-op">Razem do odzyskania</span>
-                    <span className="kz-proof">prognoza: zakłada, że wszystko leży na {mount}</span>
+                    <span className="kz-op">{t('world.ksiazeczka.ledger.total')}</span>
+                    <span className="kz-proof">{t('world.ksiazeczka.ledger.total-proof', { mount })}</span>
                   </td>
                   <td className="n kz-mx kz-credit">{size(total)}</td>
                   <td className="n kz-mx">{free !== null ? gb(free + total) : '—'}</td>
@@ -153,19 +154,19 @@ export function LedgerPage({ app, machine, reclaim }: LedgerProps) {
           {sources.length === 0 ? (
             <div className="kz-order">
               <div>
-                <span className="kz-op">Brak włączonych modułów czyszczących</span>
-                <span className="kz-proof">Dyspozycję sprawdzenia składają moduły z folderu 100 i 300.</span>
+                <span className="kz-op">{t('world.ksiazeczka.ledger.no-cleaners')}</span>
+                <span className="kz-proof">{t('world.ksiazeczka.ledger.no-cleaners-proof')}</span>
               </div>
               <button className="btn btn-ghost" onClick={() => setView({ kind: 'manager' })}>
-                Włącz moduły — 901
+                {t('world.ksiazeczka.ledger.enable')}
               </button>
             </div>
           ) : state.kind === 'scanning' ? (
             <div className="kz-order kz-order--busy" role="status" aria-busy="true">
               <div>
-                <span className="kz-op">Drukuję wyciąg…</span>
+                <span className="kz-op">{t('world.ksiazeczka.ledger.printing')}</span>
                 <span className="kz-proof">
-                  odpowiedziało {state.done} z {sources.length} modułów · tylko odczyt
+                  {t('world.ksiazeczka.ledger.answered', { done: state.done, n: sources.length })}
                 </span>
               </div>
               <span className="kz-head-run" aria-hidden="true">
@@ -176,36 +177,35 @@ export function LedgerPage({ app, machine, reclaim }: LedgerProps) {
             <div className="kz-order">
               <div>
                 <span className="kz-op">
-                  {state.kind === 'done' ? 'Wyciąg wydrukowany' : 'Dyspozycja oczekująca: sprawdź, co da się odzyskać'}
+                  {t(state.kind === 'done' ? 'world.ksiazeczka.ledger.printed' : 'world.ksiazeczka.ledger.order-pending')}
                 </span>
                 <span className="kz-proof">
-                  {sources.length} {sources.length === 1 ? 'moduł' : 'moduły'} · tylko odczyt — usuwasz zawsze w module, po jego
-                  potwierdzeniu
+                  {t('world.ksiazeczka.ledger.read-only', { n: sources.length })}
                 </span>
               </div>
               <button className={`btn ${state.kind === 'done' ? 'btn-ghost' : 'btn-primary'}`} onClick={check}>
-                {state.kind === 'done' ? 'Sprawdź ponownie' : 'Złóż dyspozycję'}
-                <span className="sr-only"> — sprawdź, co da się odzyskać</span>
+                {t(state.kind === 'done' ? 'world.ksiazeczka.ledger.recheck' : 'world.ksiazeczka.ledger.place-order')}
+                <span className="sr-only"> — {t('world.ksiazeczka.ledger.sr-check')}</span>
               </button>
             </div>
           )}
         </div>
 
         <p className="kz-legend">
-          <span className="kz-legend__line kz-legend__line--solid" aria-hidden="true" /> odczyt
-          <span className="kz-legend__line kz-legend__line--dashed" aria-hidden="true" /> czeka na podpis w module
-          <span className="kz-legend__line kz-legend__line--struck" aria-hidden="true" /> nie powiodło się
+          <span className="kz-legend__line kz-legend__line--solid" aria-hidden="true" /> {t('world.ksiazeczka.ledger.legend.read')}
+          <span className="kz-legend__line kz-legend__line--dashed" aria-hidden="true" /> {t('world.ksiazeczka.ledger.legend.waits')}
+          <span className="kz-legend__line kz-legend__line--struck" aria-hidden="true" /> {t('world.ksiazeczka.ledger.legend.failed')}
         </p>
         <p className="kz-proof kz-note">
-          Książeczka nie przechowuje operacji z poprzednich uruchomień — widać tu to, co sprawdzisz teraz.
+          {t('world.ksiazeczka.ledger.note')}
         </p>
 
         <section className="kz-index" data-tour="index" aria-labelledby="kz-index-title">
           <h2 id="kz-index-title" className="kz-lbl kz-index__title">
-            Wzory dyspozycji
+            {t('world.ksiazeczka.ledger.templates')}
           </h2>
           {quick.length === 0 ? (
-            <p className="kz-proof">Żaden włączony moduł nie ma gotowego wzoru. Moduły włączysz w 901.</p>
+            <p className="kz-proof">{t('world.ksiazeczka.ledger.templates-empty')}</p>
           ) : (
             <ul>
               {quick.map((m) => {
@@ -228,7 +228,7 @@ export function LedgerPage({ app, machine, reclaim }: LedgerProps) {
         </section>
 
         <footer className="kz-foot">
-          <span className="kz-pageno">s. 2 · obroty</span>
+          <span className="kz-pageno">{t('world.ksiazeczka.ledger.page')}</span>
         </footer>
       </div>
     </section>

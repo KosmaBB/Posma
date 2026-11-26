@@ -202,7 +202,7 @@ mod windows {
         command: String,
     }
 
-    fn listing() -> Result<Listing, String> {
+    pub fn listing() -> Result<Listing, String> {
         let out = Command::new("powershell.exe")
             .args(["-NoProfile", "-NonInteractive", "-Command", LIST_SCRIPT])
             .output()
@@ -552,5 +552,13 @@ mod tests {
             ("folder:Notatki.lnk", "Notatki", true),
             ("run:OneDrive", "OneDrive", false)
         ]);
+    }
+
+    /// The listing script itself, on a real Windows (CI's Windows Server):
+    /// a scan that fails shows an empty list, so this is where it would show.
+    #[cfg(windows)]
+    #[test]
+    fn the_listing_reads_this_windows() {
+        super::windows::listing().expect("the Run key and the Startup folder read");
     }
 }

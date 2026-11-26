@@ -40,8 +40,10 @@ const BLOCKED_NAMES: &[&str] = &[
     // macOS
     "System", "Library", "private", ".Spotlight-V100", ".fseventsd",
     ".DocumentRevisions-V100", ".TemporaryItems",
-    // Linux
-    "proc", "sys", "dev", "run", "boot",
+    // Linux. Not proc, sys, dev or run: matched at any depth they hid a
+    // person's own ~/dev or C:\Users\…\dev, while on the running system
+    // the prefixes below cover them and on another one they are empty.
+    "boot",
 ];
 
 /// Absolute prefixes that are the running system, not the user's files.
@@ -131,6 +133,29 @@ impl Filter {
             let root = Path::new(entry);
             path == root || path.starts_with(root)
         })
+    }
+}
+
+/// A file whose contents live in the cloud — OneDrive's files on demand,
+/// iCloud's optimised storage. It takes no space here, deleting it deletes
+/// it from the cloud, and reading it downloads it, so scanners leave it be.
+pub fn is_cloud_only(meta: &std::fs::Metadata) -> bool {
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        // FILE_ATTRIBUTE_RECALL_ON_DATA_ACCESS, _RECALL_ON_OPEN, _OFFLINE
+        meta.file_attributes() & (0x0040_0000 | 0x0004_0000 | 0x0000_1000) != 0
+    }
+    #[cfg(target_os = "macos")]
+    {
+        use std::os::macos::fs::MetadataExt;
+        // SF_DATALESS
+        meta.st_flags() & 0x4000_0000 != 0
+    }
+    #[cfg(not(any(windows, target_os = "macos")))]
+    {
+        let _ = meta;
+        false
     }
 }
 
@@ -275,5 +300,14 @@ mod tests {
             Filter::new(vec![]).verdict(Path::new("/media/k/D/WINDOWS/x")),
             Verdict::Blocked
         );
+    }
+
+    /// A folder of one's own projects is the person's, whatever it is called.
+    #[test]
+    fn a_dev_folder_of_ones_own_is_allowed() {
+        for p in ["/home/k/dev/app/big.iso", r"C:\Users\k\dev\app\big.iso", "/home/k/run/log.txt"] {
+            assert_eq!(f().verdict(Path::new(p)), Verdict::Allowed, "{p}");
+        }
+        assert!(f().allows_child(Path::new("/home/k/dev")) && !f().allows_child(Path::new("/dev")));
     }
 }

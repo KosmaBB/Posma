@@ -201,7 +201,7 @@
 /* ============================================================
    Pulpit: wkładka i deck
    ============================================================ */
-[data-world='kaseta'] .ks-home { display: grid; gap: 22px; max-width: 1280px; }
+[data-world='kaseta'] .ks-home { display: grid; gap: 22px; }
 [data-world='kaseta'] .ks-jcard {
   /* 600 px okładki to najmniej, przy czym legenda profilu procesora (~540 px) się mieści. */
   display: grid; grid-template-columns: 600px 60px minmax(0, 1fr); align-items: stretch;
@@ -399,7 +399,7 @@
    Strony: folder, moduł, menedżer, ustawienia, linki
    ============================================================ */
 [data-world='kaseta'] .ks-page {
-  display: grid; grid-template-columns: 56px minmax(0, 1fr); max-width: 1280px;
+  display: grid; grid-template-columns: 56px minmax(0, 1fr);
   background: var(--ks-sheen), var(--ks-stock); color: var(--ks-type); box-shadow: var(--ks-card-shadow);
 }
 [data-world='kaseta'] .ks-page__spine {
@@ -486,7 +486,7 @@
 [data-world='kaseta'] .placeholder-body { font: 19px/1.4 var(--ks-hand); color: var(--ks-pencil); border: 1px dashed var(--ks-line-strong); }
 
 /* ustawienia: liniowana kartka */
-[data-world='kaseta'] .settings-list { border: 1px solid var(--ks-line-strong); border-radius: 0; max-width: 820px; }
+[data-world='kaseta'] .settings-list { border: 1px solid var(--ks-line-strong); border-radius: 0; }
 [data-world='kaseta'] .settings-list > .glass { border-color: var(--ks-line); }
 [data-world='kaseta'] .setting-row .st-name { font: 600 18px/1.25 var(--sans); color: var(--ks-type); }
 [data-world='kaseta'] .setting-row .st-desc { font: 500 15px/1.4 var(--sans); color: var(--muted); }
@@ -723,3 +723,11 @@
 [data-world='kaseta']:where([data-fit~='980']) .ks-page { grid-template-columns: minmax(0, 1fr); }
 [data-world='kaseta']:where([data-fit~='980']) .ks-page__spine { display: none; }
 
+
+/* width ≥ 1900 / 2400px after UI scaling (data-wide): the J-card opens wider with
+   side A and side B next to each other; from 2400 px the folder's tapes stand in two rows. */
+[data-world='kaseta']:where([data-wide~='1900']) .ks-fold { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+/* Opened flat the J-card is shorter, so it stands as tall as the window and the tape window takes the height. */
+[data-world='kaseta']:where([data-wide~='1900']) .ks-home { min-height: 100%; grid-template-rows: minmax(0, 1fr) auto; }
+[data-world='kaseta']:where([data-wide~='1900']) .ks-art { flex: 1 0 236px; height: auto; }
+[data-world='kaseta']:where([data-wide~='2400']) .ks-folder .cat-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 16px; }

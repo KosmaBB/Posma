@@ -22,7 +22,15 @@
     ],
     "windows": {
       "nsis": {
-        "installMode": "perMachine"
+        "installMode": "perMachine",
+        "languages": [
+          "English",
+          "Polish"
+        ],
+        "customLanguageFiles": {
+          "Polish": "nsis/Polish.nsh"
+        },
+        "displayLanguageSelector": false
       }
     }
   }

@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { AppState, View } from '../../state/appState'
 import { catalogNumbers, folders, modulesForOs } from '../../data/modules'
+import { locale, t } from '../../i18n'
 
 interface Hit {
   key: string
@@ -40,24 +41,25 @@ export function Search({ app }: { app: AppState }) {
     const to = (view: View) => () => setView(view)
     const numbers = catalogNumbers(os, linuxProfile)
     const pages: Hit[] = [
-      { key: 'home', label: 'Przegląd', hint: 'strona główna', go: to({ kind: 'dashboard' }) },
-      { key: 'settings', label: 'Ustawienia', hint: 'dostęp, czarna lista, wygląd', go: to({ kind: 'settings' }) },
-      { key: 'manager', label: 'Zarządzanie modułami', hint: 'włącz i wyłącz moduły', go: to({ kind: 'manager' }) },
-      { key: 'links', label: 'Linki', hint: 'repozytorium i wsparcie', go: to({ kind: 'links' }) },
-      { key: 'tour', label: 'Samouczek', hint: 'oprowadzenie po aplikacji', go: app.startTour },
+      { key: 'home', label: t('world.monochrom.overview'), hint: t('world.monochrom.search.home.hint'), go: to({ kind: 'dashboard' }) },
+      { key: 'settings', label: t('page.settings'), hint: t('world.monochrom.search.settings.hint'), go: to({ kind: 'settings' }) },
+      { key: 'manager', label: t('page.manager'), hint: t('world.monochrom.search.manager.hint'), go: to({ kind: 'manager' }) },
+      { key: 'links', label: t('page.links'), hint: t('world.monochrom.search.links.hint'), go: to({ kind: 'links' }) },
+      { key: 'tour', label: t('nav.tour'), hint: t('world.monochrom.search.tour.hint'), go: app.startTour },
     ]
-    const dirs: Hit[] = folders.map((f) => ({ key: `f-${f.id}`, label: f.name, hint: 'folder', go: to({ kind: 'folder', folderId: f.id }) }))
+    const dirs: Hit[] = folders.map((f) => ({ key: `f-${f.id}`, label: f.name, hint: t('world.monochrom.search.folder'), go: to({ kind: 'folder', folderId: f.id }) }))
     const mods: Hit[] = (os ? modulesForOs(os, linuxProfile) : []).map((m) => {
       const on = installedSet.has(m.id)
       return {
         key: `m-${m.id}`,
         label: `${numbers.get(m.id) ?? ''} ${m.name}`.trim(),
-        hint: on ? m.desc : 'wyłączony — otworzy folder, w którym go włączysz',
+        hint: on ? m.desc : t('world.monochrom.search.off'),
         go: on ? to({ kind: 'module', moduleId: m.id }) : to({ kind: 'folder', folderId: m.folder }),
       }
     })
     return [...pages, ...dirs, ...mods]
-  }, [os, linuxProfile, installedSet, setView, app.startTour])
+  }, // locale() re-runs the memo when the language changes
+  [os, linuxProfile, installedSet, setView, app.startTour, locale()])
 
   const needle = fold(q.trim())
   const hits = needle ? all.filter((h) => fold(`${h.label} ${h.hint}`).includes(needle)).slice(0, 8) : []
@@ -81,11 +83,11 @@ export function Search({ app }: { app: AppState }) {
         ref={input}
         type="search"
         role="combobox"
-        aria-label="Szukaj modułu lub ustawienia"
+        aria-label={t('world.monochrom.search.placeholder')}
         aria-expanded={shown}
         aria-controls={list}
         aria-activedescendant={shown && hits[at] ? `${list}-${at}` : undefined}
-        placeholder="Szukaj modułu lub ustawienia"
+        placeholder={t('world.monochrom.search.placeholder')}
         value={q}
         onChange={(e) => { setQ(e.target.value); setOpen(true); setAt(0) }}
         onFocus={() => setOpen(true)}
@@ -99,8 +101,8 @@ export function Search({ app }: { app: AppState }) {
       />
       <kbd>Ctrl K</kbd>
       {shown && (
-        <ul className="mono-search__list" id={list} role="listbox" aria-label="Wyniki">
-          {hits.length === 0 && <li className="mono-search__none">Nic nie pasuje do „{q.trim()}”.</li>}
+        <ul className="mono-search__list" id={list} role="listbox" aria-label={t('world.monochrom.search.results')}>
+          {hits.length === 0 && <li className="mono-search__none">{t('world.monochrom.search.none', { q: q.trim() })}</li>}
           {hits.map((h, i) => (
             <li
               key={h.key}

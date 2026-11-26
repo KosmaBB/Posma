@@ -9,6 +9,7 @@ import type { AppState } from '../../state/appState'
 import { useMachine, useReclaim } from '../../state/machine'
 import { catalogNumbers, moduleById, type FolderId } from '../../data/modules'
 import { APP_PAGES } from '../../components/shell/Sidebar'
+import { t } from '../../i18n'
 import { Tour } from '../../components/tour/Tour'
 import { Settings } from '../../views/Settings'
 import { ModuleManager } from '../../views/ModuleManager'
@@ -33,7 +34,7 @@ function AppPage({ ctx, kind }: { ctx: Ctx; kind: 'manager' | 'settings' | 'link
   const page = APP_PAGES.find((p) => p.kind === kind)!
   return (
     <div className="g-page g-app">
-      <Crumbs items={[{ label: 'Pulpit', onClick: () => app.setView({ kind: 'dashboard' }) }, { label: page.name }]} />
+      <Crumbs items={[{ label: t('nav.dashboard'), onClick: () => app.setView({ kind: 'dashboard' }) }, { label: page.name }]} />
       <header className="g-phead">
         <span className="g-tag g-tag--big">{page.no}</span>
         <div>
@@ -62,7 +63,7 @@ export function Shell({ app, settings }: ShellProps) {
   return (
     <div className="g-shell">
       <a className="g-skip" href="#g-content">
-        Przejdź do treści
+        {t('world.gesto.skip')}
       </a>
       <Header ctx={ctx} />
       <Tabs ctx={ctx} section={section} />

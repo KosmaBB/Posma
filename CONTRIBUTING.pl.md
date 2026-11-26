@@ -4,7 +4,7 @@
 
 Zgłoszenia i pull requesty są mile widziane. Ten plik opisuje zasady
 specyficzne dla tego projektu; jak wszystko działa, wyjaśnia
-[dokumentacja](https://kosmabb.github.io/Posma/) (po angielsku).
+[dokumentacja](https://kosmabb.github.io/Posma/pl/).
 
 ## Zanim zaczniesz
 
@@ -60,7 +60,7 @@ robi kod, traktowana jest tutaj jak błąd.
 ## Praca z kodem
 
 Wymagania i kolejność budowania opisuje
-[docs/building.md](docs/building.md). W skrócie:
+[docs/pl/building.md](docs/pl/building.md). W skrócie:
 
 ```bash
 npm --prefix core install

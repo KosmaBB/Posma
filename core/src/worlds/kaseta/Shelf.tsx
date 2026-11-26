@@ -2,6 +2,7 @@ import { useMemo, type CSSProperties } from 'react'
 import type { AppState } from '../../state/appState'
 import { applyOrder, catalogNumbers, folderNumber, folders, modulesInFolder, type ModuleDef } from '../../data/modules'
 import { APP_PAGES } from '../../components/shell/Sidebar'
+import { t } from '../../i18n'
 
 interface SpineProps {
   no: string
@@ -34,8 +35,8 @@ export function Shelf({ app, reading }: { app: AppState; reading: (m: ModuleDef)
   const numbers = useMemo(() => catalogNumbers(os, linuxProfile), [os, linuxProfile])
 
   return (
-    <nav className="ks-shelf" aria-label="Półka z kasetami">
-      <Spine no="000" name="Pulpit" current={view.kind === 'dashboard'} onClick={() => setView({ kind: 'dashboard' })} />
+    <nav className="ks-shelf" aria-label={t('world.kaseta.shelf.aria')}>
+      <Spine no="000" name={t('nav.dashboard')} current={view.kind === 'dashboard'} onClick={() => setView({ kind: 'dashboard' })} />
 
       {folders.map((folder) => {
         const all = modulesInFolder(folder.id, os, linuxProfile)
@@ -55,7 +56,7 @@ export function Shelf({ app, reading }: { app: AppState; reading: (m: ModuleDef)
             </button>
             <div className="ks-shelf__spines" data-tour="index">
               {items.length === 0 ? (
-                <span className="ks-shelf__empty">żadnej włączonej kasety</span>
+                <span className="ks-shelf__empty">{t('world.kaseta.shelf.empty')}</span>
               ) : (
                 items.map((m) => (
                   <Spine
@@ -88,7 +89,7 @@ export function Shelf({ app, reading }: { app: AppState; reading: (m: ModuleDef)
         ))}
         <button type="button" className="ks-applink" data-tour="tour" onClick={app.startTour}>
           <span>904</span>
-          Samouczek
+          {t('nav.tour')}
         </button>
       </div>
     </nav>

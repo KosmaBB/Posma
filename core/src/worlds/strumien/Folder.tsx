@@ -1,7 +1,8 @@
 /** A folder as its own feed: one installed module per item, in the order the person arranged. */
 import type { AppState } from '../../state/appState'
 import { applyOrder, catalogNumbers, folderNumber, folders, modulesInFolder, riskLabel, type FolderId } from '../../data/modules'
-import { plural, size, type ReclaimState } from '../../state/machine'
+import { size, type ReclaimState } from '../../state/machine'
+import { locale, t } from '../../i18n'
 import { Feed, type FeedItem } from './Feed'
 import { PatternField, SquareField, StripeField } from './visuals'
 
@@ -23,9 +24,9 @@ export function Folder({
     return (
       <div className="sm-page">
         <div className="empty-state">
-          Nie ma takiego folderu.
+          {t('world.strumien.folder.missing')}
           <br />
-          <button className="btn btn-primary" onClick={() => setView({ kind: 'dashboard' })}>Wróć do strumienia</button>
+          <button className="btn btn-primary" onClick={() => setView({ kind: 'dashboard' })}>{t('world.strumien.back')}</button>
         </div>
       </div>
     )
@@ -43,11 +44,11 @@ export function Folder({
       field: folder.id,
       peek: `${numbers.get(m.id)} ${m.name}`,
       source: `${no} · ${folder.name}`,
-      note: `${i + 1}. z ${mods.length}`,
+      note: t('world.strumien.folder.note', { i: i + 1, n: mods.length }),
       figure: numbers.get(m.id) ?? '—',
-      figureNote: hit?.bytes != null ? `${size(hit.bytes)} do odzyskania` : riskLabel[m.risk],
+      figureNote: hit?.bytes != null ? t('world.strumien.folder.reclaim', { size: size(hit.bytes) }) : riskLabel[m.risk],
       title: m.name,
-      text: m.quickAction ? `${m.desc} Główna akcja: ${m.quickAction.toLowerCase()}.` : m.desc,
+      text: m.quickAction ? t('world.strumien.folder.text.action', { desc: m.desc, action: m.quickAction.toLocaleLowerCase(locale()) }) : m.desc,
       visual:
         hit?.bytes != null ? (
           <SquareField
@@ -63,8 +64,8 @@ export function Folder({
           <PatternField seed={m.id} density={RISK_DENSITY[m.risk]} />
         ),
       actions: [
-        { key: 'o', label: 'Otwórz', glyph: 'open', primary: true, run: () => setView({ kind: 'module', moduleId: m.id }) },
-        { key: 'n', label: 'Dalej', glyph: 'down', run: (nav) => nav.next() },
+        { key: 'o', label: t('common.open'), glyph: 'open', primary: true, run: () => setView({ kind: 'module', moduleId: m.id }) },
+        { key: 'n', label: t('world.strumien.next'), glyph: 'down', run: (nav) => nav.next() },
       ],
     }
   })
@@ -77,15 +78,15 @@ export function Folder({
       source: `${no} · ${folder.name}`,
       figure: no,
       figureNote: folder.name,
-      title: 'W tym folderze nic nie jest włączone',
+      title: t('world.strumien.folder.empty.title'),
       text:
         off > 0
-          ? `Czeka tu ${off} ${plural(off, 'moduł', 'moduły', 'modułów')} — włączysz je w Zarządzaniu modułami.`
-          : 'Ten system nie ma w tym folderze żadnych modułów.',
+          ? t('world.strumien.folder.empty.waiting', { n: off })
+          : t('world.strumien.folder.empty.none'),
       visual: <StripeField fields={[folder.id]} />,
-      actions: [{ key: 'z', label: 'Zarządzanie modułami', glyph: 'manager', primary: true, run: () => setView({ kind: 'manager' }) }],
+      actions: [{ key: 'z', label: t('page.manager'), glyph: 'manager', primary: true, run: () => setView({ kind: 'manager' }) }],
     })
   }
 
-  return <Feed key={folder.id} items={items} label={`Folder ${no} ${folder.name}`} tour="folder-list" paused={paused} />
+  return <Feed key={folder.id} items={items} label={t('world.strumien.folder.label', { no, name: folder.name })} tour="folder-list" paused={paused} />
 }

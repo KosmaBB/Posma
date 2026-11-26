@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import { t } from '../i18n'
 
 const AXIS_LEFT = 44
 const AXIS_BOTTOM = 24
@@ -46,7 +47,7 @@ function smooth(pts: [number, number][]): string {
 }
 
 function spanLabel(seconds: number): string {
-  return seconds >= 120 ? `${Math.round(seconds / 60)} min` : `${seconds} s`
+  return seconds >= 120 ? t('cpu.span.min', { n: Math.round(seconds / 60) }) : t('cpu.span.sec', { n: seconds })
 }
 
 /**
@@ -118,11 +119,11 @@ export function CpuProfile({ samples, capacity, tick, intervalMs, watched, onWat
   const at = age !== null && age < samples.length ? samples.length - 1 - age : samples.length - 1
   const ago = Math.round(((samples.length - 1 - at) * intervalMs) / 1000)
   const legend: { cls: string; text: string }[] = [
-    { cls: 'cpu-mean', text: `średnia ${pct(means[at] ?? 0)}` },
-    { cls: 'cpu-peak', text: `najgorętszy rdzeń ${pct(peaks[at] ?? 0)}` },
+    { cls: 'cpu-mean', text: t('cpu.mean', { pct: pct(means[at] ?? 0) }) },
+    { cls: 'cpu-peak', text: t('cpu.peak', { pct: pct(peaks[at] ?? 0) }) },
   ]
   // The picked core takes the bars' heading, so the legend never runs into it at narrow widths.
-  const heading = lit !== null ? `rdzeń ${pad(lit)} · ${pct(samples[at]?.[lit] ?? 0)}` : 'rdzenie teraz · 0–100%'
+  const heading = lit !== null ? t('cpu.core', { core: pad(lit), pct: pct(samples[at]?.[lit] ?? 0) }) : t('cpu.heading')
   const headingX = w - heading.length * MONO_CH
   let legendX = left
   // Hit areas instead of pointer arithmetic: the interface is scaled with
@@ -133,13 +134,13 @@ export function CpuProfile({ samples, capacity, tick, intervalMs, watched, onWat
 
   function select(c: number) {
     setLit(c)
-    setSaid(`rdzeń ${pad(c)} · ${pct(latest[c])}`)
+    setSaid(t('cpu.core', { core: pad(c), pct: pct(latest[c]) }))
   }
 
   function toggle(c: number) {
     const on = watching.includes(c)
     onWatch(on ? watched.filter((m) => m !== c) : [...watched, c].sort((a, b) => a - b))
-    setSaid(`rdzeń ${pad(c)} ${on ? 'nie jest już obserwowany' : 'obserwowany'}`)
+    setSaid(t(on ? 'cpu.watch.off' : 'cpu.watch.on', { core: pad(c) }))
   }
 
   function onKey(e: React.KeyboardEvent<SVGSVGElement>) {
@@ -164,7 +165,12 @@ export function CpuProfile({ samples, capacity, tick, intervalMs, watched, onWat
           height={h}
           role="img"
           tabIndex={0}
-          aria-label={`Procesor w ostatnich ${span}: średnio ${pct(nowMean)}, najbardziej zajęty rdzeń ${pct(nowPeak)}. ${watching.length ? `Obserwowane rdzenie: ${watching.map(pad).join(', ')}. ` : ''}Strzałki wybierają rdzeń i pokazują jego historię, Enter go obserwuje.`}
+          aria-label={t('cpu.aria', {
+            span,
+            mean: pct(nowMean),
+            peak: pct(nowPeak),
+            watching: watching.length ? t('cpu.aria.watching', { list: watching.map(pad).join(', ') }) : '',
+          })}
           onMouseLeave={() => {
             setLit(null)
             setAge(null)
@@ -246,7 +252,7 @@ export function CpuProfile({ samples, capacity, tick, intervalMs, watched, onWat
           )}
           {cursorX !== null && (
             <text className="axis ink" x={Math.min(Math.max(cursorX, left + 24), right - 24)} y={h - 6} textAnchor="middle">
-              {ago ? `−${spanLabel(ago)}` : 'teraz'}
+              {ago ? `−${spanLabel(ago)}` : t('cpu.now')}
             </text>
           )}
 
@@ -310,8 +316,8 @@ export function CpuProfile({ samples, capacity, tick, intervalMs, watched, onWat
       <ul className="sr-only">
         {latest.map((v, c) => (
           <li key={c}>
-            rdzeń {pad(c)}: {pct(v)}
-            {watching.includes(c) && ', obserwowany'}
+            {t('cpu.sr.core', { core: pad(c), pct: pct(v) })}
+            {watching.includes(c) && t('cpu.sr.watched')}
           </li>
         ))}
       </ul>

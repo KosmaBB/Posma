@@ -41,16 +41,22 @@ fn store_key_at(service: &str, account: &str, key: &[u8; KEY_LEN]) -> Result<(),
     entry_for(service, account)?.set_password(&encode_key(key)).map_err(|e| format!("nie udało się zapisać klucza w magazynie systemowym: {e}"))
 }
 
-fn load_key_at(service: &str, account: &str) -> Result<[u8; KEY_LEN], String> {
-    let encoded = entry_for(service, account)?.get_password().map_err(|e| format!("nie udało się odczytać klucza z magazynu systemowego: {e}"))?;
-    decode_key(&encoded)
+/// `None` only when the store answers that it holds no such key — after a
+/// reinstall, say. A store that cannot answer (a closed wallet, no Secret
+/// Service running) is an error, never "no key".
+fn load_key_at(service: &str, account: &str) -> Result<Option<[u8; KEY_LEN]>, String> {
+    match entry_for(service, account)?.get_password() {
+        Ok(encoded) => decode_key(&encoded).map(Some),
+        Err(keyring::Error::NoEntry) => Ok(None),
+        Err(e) => Err(format!("nie udało się odczytać klucza z magazynu systemowego: {e}")),
+    }
 }
 
 pub fn store_key(key: &[u8; KEY_LEN]) -> Result<(), String> {
     store_key_at(SERVICE, &account_name(), key)
 }
 
-pub fn load_key() -> Result<[u8; KEY_LEN], String> {
+pub fn load_key() -> Result<Option<[u8; KEY_LEN]>, String> {
     load_key_at(SERVICE, &account_name())
 }
 
@@ -107,8 +113,10 @@ mod tests {
 
         store_key_at(service, account, &key).expect("store into OS keychain");
         let loaded = load_key_at(service, account).expect("load from OS keychain");
-        assert_eq!(key, loaded);
+        assert_eq!(Some(key), loaded);
 
         entry_for(service, account).unwrap().delete_password().expect("clean up disposable test entry");
+        // Gone is an answer, not an error: it is what lets a vault start over.
+        assert_eq!(load_key_at(service, account).expect("ask again"), None);
     }
 }

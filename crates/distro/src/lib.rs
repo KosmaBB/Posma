@@ -184,6 +184,39 @@ pub fn manager_preferring(preferred: Option<Manager>) -> Result<Manager, String>
 
 /// Size and file count of a directory. `only_ext` narrows it to one kind
 /// of file; `recursive` descends.
+/// pacman.conf may move the cache or add more than one, and `-Scc`
+/// empties all of them.
+fn pacman_cache_dirs() -> Vec<PathBuf> {
+    let dirs: Vec<PathBuf> =
+        stdout_of("pacman-conf", &["CacheDir"]).lines().map(str::trim).filter(|l| l.starts_with('/')).map(PathBuf::from).collect();
+    if dirs.is_empty() { vec![PathBuf::from("/var/cache/pacman/pkg")] } else { dirs }
+}
+
+/// pacman downloads into a `download-XXXXXX` directory of its own inside
+/// the cache and removes it when done. An interrupted download leaves it
+/// behind, and `-Scc`, which unlinks entries one by one, then fails on
+/// every such directory however empty the cache already is. None while a
+/// pacman runs: the directory may be its download in progress.
+pub fn pacman_leftover_downloads() -> Vec<PathBuf> {
+    let db = stdout_of("pacman-conf", &["DBPath"]);
+    let db = db.lines().map(str::trim).find(|l| l.starts_with('/')).unwrap_or("/var/lib/pacman/");
+    if Path::new(db).join("db.lck").exists() {
+        return Vec::new();
+    }
+    download_dirs_in(&pacman_cache_dirs())
+}
+
+/// Directories only, by their own type: a link named like one is not followed.
+fn download_dirs_in(dirs: &[PathBuf]) -> Vec<PathBuf> {
+    dirs.iter()
+        .filter_map(|dir| fs::read_dir(dir).ok())
+        .flatten()
+        .flatten()
+        .filter(|e| e.file_name().to_string_lossy().starts_with("download-") && e.file_type().is_ok_and(|t| t.is_dir()))
+        .map(|e| e.path())
+        .collect()
+}
+
 fn measure(dir: &Path, recursive: bool, only_ext: Option<&str>) -> (u64, u64) {
     let Ok(read) = fs::read_dir(dir) else { return (0, 0) };
     let (mut bytes, mut files) = (0u64, 0u64);
@@ -260,10 +293,7 @@ impl Manager {
             // pacman.conf may move the cache or add more than one, and
             // `-Scc` empties all of them.
             Manager::Pacman => {
-                let configured = stdout_of("pacman-conf", &["CacheDir"]);
-                let dirs: Vec<&str> = configured.lines().map(str::trim).filter(|l| l.starts_with('/')).collect();
-                let dirs = if dirs.is_empty() { vec!["/var/cache/pacman/pkg"] } else { dirs };
-                dirs.iter().map(|d| measure(Path::new(d), false, None)).fold((0, 0), |(b, f), (db, df)| (b + db, f + df))
+                pacman_cache_dirs().iter().map(|d| measure(d, false, None)).fold((0, 0), |(b, f), (db, df)| (b + db, f + df))
             }
             // dnf 5 and dnf 4 keep theirs in different places; a system
             // upgraded across the two can have both.
@@ -758,6 +788,22 @@ pub fn grub() -> Result<Grub, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Only pacman's own download directories: never a package, never a
+    /// link that merely carries the name.
+    #[cfg(unix)]
+    #[test]
+    fn only_leftover_download_directories_are_picked() {
+        let cache = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/test-distro-pacman-cache");
+        let _ = fs::remove_dir_all(&cache);
+        fs::create_dir_all(cache.join("download-AbC123")).unwrap();
+        fs::create_dir_all(cache.join("elsewhere")).unwrap();
+        fs::write(cache.join("firefox-1.0-1-x86_64.pkg.tar.zst"), "").unwrap();
+        fs::write(cache.join("download-file"), "").unwrap();
+        std::os::unix::fs::symlink(cache.join("elsewhere"), cache.join("download-link")).unwrap();
+        assert_eq!(download_dirs_in(std::slice::from_ref(&cache)), vec![cache.join("download-AbC123")]);
+        fs::remove_dir_all(&cache).unwrap();
+    }
 
     #[test]
     fn derivatives_resolve_through_id_like() {

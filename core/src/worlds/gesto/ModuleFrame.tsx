@@ -7,6 +7,7 @@
 import { ModuleBody } from '../../views/ModuleView'
 import { folderNumber, folders, moduleById, riskLabel } from '../../data/modules'
 import { DISK_WARN_PCT, size, usedPct } from '../../state/machine'
+import { t } from '../../i18n'
 import { Bar, Box, Crumbs, installedIn, type Ctx } from './parts'
 
 function ReclaimSide({ ctx, id }: { ctx: Ctx; id: string }) {
@@ -15,26 +16,26 @@ function ReclaimSide({ ctx, id }: { ctx: Ctx; id: string }) {
   const hit = reclaim.foundOf(id)
   const state = reclaim.reclaim.kind
   return (
-    <Box no="006" title="Do odzyskania">
+    <Box no="006" title={t('world.gesto.reclaim')}>
       {state === 'done' ? (
         hit?.error ? (
           <p className="g-quiet" title={hit.error}>
-            Ostatnie sprawdzenie nie odczytało tego modułu.
+            {t('world.gesto.reclaim.unread-module')}
           </p>
         ) : (
           <p className="g-fig g-fig--hot">
             {size(hit?.bytes ?? 0)}
-            <span>według domyślnego wyboru</span>
+            <span>{t('world.gesto.reclaim.default-choice')}</span>
           </p>
         )
       ) : (
         <p className="g-quiet" role="status">
-          {state === 'scanning' ? 'Sprawdzam…' : 'Pulpit jeszcze nie sprawdzał tego modułu.'}
+          {state === 'scanning' ? t('world.gesto.reclaim.checking-ellipsis') : t('world.gesto.reclaim.never-checked')}
         </p>
       )}
       {state !== 'scanning' && (
         <button type="button" className="btn btn-ghost btn-mini" onClick={reclaim.check}>
-          {state === 'done' ? 'Sprawdź ponownie' : 'Sprawdź teraz'}
+          {state === 'done' ? t('world.gesto.reclaim.check-again') : t('world.gesto.reclaim.check-now')}
         </button>
       )}
     </Box>
@@ -45,7 +46,7 @@ function DisksSide({ ctx }: { ctx: Ctx }) {
   const disks = ctx.machine.disks.filter((d) => d.total_bytes > 0)
   if (!disks.length) return null
   return (
-    <Box no="004" title="Dyski">
+    <Box no="004" title={t('world.gesto.disks')}>
       <ul className="g-mini-disks">
         {disks.map((d) => {
           const used = usedPct(d)
@@ -70,9 +71,9 @@ export function ModuleFrame({ ctx, moduleId }: { ctx: Ctx; moduleId: string }) {
     return (
       <div className="g-page">
         <div className="g-box g-empty">
-          <p>Nie znaleziono modułu.</p>
+          <p>{t('world.gesto.module.missing')}</p>
           <button type="button" className="btn btn-primary" onClick={home}>
-            Wróć na pulpit
+            {t('world.gesto.module.back')}
           </button>
         </div>
       </div>
@@ -85,7 +86,7 @@ export function ModuleFrame({ ctx, moduleId }: { ctx: Ctx; moduleId: string }) {
       <div className="g-main">
         <Crumbs
           items={[
-            { label: 'Pulpit', onClick: home },
+            { label: t('nav.dashboard'), onClick: home },
             { label: folder.name, onClick: () => app.setView({ kind: 'folder', folderId: folder.id }) },
             { label: mod.name },
           ]}
@@ -103,13 +104,13 @@ export function ModuleFrame({ ctx, moduleId }: { ctx: Ctx; moduleId: string }) {
         </div>
       </div>
 
-      <aside className="g-side" aria-label="Kontekst modułu">
+      <aside className="g-side" aria-label={t('world.gesto.module.aside')}>
         <ReclaimSide ctx={ctx} id={mod.id} />
         <DisksSide ctx={ctx} />
         <Box
           no={folderNumber(folder.id)}
-          title={`Także w: ${folder.name}`}
-          more={{ label: 'Folder', onClick: () => app.setView({ kind: 'folder', folderId: folder.id }) }}
+          title={t('world.gesto.module.also-in', { folder: folder.name })}
+          more={{ label: t('world.gesto.module.folder'), onClick: () => app.setView({ kind: 'folder', folderId: folder.id }) }}
         >
           {siblings.length ? (
             <ul className="g-links g-links--one">
@@ -123,7 +124,7 @@ export function ModuleFrame({ ctx, moduleId }: { ctx: Ctx; moduleId: string }) {
               ))}
             </ul>
           ) : (
-            <p className="g-quiet">To jedyny włączony moduł w tym folderze.</p>
+            <p className="g-quiet">{t('world.gesto.module.only-one')}</p>
           )}
         </Box>
       </aside>

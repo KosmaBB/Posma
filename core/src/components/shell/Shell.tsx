@@ -9,12 +9,13 @@ import type { SettingsState } from '../../state/settings'
 import { Links } from '../../views/Links'
 import { ModuleView } from '../../views/ModuleView'
 import { Tour } from '../tour/Tour'
+import { t } from '../../i18n'
 
 function viewTitle(app: AppState): { no: string; title: string; crumb: string } {
   const { view } = app
   switch (view.kind) {
     case 'dashboard':
-      return { no: '000', title: 'Pulpit', crumb: 'posma://dashboard' }
+      return { no: '000', title: t('nav.dashboard'), crumb: 'posma://dashboard' }
     case 'manager':
     case 'settings':
     case 'links': {
@@ -25,12 +26,12 @@ function viewTitle(app: AppState): { no: string; title: string; crumb: string } 
     case 'module': {
       const mod = moduleById(view.moduleId, app.linuxProfile)
       const no = catalogNumbers(app.onboarding?.os, app.linuxProfile).get(view.moduleId) ?? '—'
-      return { no, title: mod?.name ?? 'Moduł', crumb: `posma://module/${view.moduleId}` }
+      return { no, title: mod?.name ?? t('shell.module'), crumb: `posma://module/${view.moduleId}` }
     }
     case 'folder': {
       const folder = folders.find((f) => f.id === view.folderId)
       const no = folder ? folderNumber(folder.id) : '—'
-      return { no, title: folder?.name ?? 'Folder', crumb: `posma://folder/${view.folderId}` }
+      return { no, title: folder?.name ?? t('shell.folder'), crumb: `posma://folder/${view.folderId}` }
     }
   }
 }

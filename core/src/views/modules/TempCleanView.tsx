@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { Icon } from '../../components/Icons'
 import { confirmAction } from '../../components/confirm'
 import { callModule } from '../../data/callModule'
+import { formatNumber, t } from '../../i18n'
 
 interface Entry {
   path: string
@@ -40,17 +41,14 @@ type Phase =
   | { kind: 'done'; result: CleanData }
   | { kind: 'error'; message: string }
 
-// Polish decimal comma, no thousands grouping, as the rest of the app writes sizes.
-const fixed = (digits: number) =>
-  new Intl.NumberFormat('pl-PL', { minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: false })
-const TWO = fixed(2)
-const ONE = fixed(1)
-const NONE = fixed(0)
+// The language's decimal mark, no thousands grouping, as the rest of the app writes sizes.
+const fixed = (n: number, digits: number) =>
+  formatNumber(n, { minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: false })
 
 export function formatBytes(bytes: number): string {
-  if (bytes >= 1024 ** 3) return `${TWO.format(bytes / 1024 ** 3)} GB`
-  if (bytes >= 1024 ** 2) return `${ONE.format(bytes / 1024 ** 2)} MB`
-  if (bytes >= 1024) return `${NONE.format(bytes / 1024)} KB`
+  if (bytes >= 1024 ** 3) return `${fixed(bytes / 1024 ** 3, 2)} GB`
+  if (bytes >= 1024 ** 2) return `${fixed(bytes / 1024 ** 2, 1)} MB`
+  if (bytes >= 1024) return `${fixed(bytes / 1024, 0)} KB`
   return `${bytes} B`
 }
 
@@ -89,7 +87,7 @@ export function TempCleanView() {
     const paths = [...checked]
     if (paths.length === 0) return
     const total = selectedBytes(scan)
-    if (!(await confirmAction(`Usunąć ${paths.length} pozycji (${formatBytes(total)})? Tej operacji nie można cofnąć.`))) {
+    if (!(await confirmAction(t('view.temp-clean.confirm', { n: paths.length, size: formatBytes(total) })))) {
       return
     }
     setPhase({ kind: 'cleaning', scan })
@@ -132,7 +130,7 @@ export function TempCleanView() {
           merged.errors.push(res.error)
         }
       } catch (e) {
-        merged.errors.push(`Pliki systemowe: ${String(e)}`)
+        merged.errors.push(t('view.temp-clean.system-files-error', { error: String(e) }))
       }
     }
 
@@ -172,24 +170,24 @@ export function TempCleanView() {
     <div>
       {phase.kind === 'idle' && (
         <div className="glass empty-state">
-          Przeskanuj znane lokalizacje plików tymczasowych — nic nie zostanie usunięte bez Twojego potwierdzenia.
+          {t('view.temp-clean.intro')}
           <br />
-          <button className="btn btn-primary" onClick={runScan}>Skanuj</button>
+          <button className="btn btn-primary" onClick={runScan}>{t('view.temp-clean.scan')}</button>
         </div>
       )}
 
       {phase.kind === 'scanning' && (
         <div className="glass empty-state">
           <span className="scan-spinner" aria-hidden />
-          Skanowanie lokalizacji tymczasowych...
+          {t('view.temp-clean.scanning')}
         </div>
       )}
 
       {phase.kind === 'error' && (
         <div className="glass empty-state" style={{ color: 'var(--critical)' }}>
-          Błąd: {phase.message}
+          {t('view.temp-clean.error', { message: phase.message })}
           <br />
-          <button className="btn btn-ghost" onClick={runScan}>Spróbuj ponownie</button>
+          <button className="btn btn-ghost" onClick={runScan}>{t('view.temp-clean.retry')}</button>
         </div>
       )}
 
@@ -197,23 +195,23 @@ export function TempCleanView() {
         <>
           <div className="clean-summary glass">
             <div>
-              <div className="cs-label">Znaleziono do wyczyszczenia</div>
+              <div className="cs-label">{t('view.temp-clean.found')}</div>
               <div className="cs-value mono">{formatBytes(scan.total_bytes)}</div>
             </div>
             <div>
-              <div className="cs-label">Zaznaczone</div>
+              <div className="cs-label">{t('view.temp-clean.selected')}</div>
               <div className="cs-value mono" style={{ color: 'var(--accent)' }}>{formatBytes(selectedBytes(scan))}</div>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
               <button className="btn btn-ghost" onClick={runScan} disabled={phase.kind === 'cleaning'}>
-                Skanuj ponownie
+                {t('view.temp-clean.rescan')}
               </button>
               <button
                 className="btn btn-primary"
                 disabled={checked.size === 0 || phase.kind === 'cleaning'}
                 onClick={() => runClean(scan)}
               >
-                {phase.kind === 'cleaning' ? 'Czyszczenie...' : `Wyczyść zaznaczone`}
+                {phase.kind === 'cleaning' ? t('view.temp-clean.cleaning') : t('view.temp-clean.clean-selected')}
               </button>
             </div>
           </div>
@@ -227,7 +225,7 @@ export function TempCleanView() {
                   <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                     <span className="count">{formatBytes(cat.total_bytes)}</span>
                     <button className="btn btn-ghost btn-mini" onClick={() => toggleCategory(cat)}>
-                      {allOn ? 'Odznacz wszystko' : 'Zaznacz wszystko'}
+                      {allOn ? t('view.temp-clean.deselect-all') : t('view.temp-clean.select-all')}
                     </button>
                   </div>
                 </div>
@@ -241,7 +239,7 @@ export function TempCleanView() {
                         disabled={phase.kind === 'cleaning'}
                       />
                       <span className="cr-path mono">{e.path}</span>
-                      <span className="cr-files">{e.files} plików</span>
+                      <span className="cr-files">{t('view.temp-clean.files', { n: e.files })}</span>
                       <span className="cr-size mono">{formatBytes(e.size_bytes)}</span>
                     </label>
                   ))}
@@ -258,19 +256,19 @@ export function TempCleanView() {
             <Icon name="check" />
           </div>
           <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', fontFamily: 'var(--sans)' }}>
-            Odzyskano {formatBytes(phase.result.freed_bytes)}
+            {t('view.temp-clean.recovered', { size: formatBytes(phase.result.freed_bytes) })}
           </div>
-          Usunięto {phase.result.removed} pozycji.
+          {t('view.temp-clean.removed', { n: phase.result.removed })}
           {phase.result.errors.length > 0 && (
             <div className="clean-errors mono">
               {phase.result.errors.slice(0, 8).map((err) => (
                 <div key={err}>{err}</div>
               ))}
-              {phase.result.errors.length > 8 && <div>... i {phase.result.errors.length - 8} więcej</div>}
+              {phase.result.errors.length > 8 && <div>{t('view.temp-clean.more-errors', { n: phase.result.errors.length - 8 })}</div>}
             </div>
           )}
           <br />
-          <button className="btn btn-primary" onClick={runScan}>Skanuj ponownie</button>
+          <button className="btn btn-primary" onClick={runScan}>{t('view.temp-clean.rescan')}</button>
         </div>
       )}
     </div>

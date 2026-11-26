@@ -6,6 +6,7 @@ import { confirmAction } from '../../components/confirm'
 import { EDITED_LOADERS } from '../../data/linuxProfile'
 import { BootLoaderEditor, type BackupEntry } from './BootLoaderEditor'
 import { callModule } from '../../data/callModule'
+import { t, locale } from '../../i18n'
 
 interface GrubFields {
   grub_default: string
@@ -114,7 +115,7 @@ function themeConfigPath(themesDir: string, name: string): string {
 }
 
 function formatDate(unixSeconds: number): string {
-  return new Date(unixSeconds * 1000).toLocaleString('pl-PL')
+  return new Date(unixSeconds * 1000).toLocaleString(locale())
 }
 
 function formatBytes(bytes: number): string {
@@ -132,10 +133,10 @@ function formatBytes(bytes: number): string {
  */
 function ThemePreviewBox({ preview, entries }: { preview: ThemePreview; entries: string[] }) {
   if (!preview.valid) {
-    return <div className="glass empty-state" style={{ padding: 20 }}>Nie udało się wygenerować podglądu.</div>
+    return <div className="glass empty-state" style={{ padding: 20 }}>{t('view.grub-editor.preview.failed')}</div>
   }
   const box = preview.boot_menu
-  const shown = entries.length > 0 ? entries.slice(0, 5) : ['Twój system', 'Opcje zaawansowane', 'Zamknij']
+  const shown = entries.length > 0 ? entries.slice(0, 5) : [t('view.grub-editor.preview.sample-system'), t('view.grub-editor.preview.sample-advanced'), t('view.grub-editor.preview.sample-close')]
   return (
     <div
       style={{
@@ -302,7 +303,7 @@ export function GrubEditorView() {
   }
 
   async function saveSettings() {
-    if (!(await confirmAction('Zapisać ustawienia GRUB? Zostanie utworzona kopia zapasowa poprzedniej konfiguracji, a grub.cfg zostanie odświeżony.'))) return
+    if (!(await confirmAction(t('view.grub-editor.save.confirm')))) return
     setSaving(true)
     setSaveResult(null)
     try {
@@ -319,7 +320,7 @@ export function GrubEditorView() {
   }
 
   async function pickThemeFolder() {
-    const dir = await open({ directory: true, multiple: false, title: 'Wybierz folder z rozpakowanym motywem GRUB' })
+    const dir = await open({ directory: true, multiple: false, title: t('view.grub-editor.theme.pick-title') })
     if (!dir || typeof dir !== 'string') return
     setThemePath(dir)
     setThemeResult(null)
@@ -342,7 +343,7 @@ export function GrubEditorView() {
 
   async function installTheme() {
     if (!scan || !themePath || !themeInspection?.valid || !themeName.trim()) return
-    if (!(await confirmAction(`Zainstalować i włączyć motyw „${themeName}"? Zostanie skopiowany do ${scan.themes_dir} i ustawiony jako aktywny.`))) return
+    if (!(await confirmAction(t('view.grub-editor.theme.install.confirm', { name: themeName, dir: scan.themes_dir })))) return
     setInstallingTheme(true)
     setThemeResult(null)
     try {
@@ -376,7 +377,7 @@ export function GrubEditorView() {
    */
   async function disableTheme() {
     if (!scan?.fields.grub_theme) return
-    if (!(await confirmAction('Wyłączyć motyw i wrócić do domyślnego wyglądu GRUB? Pliki motywu zostaną na dysku.'))) return
+    if (!(await confirmAction(t('view.grub-editor.theme.disable.confirm')))) return
     setInstallingTheme(true)
     setThemeResult(null)
     try {
@@ -399,7 +400,7 @@ export function GrubEditorView() {
   }
 
   async function savePreset() {
-    const name = window.prompt('Nazwa presetu (zapisze bieżące ustawienia z formularza):')
+    const name = window.prompt(t('view.grub-editor.presets.prompt'))
     if (!name || !name.trim()) return
     setPresetBusy(name)
     try {
@@ -414,7 +415,7 @@ export function GrubEditorView() {
   }
 
   async function applyPreset(name: string) {
-    if (!(await confirmAction(`Wgrać preset „${name}"? Nadpisze bieżące ustawienia GRUB (z kopią zapasową).`))) return
+    if (!(await confirmAction(t('view.grub-editor.presets.apply.confirm', { name })))) return
     setPresetBusy(name)
     try {
       const loaded = await callModule<{ content: string }>('grub-editor', { cmd: 'load_preset', name })
@@ -435,7 +436,7 @@ export function GrubEditorView() {
   }
 
   async function deletePreset(name: string) {
-    if (!(await confirmAction(`Usunąć preset „${name}"?`))) return
+    if (!(await confirmAction(t('view.grub-editor.presets.delete.confirm', { name })))) return
     setPresetBusy(name)
     try {
       const res = await callModule<null>('grub-editor', { cmd: 'delete_preset', name })
@@ -446,7 +447,7 @@ export function GrubEditorView() {
   }
 
   async function restoreBackup(filename: string) {
-    if (!(await confirmAction(`Przywrócić tę kopię zapasową? Bieżąca konfiguracja też zostanie zapisana jako kopia przed przywróceniem.`))) return
+    if (!(await confirmAction(t('view.grub-editor.restore.confirm')))) return
     setRestoring(filename)
     try {
       await invoke('request_permission', { capability: 'boot' })
@@ -470,14 +471,14 @@ export function GrubEditorView() {
   if (scanError && !scan) {
     return (
       <div className="glass empty-state" style={{ color: 'var(--critical)' }}>
-        Błąd: {scanError}
+        {t('view.grub-editor.error', { error: scanError })}
         <br />
-        <button className="btn btn-ghost" onClick={loadScan}>Spróbuj ponownie</button>
+        <button className="btn btn-ghost" onClick={loadScan}>{t('view.grub-editor.retry')}</button>
       </div>
     )
   }
   if (!scan) {
-    return <Preparing title="Wczytuję konfigurację rozruchu" note="Odczytuję ustawienia rozruchu i listę zapisanych kopii zapasowych." />
+    return <Preparing title={t('view.grub-editor.preparing.title')} note={t('view.grub-editor.preparing.note')} />
   }
   if (scan.bootloader && EDITED_LOADERS.includes(scan.bootloader)) {
     return <BootLoaderEditor loader={scan.bootloader} backups={scan.backups} keepBackups={keepBackups} onChanged={loadScan} />
@@ -489,11 +490,11 @@ export function GrubEditorView() {
   return (
     <div>
       <div className="section-head">
-        <h2 style={{ fontSize: 14 }}>Podstawowe ustawienia</h2>
+        <h2 style={{ fontSize: 14 }}>{t('view.grub-editor.basic')}</h2>
       </div>
       <div className="glass" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <label className="form-field">
-          <span>Domyślny system</span>
+          <span>{t('view.grub-editor.default-system')}</span>
           <div style={{ display: 'flex', gap: 8 }}>
             <input
               list="grub-boot-entries"
@@ -506,13 +507,13 @@ export function GrubEditorView() {
               {defaultOptions.map((o) => <option key={o} value={o} />)}
             </datalist>
             <button className="btn btn-ghost btn-mini" onClick={loadBootEntries} disabled={bootEntriesLoading}>
-              {bootEntriesLoading ? 'Wczytywanie...' : 'Pokaż listę wpisów'}
+              {bootEntriesLoading ? t('view.grub-editor.loading') : t('view.grub-editor.show-entries')}
             </button>
           </div>
         </label>
 
         <label className="form-field">
-          <span>Czas oczekiwania (sekundy)</span>
+          <span>{t('view.grub-editor.timeout')}</span>
           <input
             type="number"
             min={0}
@@ -524,26 +525,26 @@ export function GrubEditorView() {
         </label>
 
         <label className="form-field">
-          <span>Styl menu</span>
+          <span>{t('view.grub-editor.menu-style')}</span>
           <select
             value={grubTimeoutStyle}
             onChange={(e) => setGrubTimeoutStyle(e.target.value)}
             style={{ padding: '9px 12px', background: 'var(--bg)', border: '1px solid var(--border-strong)', color: 'var(--ink)', maxWidth: 220 }}
           >
-            <option value="menu">Zawsze pokaż menu</option>
-            <option value="countdown">Odliczanie</option>
-            <option value="hidden">Ukryte</option>
+            <option value="menu">{t('view.grub-editor.menu-style.menu')}</option>
+            <option value="countdown">{t('view.grub-editor.menu-style.countdown')}</option>
+            <option value="hidden">{t('view.grub-editor.menu-style.hidden')}</option>
           </select>
         </label>
 
         <label className="form-check">
           <input type="checkbox" checked={disableOsProber} onChange={(e) => setDisableOsProber(e.target.checked)} />
-          <span>Wyłącz wykrywanie innych systemów (os-prober)</span>
+          <span>{t('view.grub-editor.os-prober')}</span>
         </label>
 
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginTop: 4 }}>
           <button className="btn btn-primary" onClick={saveSettings} disabled={saving}>
-            {saving ? 'Zapisywanie...' : 'Zapisz ustawienia'}
+            {saving ? t('view.grub-editor.saving') : t('view.grub-editor.save')}
           </button>
         </div>
         {saveResult && (
@@ -555,17 +556,17 @@ export function GrubEditorView() {
                 : { color: 'var(--critical)' }
             }
           >
-            {saveResult.success ? 'Zapisano i odświeżono grub.cfg.' : `Nie udało się: ${saveResult.error}`}
+            {saveResult.success ? t('view.grub-editor.saved') : t('view.grub-editor.failed', { error: saveResult.error ?? '' })}
           </div>
         )}
       </div>
 
       <div className="section-head" style={{ marginTop: 20 }}>
-        <h2 style={{ fontSize: 14 }}>Motyw</h2>
+        <h2 style={{ fontSize: 14 }}>{t('view.grub-editor.theme')}</h2>
       </div>
       <div className="glass" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-          Aktywny motyw: <span className="mono">{scan.fields.grub_theme ?? 'brak (domyślny wygląd GRUB)'}</span>
+          {t('view.grub-editor.theme.active')} <span className="mono">{scan.fields.grub_theme ?? t('view.grub-editor.theme.none')}</span>
         </div>
         {activePreview && (
           <div style={{ maxWidth: 420 }}>
@@ -573,10 +574,10 @@ export function GrubEditorView() {
           </div>
         )}
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <button className="btn btn-ghost" onClick={pickThemeFolder}>Wybierz folder z motywem</button>
+          <button className="btn btn-ghost" onClick={pickThemeFolder}>{t('view.grub-editor.theme.pick')}</button>
           {scan.fields.grub_theme && (
             <button className="btn btn-ghost" onClick={disableTheme} disabled={installingTheme}>
-              Wyłącz motyw
+              {t('view.grub-editor.theme.disable')}
             </button>
           )}
           {themePath && (
@@ -585,13 +586,13 @@ export function GrubEditorView() {
         </div>
         {themePath && themeInspection && !themeInspection.valid && (
           <div className="form-warning" style={{ color: 'var(--critical)' }}>
-            To nie wygląda na motyw GRUB — brak pliku theme.txt w wybranym folderze.
+            {t('view.grub-editor.theme.invalid')}
           </div>
         )}
         {themeInspection?.valid && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ fontSize: 13, color: 'var(--good)' }}>
-              Rozpoznano motyw — {themeInspection.files} plików, {formatBytes(themeInspection.size_bytes)}.
+              {t('view.grub-editor.theme.recognized', { n: themeInspection.files, size: formatBytes(themeInspection.size_bytes) })}
             </div>
             {pickedPreview && (
               <div style={{ maxWidth: 420 }}>
@@ -599,7 +600,7 @@ export function GrubEditorView() {
               </div>
             )}
             <label className="form-field">
-              <span>Nazwa (folder docelowy w {scan.themes_dir})</span>
+              <span>{t('view.grub-editor.theme.name', { dir: scan.themes_dir })}</span>
               <input
                 type="text"
                 value={themeName}
@@ -609,34 +610,34 @@ export function GrubEditorView() {
             </label>
             <div>
               <button className="btn btn-primary" onClick={installTheme} disabled={installingTheme || !themeName.trim()}>
-                {installingTheme ? 'Instalowanie...' : 'Zainstaluj i użyj'}
+                {installingTheme ? t('view.grub-editor.theme.installing') : t('view.grub-editor.theme.install')}
               </button>
             </div>
           </div>
         )}
         {themeResult && (
           <div className="form-warning" style={themeResult.success ? { color: 'var(--good)' } : { color: 'var(--critical)' }}>
-            {themeResult.success ? 'Motyw zainstalowany i aktywny.' : `Nie udało się: ${themeResult.error}`}
+            {themeResult.success ? t('view.grub-editor.theme.installed') : t('view.grub-editor.failed', { error: themeResult.error ?? '' })}
           </div>
         )}
       </div>
 
       <div className="section-head" style={{ marginTop: 20 }}>
-        <h2 style={{ fontSize: 14 }}>Presety</h2>
-        <button className="btn btn-ghost btn-mini" onClick={savePreset}>Zapisz obecne jako preset</button>
+        <h2 style={{ fontSize: 14 }}>{t('view.grub-editor.presets')}</h2>
+        <button className="btn btn-ghost btn-mini" onClick={savePreset}>{t('view.grub-editor.presets.save')}</button>
       </div>
       {(!presets || presets.length === 0) ? (
-        <div className="glass empty-state">Brak zapisanych presetów.</div>
+        <div className="glass empty-state">{t('view.grub-editor.presets.empty')}</div>
       ) : (
         <div className="clean-list">
           {presets.map((p) => (
             <div key={p.name} className="glass clean-row" style={{ cursor: 'default', opacity: 1 }}>
               <span className="cr-path">{p.name}</span>
               <button className="btn btn-ghost btn-mini" disabled={presetBusy === p.name} onClick={() => applyPreset(p.name)}>
-                {presetBusy === p.name ? '...' : 'Wgraj'}
+                {presetBusy === p.name ? '...' : t('view.grub-editor.presets.apply')}
               </button>
               <button className="btn btn-ghost btn-mini" style={{ color: 'var(--critical)' }} disabled={presetBusy === p.name} onClick={() => deletePreset(p.name)}>
-                Usuń
+                {t('common.remove')}
               </button>
             </div>
           ))}
@@ -644,10 +645,10 @@ export function GrubEditorView() {
       )}
 
       <div className="section-head" style={{ marginTop: 20 }}>
-        <h2 style={{ fontSize: 14 }}>Kopie zapasowe</h2>
+        <h2 style={{ fontSize: 14 }}>{t('view.grub-editor.backups')}</h2>
       </div>
       <div className="glass" style={{ padding: 16, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span style={{ fontSize: 13, color: 'var(--muted)' }}>Liczba przechowywanych kopii</span>
+        <span style={{ fontSize: 13, color: 'var(--muted)' }}>{t('view.grub-editor.backups.keep')}</span>
         <input
           type="number"
           min={1}
@@ -656,17 +657,17 @@ export function GrubEditorView() {
           onChange={(e) => setKeepBackups(Math.max(1, Math.min(20, Number(e.target.value))))}
           style={{ padding: '6px 10px', background: 'var(--bg)', border: '1px solid var(--border-strong)', color: 'var(--ink)', width: 70 }}
         />
-        <span style={{ fontSize: 13, color: 'var(--muted)' }}>domyślnie 2 — starsze kopie usuwane automatycznie przy kolejnym zapisie</span>
+        <span style={{ fontSize: 13, color: 'var(--muted)' }}>{t('view.grub-editor.backups.keep-note')}</span>
       </div>
       {scan.backups.length === 0 ? (
-        <div className="glass empty-state">Brak kopii zapasowych — pojawią się po pierwszym zapisie.</div>
+        <div className="glass empty-state">{t('view.grub-editor.backups.empty')}</div>
       ) : (
         <div className="clean-list">
           {scan.backups.map((b) => (
             <div key={b.filename} className="glass clean-row" style={{ cursor: 'default', opacity: 1 }}>
               <span className="cr-path mono">{formatDate(b.created_unix)}</span>
               <button className="btn btn-ghost btn-mini" disabled={restoring === b.filename} onClick={() => restoreBackup(b.filename)}>
-                {restoring === b.filename ? 'Przywracanie...' : 'Przywróć'}
+                {restoring === b.filename ? t('view.grub-editor.restoring') : t('view.grub-editor.restore')}
               </button>
             </div>
           ))}

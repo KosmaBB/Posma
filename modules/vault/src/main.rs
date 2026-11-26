@@ -17,6 +17,7 @@
 //!   {"cmd":"unlock","pin":"123456"}
 //!   {"cmd":"lock"}
 //!   {"cmd":"change_pin","old_pin":"123456","new_pin":"654321"}
+//!   {"cmd":"reset"}               // only once the key is gone from the system's store
 //!   {"cmd":"list_structure"}
 //!   {"cmd":"list_templates"}
 //!   {"cmd":"get_entry","id":1}
@@ -61,6 +62,7 @@ enum Request {
     Unlock { pin: String },
     Lock,
     ChangePin { old_pin: String, new_pin: String },
+    Reset,
     ListStructure,
     ListTemplates,
     GetEntry { id: i64 },
@@ -125,6 +127,7 @@ fn handle(vault: &mut Vault, line: &str) -> String {
             respond(Ok(true))
         }
         Request::ChangePin { old_pin, new_pin } => respond(vault.change_pin(&old_pin, &new_pin).map(|_| true)),
+        Request::Reset => respond(vault.reset().map(|_| true)),
         Request::ListStructure => respond(vault.list_structure()),
         Request::ListTemplates => respond(vault.list_templates()),
         Request::GetEntry { id } => respond(vault.get_entry(id)),

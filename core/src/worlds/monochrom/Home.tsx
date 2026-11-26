@@ -3,10 +3,11 @@ import type { ShellProps } from '../index'
 import { catalogNumbers, moduleById, orderedModules } from '../../data/modules'
 import { CpuProfile } from '../../components/CpuProfile'
 import {
-  DISK_WARN_PCT, HISTORY, UP_TO_ONE, gb, plural, size, useMachine, useReclaim, usedPct,
+  DISK_WARN_PCT, HISTORY, UP_TO_ONE, gb, size, useMachine, useReclaim, usedPct,
   type DiskInfo, type Machine, type Metric, type ReclaimState,
 } from '../../state/machine'
 import { Pair, PairRail, Shot } from './pairs'
+import { t } from '../../i18n'
 
 const NB = ' '
 /** Keeps a figure and its unit on one line inside a claim. */
@@ -17,19 +18,19 @@ const pct = (n: number) => `${Math.round(n)}${NB}%`
 const CPU_RESTING = 15
 const CPU_BUSY = 60
 
-const RAIL = [
-  { id: 'mono-disk', label: 'Dysk' },
-  { id: 'mono-reclaim', label: 'Do odzyskania' },
-  { id: 'mono-cpu', label: 'Procesor' },
-  { id: 'mono-memory', label: 'Pamięć' },
-  { id: 'mono-shortcuts', label: 'Skróty' },
+const rail = () => [
+  { id: 'mono-disk', label: t('world.monochrom.rail.disk') },
+  { id: 'mono-reclaim', label: t('world.monochrom.rail.reclaim') },
+  { id: 'mono-cpu', label: t('world.monochrom.rail.cpu') },
+  { id: 'mono-memory', label: t('world.monochrom.rail.memory') },
+  { id: 'mono-shortcuts', label: t('world.monochrom.rail.shortcuts') },
 ]
 
 export function Home({ app, settings }: ShellProps) {
   const refreshMs = settings.settings.refreshMs
   const machine = useMachine(refreshMs)
   const reclaim = useReclaim(app)
-  const every = `odczyt co ${UP_TO_ONE.format(refreshMs / 1000)}${NB}s`
+  const every = t('world.monochrom.home.every', { s: UP_TO_ONE.format(refreshMs / 1000) })
 
   return (
     <>
@@ -40,7 +41,7 @@ export function Home({ app, settings }: ShellProps) {
         <MemoryPair machine={machine} />
         <ShortcutsPair app={app} reclaim={reclaim} />
       </div>
-      <PairRail items={RAIL} />
+      <PairRail items={rail()} />
     </>
   )
 }
@@ -57,19 +58,19 @@ function DiskPair({ machine, every }: { machine: Machine; every: string }) {
   let sub: string
   if (mainDisk) {
     const full = usedPct(mainDisk) >= DISK_WARN_PCT
-    claim = `Na dysku systemowym zostało ${full ? 'tylko ' : ''}${nb(gb(mainDisk.available_bytes))}.`
-    sub = `${pct(usedPct(mainDisk))} z ${nb(gb(mainDisk.total_bytes))} zajęte.`
-    if (crowded.length === 1) sub += ` Dysk ${what(crowded[0])} jest pełny w ${pct(usedPct(crowded[0]))}.`
-    if (crowded.length > 1) sub += ` Prawie pełne są też: ${crowded.map(what).join(', ')}.`
+    claim = t(full ? 'world.monochrom.disk.claim-full' : 'world.monochrom.disk.claim', { free: nb(gb(mainDisk.available_bytes)) })
+    sub = t('world.monochrom.disk.used', { pct: pct(usedPct(mainDisk)), total: nb(gb(mainDisk.total_bytes)) })
+    if (crowded.length === 1) sub += ' ' + t('world.monochrom.disk.crowded-one', { name: what(crowded[0]), pct: pct(usedPct(crowded[0])) })
+    if (crowded.length > 1) sub += ' ' + t('world.monochrom.disk.crowded-many', { names: crowded.map(what).join(', ') })
   } else if (error) {
-    claim = 'Nie udało się odczytać stanu maszyny.'
-    sub = 'Moduł system-info nie odpowiada. Kolejna próba przy następnym odczycie.'
+    claim = t('world.monochrom.disk.error')
+    sub = t('world.monochrom.disk.error-sub')
   } else if (info) {
-    claim = 'Nie widać żadnego dysku.'
-    sub = 'system-info nie zgłosił żadnego nośnika.'
+    claim = t('world.monochrom.disk.none')
+    sub = t('world.monochrom.disk.none-sub')
   } else {
-    claim = 'Czytam stan maszyny…'
-    sub = 'Pierwszy odczyt zwykle trwa sekundę.'
+    claim = t('world.monochrom.disk.loading')
+    sub = t('world.monochrom.disk.loading-sub')
   }
 
   return (
@@ -83,8 +84,8 @@ function DiskPair({ machine, every }: { machine: Machine; every: string }) {
         </>
       }
       proof={
-        <Shot title="Dyski" note={every}>
-          {disksInOrder.length === 0 && <div className="mono-empty">{error ? 'Brak odczytu.' : <span className="mono-ghost" />}</div>}
+        <Shot title={t('world.monochrom.disk.title')} note={every}>
+          {disksInOrder.length === 0 && <div className="mono-empty">{error ? t('world.monochrom.disk.no-reading') : <span className="mono-ghost" />}</div>}
           {disksInOrder.map((d) => (
             <DiskRow key={d.mount_point} disk={d} main={d === mainDisk} />
           ))}
@@ -97,17 +98,17 @@ function DiskPair({ machine, every }: { machine: Machine; every: string }) {
 function DiskRow({ disk, main }: { disk: DiskInfo; main: boolean }) {
   const used = usedPct(disk)
   const full = used >= DISK_WARN_PCT
-  const what = main ? 'dysk systemowy' : disk.model ?? disk.name
+  const what = main ? t('world.monochrom.disk.system') : disk.model ?? disk.name
   return (
     <div className={`mono-disk${full ? ' mono-disk--full' : ''}`}>
       <div className="mono-disk__name">
         <b title={disk.mount_point}>{disk.mount_point}</b>
         <small>
-          {full && <span className="mono-flag">prawie pełny · </span>}
-          {what} · {gb(disk.total_bytes - disk.available_bytes).replace(' GB', '')} z {gb(disk.total_bytes)}
+          {full && <span className="mono-flag">{t('world.monochrom.disk.almost-full')}</span>}
+          {t('world.monochrom.disk.row-detail', { what, used: gb(disk.total_bytes - disk.available_bytes).replace(' GB', ''), total: gb(disk.total_bytes) })}
         </small>
       </div>
-      <div className="mono-meter" role="img" aria-label={`Zajęte ${Math.round(used)} procent`}>
+      <div className="mono-meter" role="img" aria-label={t('world.monochrom.disk.meter', { n: Math.round(used) })}>
         <i style={{ width: `${Math.min(100, used)}%` }} />
       </div>
       <div className="mono-disk__pct">{pct(used)}</div>
@@ -130,21 +131,21 @@ function ReclaimPair({ app, reclaim }: { app: ShellProps['app']; reclaim: Reclai
   let title: string
   let sub: string
   if (n === 0) {
-    title = 'Żaden włączony moduł nie liczy miejsca do odzyskania.'
-    sub = 'Włącz Czyszczenie Temp albo cache pakietów w zarządzaniu modułami.'
+    title = t('world.monochrom.reclaim.none')
+    sub = t('world.monochrom.reclaim.none-sub')
   } else if (state.kind === 'idle') {
-    title = 'Sprawdź, ile da się odzyskać.'
-    sub = `${n} ${plural(n, 'moduł policzy', 'moduły policzą', 'modułów policzy')}, ile miejsca zwolni. To tylko odczyt — nic nie zostanie usunięte.`
+    title = t('world.monochrom.reclaim.idle')
+    sub = t('world.monochrom.reclaim.idle-sub', { n })
   } else if (state.kind === 'scanning') {
-    title = `Sprawdzam… ${state.done} z ${n}.`
-    sub = 'Każdy moduł tylko czyta swoje miejsca.'
+    title = t('world.monochrom.reclaim.scanning', { done: state.done, n })
+    sub = t('world.monochrom.reclaim.scanning-sub')
   } else if (total > 0) {
-    title = `Da się odzyskać około ${nb(size(total))}.`
-    sub = `${plural(n, 'Sprawdził', 'Sprawdziły', 'Sprawdziło')} ${n} ${plural(n, 'moduł', 'moduły', 'modułów')}, nic jeszcze nie usunięto.`
-    if (failed.length) sub += ` ${failed.length} ${plural(failed.length, 'nie odpowiedział', 'nie odpowiedziały', 'nie odpowiedziało')}.`
+    title = t('world.monochrom.reclaim.found', { size: nb(size(total)) })
+    sub = t('world.monochrom.reclaim.found-sub', { n })
+    if (failed.length) sub += ' ' + t('world.monochrom.reclaim.failed', { n: failed.length })
   } else {
-    title = failed.length ? 'Nie udało się nic policzyć.' : 'Nie ma nic do odzyskania.'
-    sub = failed.length ? 'Moduły nie odpowiedziały — spróbuj ponownie.' : 'Każdy sprawdzony moduł ma czysto.'
+    title = t(failed.length ? 'world.monochrom.reclaim.nothing-counted' : 'world.monochrom.reclaim.nothing')
+    sub = t(failed.length ? 'world.monochrom.reclaim.nothing-counted-sub' : 'world.monochrom.reclaim.nothing-sub')
   }
 
   const rows = state.kind === 'done' ? found : sources.map((m) => ({ id: m.id, bytes: null, error: null }))
@@ -159,28 +160,28 @@ function ReclaimPair({ app, reclaim }: { app: ShellProps['app']; reclaim: Reclai
           <p>{sub}</p>
           <div className="mono-actions">
             {n === 0 && (
-              <button className="btn btn-ghost" onClick={() => app.setView({ kind: 'manager' })}>Zarządzaj modułami</button>
+              <button className="btn btn-ghost" onClick={() => app.setView({ kind: 'manager' })}>{t('world.monochrom.reclaim.manage')}</button>
             )}
-            {n > 0 && state.kind === 'idle' && <button className="btn btn-primary" onClick={check}>Sprawdź, co da się odzyskać</button>}
+            {n > 0 && state.kind === 'idle' && <button className="btn btn-primary" onClick={check}>{t('world.monochrom.reclaim.check')}</button>}
             {state.kind === 'done' && top && (
-              <button className="btn btn-primary" onClick={() => open(top.id)}>Otwórz {top.name}</button>
+              <button className="btn btn-primary" onClick={() => open(top.id)}>{t('world.monochrom.reclaim.open', { name: top.name })}</button>
             )}
-            {state.kind === 'done' && <button className="btn btn-ghost" onClick={check}>Sprawdź ponownie</button>}
+            {state.kind === 'done' && <button className="btn btn-ghost" onClick={check}>{t('world.monochrom.reclaim.recheck')}</button>}
           </div>
         </>
       }
       proof={
         <Shot
-          title="Do odzyskania"
-          note={state.kind === 'scanning' ? <span className="mono-run" aria-hidden="true" /> : state.kind === 'done' ? 'tylko odczyt' : 'nic jeszcze nie sprawdzono'}
-          foot={state.kind === 'done' && total > 0 ? <>Razem<strong>{size(total)}</strong></> : undefined}
+          title={t('world.monochrom.rail.reclaim')}
+          note={state.kind === 'scanning' ? <span className="mono-run" aria-hidden="true" /> : state.kind === 'done' ? t('world.monochrom.reclaim.read-only') : t('world.monochrom.reclaim.not-checked')}
+          foot={state.kind === 'done' && total > 0 ? <>{t('world.monochrom.reclaim.total')}<strong>{size(total)}</strong></> : undefined}
         >
           {rows.length === 0 ? (
-            <div className="mono-empty">Brak modułów, które liczą miejsce.</div>
+            <div className="mono-empty">{t('world.monochrom.reclaim.no-modules')}</div>
           ) : (
             <table className="mono-table">
               <thead>
-                <tr><th>Moduł</th><th className="num">Do odzyskania</th></tr>
+                <tr><th>{t('world.monochrom.reclaim.col.module')}</th><th className="num">{t('world.monochrom.rail.reclaim')}</th></tr>
               </thead>
               <tbody>
                 {rows.map((r) => {
@@ -194,9 +195,9 @@ function ReclaimPair({ app, reclaim }: { app: ShellProps['app']; reclaim: Reclai
                       </td>
                       <td className="num">
                         {r.error ? (
-                          <span className="mono-err" title={r.error}>nie odpowiedział</span>
+                          <span className="mono-err" title={r.error}>{t('world.monochrom.reclaim.no-answer')}</span>
                         ) : r.bytes === null ? (
-                          <span className="mono-quiet">{state.kind === 'scanning' ? 'liczę…' : '—'}</span>
+                          <span className="mono-quiet">{state.kind === 'scanning' ? t('world.monochrom.reclaim.counting') : '—'}</span>
                         ) : (
                           <>
                             <span className="mono-sizebar" aria-hidden="true"><i style={{ width: `${Math.max(2, ((r.bytes ?? 0) / max) * 100)}%` }} /></span>
@@ -225,12 +226,12 @@ function CpuPair({ machine, settings, every }: { machine: Machine; settings: She
   const v = cpu?.value ?? null
   const claim =
     v === null
-      ? error ? 'Procesor nie odpowiada na odczyt.' : 'Czytam procesor…'
-      : `${v < CPU_RESTING ? 'Procesor odpoczywa' : v < CPU_BUSY ? 'Procesor pracuje' : 'Procesor jest mocno zajęty'}: ${pct(v)}.`
+      ? t(error ? 'world.monochrom.cpu.error' : 'world.monochrom.cpu.loading')
+      : t(v < CPU_RESTING ? 'world.monochrom.cpu.resting' : v < CPU_BUSY ? 'world.monochrom.cpu.working' : 'world.monochrom.cpu.busy', { pct: pct(v) })
   const sub = [
-    coreCount ? `${coreCount} ${plural(coreCount, 'rdzeń', 'rdzenie', 'rdzeni')}` : null,
+    coreCount ? t('world.monochrom.cpu.cores', { n: coreCount }) : null,
     temp ? `${Math.round(temp.value)}${NB}°C` : null,
-    busiest !== null ? `najbardziej zajęty rdzeń: ${pct(busiest)}` : null,
+    busiest !== null ? t('world.monochrom.cpu.busiest', { pct: pct(busiest) }) : null,
   ].filter(Boolean).join(', ')
 
   return (
@@ -241,11 +242,11 @@ function CpuPair({ machine, settings, every }: { machine: Machine; settings: She
         <>
           <h2>{claim}</h2>
           {sub && <p>{sub[0].toUpperCase() + sub.slice(1)}.</p>}
-          <p className="mono-note">Najedź na wykres, żeby odczytać chwilę; kliknij słupek, żeby obserwować rdzeń.</p>
+          <p className="mono-note">{t('world.monochrom.cpu.hint')}</p>
         </>
       }
       proof={
-        <Shot title={coreCount ? `Procesor · ${coreCount} ${plural(coreCount, 'rdzeń', 'rdzenie', 'rdzeni')}` : 'Procesor'} note={every}>
+        <Shot title={coreCount ? t('world.monochrom.cpu.title-cores', { cores: t('world.monochrom.cpu.cores', { n: coreCount }) }) : t('world.monochrom.cpu.title')} note={every}>
           <div className="mono-cpu">
             {record.samples.length > 1 ? (
               <CpuProfile
@@ -258,7 +259,7 @@ function CpuPair({ machine, settings, every }: { machine: Machine; settings: She
               />
             ) : (
               <div className="mono-empty" role="status">
-                {error ? 'Nie udało się odczytać procesora.' : 'Wykres potrzebuje dwóch odczytów — czekam na kolejny…'}
+                {t(error ? 'world.monochrom.cpu.read-failed' : 'world.monochrom.cpu.waiting')}
               </div>
             )}
           </div>
@@ -278,7 +279,11 @@ function reading(m: Metric): string {
 function MemoryPair({ machine }: { machine: Machine }) {
   const { ram, metrics, error, info } = machine
   const rest = metrics.filter((m) => m.id !== 'cpu')
-  const claim = ram?.detail ? `Pamięć: ${nb(ram.detail)}.` : ram ? `Pamięć zajęta w ${pct(ram.value)}.` : error ? 'Brak odczytu pamięci.' : 'Czytam pamięć…'
+  const claim = ram?.detail
+    ? t('world.monochrom.memory.detail', { detail: nb(ram.detail) })
+    : ram
+      ? t('world.monochrom.memory.used', { pct: pct(ram.value) })
+      : t(error ? 'world.monochrom.memory.none' : 'world.monochrom.memory.loading')
   return (
     <Pair
       id="mono-memory"
@@ -286,12 +291,12 @@ function MemoryPair({ machine }: { machine: Machine }) {
       claim={
         <>
           <h2>{claim}</h2>
-          {ram && <p>{pct(ram.value)} w użyciu. Obok wszystkie odczyty, które maszyna udostępnia.</p>}
+          {ram && <p>{t('world.monochrom.memory.in-use', { pct: pct(ram.value) })}</p>}
         </>
       }
       proof={
-        <Shot title="Odczyty" note={`${rest.length} ${plural(rest.length, 'czujnik', 'czujniki', 'czujników')}`}>
-          {rest.length === 0 && <div className="mono-empty">{info ? 'Maszyna nie udostępnia innych odczytów.' : <span className="mono-ghost" />}</div>}
+        <Shot title={t('world.monochrom.memory.title')} note={t('world.monochrom.memory.sensors', { n: rest.length })}>
+          {rest.length === 0 && <div className="mono-empty">{info ? t('world.monochrom.memory.no-others') : <span className="mono-ghost" />}</div>}
           {rest.map((m) => (
             <div key={m.id} className="mono-reading">
               <div className="mono-reading__name">
@@ -327,13 +332,13 @@ function ShortcutsPair({ app, reclaim }: { app: ShellProps['app']; reclaim: Recl
       proofTour="index"
       claim={
         <>
-          <h2>{quick.length ? `${quick.length} ${plural(quick.length, 'skrót', 'skróty', 'skrótów')} do włączonych modułów.` : 'Nie ma jeszcze skrótów.'}</h2>
-          <p>{quick.length ? 'Główna akcja każdego modułu, w kolejności z folderów.' : 'Włącz moduły w zarządzaniu, a ich główne akcje pojawią się tutaj.'}</p>
+          <h2>{quick.length ? t('world.monochrom.shortcuts.count', { n: quick.length }) : t('world.monochrom.shortcuts.none')}</h2>
+          <p>{t(quick.length ? 'world.monochrom.shortcuts.hint' : 'world.monochrom.shortcuts.hint-none')}</p>
         </>
       }
       proof={
-        <Shot title="Skróty" note="kolejność z folderów">
-          {quick.length === 0 && <div className="mono-empty">Brak włączonych modułów z akcją.</div>}
+        <Shot title={t('world.monochrom.rail.shortcuts')} note={t('world.monochrom.shortcuts.note')}>
+          {quick.length === 0 && <div className="mono-empty">{t('world.monochrom.shortcuts.empty')}</div>}
           <ul className="mono-quick">
             {quick.map((m) => {
               const hit = reclaim.foundOf(m.id)
@@ -342,7 +347,7 @@ function ShortcutsPair({ app, reclaim }: { app: ShellProps['app']; reclaim: Recl
                   <button className="mono-quick__row" onClick={() => app.setView({ kind: 'module', moduleId: m.id })}>
                     <span className="mono-no">{numbers.get(m.id)}</span>
                     <span className="mono-quick__name">{m.name}</span>
-                    <span className="mono-quick__reading">{hit?.bytes ? `${size(hit.bytes)} do odzyskania` : ''}</span>
+                    <span className="mono-quick__reading">{hit?.bytes ? t('world.monochrom.shortcuts.reclaimable', { size: size(hit.bytes) }) : ''}</span>
                     <span className="mono-quick__act">{m.quickAction}</span>
                   </button>
                 </li>

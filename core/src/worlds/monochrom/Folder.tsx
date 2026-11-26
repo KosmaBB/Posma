@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { AppState } from '../../state/appState'
 import { applyOrder, catalogNumbers, folders, modulesInFolder, riskLabel } from '../../data/modules'
-import { plural } from '../../state/machine'
+import { t } from '../../i18n'
 import { Pair } from './pairs'
 
 /** One folder: how many modules it holds, then the table that proves it. */
@@ -16,8 +16,8 @@ export function Folder({ app, folderId }: { app: AppState; folderId: string }) {
       <div className="mono-pairs">
         <Pair
           id="mono-folder"
-          claim={<h1>Nie ma takiego folderu.</h1>}
-          proof={<button className="btn btn-ghost" onClick={() => setView({ kind: 'dashboard' })}>Wróć do przeglądu</button>}
+          claim={<h1>{t('world.monochrom.folder.missing')}</h1>}
+          proof={<button className="btn btn-ghost" onClick={() => setView({ kind: 'dashboard' })}>{t('world.monochrom.back')}</button>}
         />
       </div>
     )
@@ -35,11 +35,11 @@ export function Folder({ app, folderId }: { app: AppState; folderId: string }) {
         stack
         claim={
           <>
-            <h1>{n ? `${folder.name}: ${n} ${plural(n, 'moduł', 'moduły', 'modułów')}.` : `${folder.name}: na razie pusto.`}</h1>
+            <h1>{n ? t('world.monochrom.folder.title', { name: folder.name, n }) : t('world.monochrom.folder.title-empty', { name: folder.name })}</h1>
             <p>
               {n
-                ? `Włączone: ${on} z ${n}. Wiersz otwiera moduł; wyłączony włączysz jednym przyciskiem.`
-                : 'W tym folderze nie ma jeszcze modułów dla Twojego systemu.'}
+                ? t('world.monochrom.folder.enabled', { on, n })
+                : t('world.monochrom.folder.empty')}
             </p>
           </>
         }
@@ -49,10 +49,10 @@ export function Folder({ app, folderId }: { app: AppState; folderId: string }) {
               <table className="mono-table mono-table--modules" data-tour="folder-list">
                 <thead>
                   <tr>
-                    <th className="mono-col-no">Nr</th>
-                    <th>Moduł</th>
-                    <th>Ryzyko</th>
-                    <th className="num">Akcja</th>
+                    <th className="mono-col-no">{t('world.monochrom.folder.col.no')}</th>
+                    <th>{t('world.monochrom.folder.col.module')}</th>
+                    <th>{t('world.monochrom.folder.col.risk')}</th>
+                    <th className="num">{t('world.monochrom.folder.col.action')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -71,18 +71,18 @@ export function Folder({ app, folderId }: { app: AppState; folderId: string }) {
                             {enabled ? (
                               <>
                                 <button className="btn btn-ghost btn-mini" onClick={(e) => { e.stopPropagation(); open(m.id) }}>
-                                  {m.quickAction ?? 'Otwórz'}
+                                  {m.quickAction ?? t('common.open')}
                                 </button>
                                 <button
                                   className="btn btn-ghost btn-mini mono-quiet-btn"
-                                  title="Ukryj ten moduł — pliki zostają na dysku"
+                                  title={t('world.monochrom.folder.hide-title')}
                                   onClick={(e) => { e.stopPropagation(); setModuleInstalled(m.id, false) }}
                                 >
-                                  Wyłącz
+                                  {t('world.monochrom.folder.hide')}
                                 </button>
                               </>
                             ) : (
-                              <button className="btn btn-ghost btn-mini" onClick={() => setModuleInstalled(m.id, true)}>Włącz moduł</button>
+                              <button className="btn btn-ghost btn-mini" onClick={() => setModuleInstalled(m.id, true)}>{t('world.monochrom.folder.show')}</button>
                             )}
                           </span>
                         </td>

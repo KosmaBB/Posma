@@ -155,7 +155,7 @@
 
 /* ---------------------------------------------------------- wyszukiwanie */
 [data-world='monochrom'] .mono-search {
-  position: relative; display: flex; align-items: center; gap: 10px; width: 290px; height: 38px;
+  position: relative; display: flex; align-items: center; gap: 10px; width: 316px; height: 38px;
   padding: 0 8px 0 12px; border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
   background: var(--bg-2); transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -163,7 +163,7 @@
 [data-world='monochrom'] .mono-search__icon { width: 17px; height: 17px; flex: none; fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-linecap: round; }
 [data-world='monochrom'] .mono-search input {
   flex: 1; min-width: 0; height: 100%; padding: 0; border: 0; outline: none; background: transparent;
-  color: var(--ink); font: 14px var(--sans); appearance: none;
+  color: var(--ink); font: 14px var(--sans); appearance: none; text-overflow: ellipsis;
 }
 [data-world='monochrom'] .mono-search input::placeholder { color: var(--muted); }
 [data-world='monochrom'] .mono-search input::-webkit-search-cancel-button { display: none; }
@@ -186,7 +186,9 @@
 
 /* ---------------------------------------------------------------- strona */
 [data-world='monochrom'] .mono-page { position: relative; overflow-y: auto; overflow-x: hidden; scroll-padding-top: 32px; }
-[data-world='monochrom'] .mono-wrap { max-width: 1600px; margin: 0 auto; padding: 44px 232px 140px 80px; }
+[data-world='monochrom'] .mono-wrap { padding: 44px 232px 140px 80px; }
+/* Folder, manager and settings have no rail: the page takes its space. */
+[data-world='monochrom'] .mono-wrap:where(:not(:has(.mono-rail))) { padding-right: 80px; }
 [data-world='monochrom'] .mono-pairs { display: flex; flex-direction: column; gap: calc(72px * var(--d)); }
 
 [data-world='monochrom'] .mono-pair {
@@ -222,7 +224,6 @@
     radial-gradient(110% 95% at 28% 0%, var(--mono-g1) 0%, var(--mono-g2) 52%, var(--mono-g3) 100%);
 }
 [data-world='monochrom'] .mono-proof:empty { display: none; }
-[data-world='monochrom'] .mono-proof--page { max-width: 1040px; }
 
 [data-world='monochrom'] .mono-shot {
   background: var(--panel-bg); border: 1px solid var(--mono-shot-edge); border-radius: var(--radius);
@@ -406,6 +407,7 @@
 /* width ≤ 1440px after UI scaling: set by settings.ts, since media queries cannot see zoom */
 [data-world='monochrom']:where([data-fit~='1440']) .mono-sys { display: none; }
 [data-world='monochrom']:where([data-fit~='1440']) .mono-wrap { padding-right: 216px; padding-left: 56px; }
+[data-world='monochrom']:where([data-fit~='1440']) .mono-wrap:where(:not(:has(.mono-rail))) { padding-right: 56px; }
 
 /* width ≤ 1280px after UI scaling: set by settings.ts, since media queries cannot see zoom */
 [data-world='monochrom']:where([data-fit~='1280']) { --claim-size: 40px; }

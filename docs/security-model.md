@@ -1,5 +1,7 @@
 # Security model
 
+*[Polska wersja →](pl/security-model.md)*
+
 This document exists to be checked against the code, not taken on faith. It
 describes what can reach administrator rights, what stops it, and — just as
 importantly — what is **not** protected.
@@ -144,6 +146,10 @@ system. And services are switched only from a reviewed list
 (`broker-common/src/windows_services.rs`): the request names a service and on
 or off, the broker refuses any name the list lacks, and "on" means the start
 type Windows gives that service, never one from the request.
+SMART is read with `smartctl` from where the smartmontools installer puts
+it in Program Files — again a folder the system names, never one found on
+`PATH` — and only for the drives the health module lists, `/dev/sda` to
+`/dev/sdz`.
 
 Homebrew is never run as root on macOS: its prefix belongs to the user, so
 a root process running from it would be running whatever the user put
@@ -202,7 +208,7 @@ around 80 real files on a live machine.
 Capabilities are a closed list (`fs-user`, `fs-system`, `fs-scan`, `pkg`,
 `svc`, `autostart-user`, `autostart-system`, `boot`, `disk-smart`,
 `restore-point`, `fda`, `secrets`, `net`), defined once in
-[`access/catalog.json`](../access/catalog.json). The Rust core embeds that
+[`access/catalog.json`](https://github.com/KosmaBB/Posma/blob/master/access/catalog.json). The Rust core embeds that
 file at compile time and the interface imports the same one, so the thing
 enforcing permissions and the thing describing them to you cannot disagree.
 They used to be separate hand-maintained copies, and they had drifted.

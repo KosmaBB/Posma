@@ -6,14 +6,17 @@ import {
   OVERRIDE_KEYS, PEAKS, WORLDS, contrastRatio, inkOn, lookInfo, type Choice, type Look, type Motion, type World,
 } from '../state/looks'
 import { WORLD_PREVIEWS } from '../worlds'
+import { formatNumber, t } from '../i18n'
 
 const SCALES: { value: UiScale; label: string }[] = [
-  { value: 'auto', label: 'Automatyczne' },
-  { value: '0.9', label: 'Mniejsze (90%)' },
-  { value: '1', label: 'Domyślne (100%)' },
-  { value: '1.15', label: 'Większe (115%)' },
-  { value: '1.3', label: 'Duże (130%)' },
-  { value: '1.5', label: 'Bardzo duże (150%)' },
+  { value: 'auto', get label() { return t('appearance.scale.auto') } },
+  { value: '0.9', get label() { return t('appearance.scale.0.9') } },
+  { value: '1', get label() { return t('appearance.scale.1') } },
+  { value: '1.15', get label() { return t('appearance.scale.1.15') } },
+  { value: '1.3', get label() { return t('appearance.scale.1.3') } },
+  { value: '1.5', get label() { return t('appearance.scale.1.5') } },
+  { value: '1.75', get label() { return t('appearance.scale.1.75') } },
+  { value: '2', get label() { return t('appearance.scale.2') } },
 ]
 
 /** Accents darker than this against the ground get a warning: focus rings and marks start to vanish. */
@@ -33,14 +36,14 @@ function LookPreview({ look, dark }: { look: Look; dark: boolean }) {
     <span className="look-prev" data-look={look} data-theme={dark ? 'dark' : 'light'} aria-hidden="true">
       <span className="look-prev__side"><i /><i /><i /><i /><i /></span>
       <span className="look-prev__main">
-        <span className="look-prev__lbl">Profil procesora</span>
+        <span className="look-prev__lbl">{t('appearance.preview.label')}</span>
         <span className="look-prev__hero">000</span>
         <svg className="look-prev__chart" viewBox="0 0 100 16" preserveAspectRatio="none">
           <line className="grid" x1="0" y1="8" x2="100" y2="8" />
           <polyline className="peak" points={PEAK_POINTS} />
           <polyline className="mean" points={MEAN_POINTS} />
         </svg>
-        <span className="look-prev__btn">Skanuj</span>
+        <span className="look-prev__btn">{t('appearance.preview.button')}</span>
       </span>
     </span>
   )
@@ -111,7 +114,7 @@ function CardGrid<T extends string>({
             onKeyDown={(e) => onKey(e, i)}
           >
             {preview(it.id)}
-            <span className="look-card__name">{it.name}{it.id === value && <span className="mono">w użyciu</span>}</span>
+            <span className="look-card__name">{it.name}{it.id === value && <span className="mono">{t('appearance.in-use')}</span>}</span>
             <span className="look-card__desc">{it.desc}</span>
           </button>
         )
@@ -146,7 +149,7 @@ function OverrideSelect<T extends string>({
 }) {
   return (
     <select value={value} aria-label={label} onChange={(e) => onChange(e.target.value as T | 'look')}>
-      <option value="look">{own ? `Jak w wyglądzie (${own})` : 'Jak w świecie'}</option>
+      <option value="look">{own ? t('appearance.like-look', { own }) : t('appearance.like-world')}</option>
       {choices.map((c) => (
         <option key={c.value} value={c.value}>{c.label}</option>
       ))}
@@ -158,7 +161,7 @@ function AccentPicker({ settings, dark }: { settings: SettingsState; dark: boole
   const { settings: s, set } = settings
   const own = lookInfo(s.look).own.accent
   return (
-    <div className="accent-picker" role="group" aria-label="Kolor akcentu">
+    <div className="accent-picker" role="group" aria-label={t('appearance.accent')}>
       <button
         type="button"
         aria-pressed={s.accent === 'look'}
@@ -166,10 +169,10 @@ function AccentPicker({ settings, dark }: { settings: SettingsState; dark: boole
         data-world={s.world}
         data-look={s.world === 'katalog' ? s.look : undefined}
         data-theme={dark ? 'dark' : 'light'}
-        title={s.world === 'katalog' ? `Z wyglądu (${own})` : 'Ze świata'}
+        title={s.world === 'katalog' ? t('appearance.accent.from-look', { own }) : t('appearance.accent.from-world')}
         onClick={() => set('accent', 'look')}
       >
-        z wyglądu
+        {t('appearance.accent.look')}
       </button>
       {ACCENTS.map((a) => (
         <button
@@ -186,12 +189,12 @@ function AccentPicker({ settings, dark }: { settings: SettingsState; dark: boole
       <label
         className="accent-dot accent-dot--custom"
         data-checked={s.accent === 'custom'}
-        title="Własny kolor"
+        title={t('appearance.accent.custom')}
         style={{ '--swatch': s.accentColor, '--on-swatch': inkOn(s.accentColor) } as CSSProperties}
       >
         <input
           type="color"
-          aria-label={s.accent === 'custom' ? 'Własny kolor akcentu, wybrany' : 'Własny kolor akcentu'}
+          aria-label={s.accent === 'custom' ? t('appearance.accent.custom.selected') : t('appearance.accent.custom.label')}
           value={s.accentColor}
           // Choosing the colour already stored fires no change; the click alone means "use mine".
           onClick={() => set('accent', 'custom')}
@@ -200,7 +203,7 @@ function AccentPicker({ settings, dark }: { settings: SettingsState; dark: boole
             set('accent', 'custom')
           }}
         />
-        <span>własny</span>
+        <span>{t('appearance.accent.custom.short')}</span>
       </label>
     </div>
   )
@@ -239,15 +242,15 @@ export function AppearanceSection({ settings }: { settings: SettingsState }) {
   return (
     <>
       <div className="section-head">
-        <h2>Wygląd</h2>
+        <h2>{t('appearance.title')}</h2>
         <span className="count">
-          {katalog ? `${world.name} · ${look.name}` : world.name} · {dark ? 'ciemny' : 'jasny'}
+          {katalog && look.name !== world.name ? `${world.name} · ${look.name}` : world.name} ·{dark ? t('appearance.mode.dark.short') : t('appearance.mode.light.short')}
         </span>
       </div>
       <CardGrid
         items={WORLDS}
         value={s.world}
-        label="Świat aplikacji"
+        label={t('appearance.worlds')}
         tour="look"
         wide
         deferPick
@@ -257,102 +260,102 @@ export function AppearanceSection({ settings }: { settings: SettingsState }) {
 
       {katalog && (
         <>
-          <span className="lbl settings-group">Odmiany Katalogu</span>
+          <span className="lbl settings-group">{t('appearance.looks')}</span>
           <CardGrid
             items={LOOKS}
             value={s.look}
-            label="Odmiana Katalogu"
+            label={t('appearance.look')}
             preview={(l) => <LookPreview look={l} dark={dark} />}
             onPick={(l) => set('look', l)}
           />
         </>
       )}
 
-      <span className="lbl settings-group">Kolor</span>
+      <span className="lbl settings-group">{t('appearance.group.color')}</span>
       <div className="settings-list">
-        <SettingRow name="Tryb" desc="Każdy wygląd ma wersję jasną i ciemną. Systemowy idzie za ustawieniem systemu.">
-          <select value={s.theme} aria-label="Tryb" onChange={(e) => set('theme', e.target.value as Theme)}>
-            <option value="dark">Ciemny</option>
-            <option value="light">Jasny</option>
-            <option value="system">Systemowy</option>
+        <SettingRow name={t('appearance.mode')} desc={t('appearance.mode.desc')}>
+          <select value={s.theme} aria-label={t('appearance.mode')} onChange={(e) => set('theme', e.target.value as Theme)}>
+            <option value="dark">{t('appearance.mode.dark')}</option>
+            <option value="light">{t('appearance.mode.light')}</option>
+            <option value="system">{t('appearance.mode.system')}</option>
           </select>
         </SettingRow>
         <SettingRow
-          name="Kolor akcentu"
+          name={t('appearance.accent')}
           desc={
             weakAccent ? (
               <span className="accent-warn">
-                Ten kolor słabo odcina się od tła ({accentRatio.toFixed(1)}:1) — zaznaczenia i obramowania mogą zniknąć.
+                {t('appearance.accent.weak', { ratio: formatNumber(accentRatio, { minimumFractionDigits: 1, maximumFractionDigits: 1 }) })}
               </span>
             ) : (
-              'Kolor przycisków, zaznaczeń i obramowania skupienia. Gotowe kolory mają osobny odcień na jasne i ciemne tło.'
+              t('appearance.accent.desc')
             )
           }
         >
           <AccentPicker settings={settings} dark={dark} />
         </SettingRow>
-        <SettingRow name="Kontrast" desc="Wysoki zbliża opisy, podpisy i linie do koloru tekstu.">
-          <select value={s.contrast} aria-label="Kontrast" onChange={(e) => set('contrast', e.target.value as typeof s.contrast)}>
-            <option value="normal">Normalny</option>
-            <option value="high">Wysoki</option>
+        <SettingRow name={t('appearance.contrast')} desc={t('appearance.contrast.desc')}>
+          <select value={s.contrast} aria-label={t('appearance.contrast')} onChange={(e) => set('contrast', e.target.value as typeof s.contrast)}>
+            <option value="normal">{t('appearance.contrast.normal')}</option>
+            <option value="high">{t('appearance.contrast.high')}</option>
           </select>
         </SettingRow>
       </div>
 
-      <span className="lbl settings-group">Typografia</span>
+      <span className="lbl settings-group">{t('appearance.group.type')}</span>
       <div className="settings-list">
-        <SettingRow name="Krój tekstu" desc="Atkinson Hyperlegible rozróżnia litery, które inne kroje zlewają (Il1, O0).">
-          <OverrideSelect label="Krój tekstu" value={s.font} choices={FONTS} own={own?.font} onChange={(v) => set('font', v)} />
+        <SettingRow name={t('appearance.font')} desc={t('appearance.font.desc')}>
+          <OverrideSelect label={t('appearance.font')} value={s.font} choices={FONTS} own={own?.font} onChange={(v) => set('font', v)} />
         </SettingRow>
-        <SettingRow name="Krój liczb" desc="Odczyty, ścieżki i numery katalogowe. Cyfry zawsze mają równą szerokość.">
-          <OverrideSelect label="Krój liczb" value={s.numFont} choices={NUM_FONTS} own={own?.numFont} onChange={(v) => set('numFont', v)} />
+        <SettingRow name={t('appearance.numfont')} desc={t('appearance.numfont.desc')}>
+          <OverrideSelect label={t('appearance.numfont')} value={s.numFont} choices={NUM_FONTS} own={own?.numFont} onChange={(v) => set('numFont', v)} />
         </SettingRow>
-        <SettingRow name="Etykiety" desc="Podpisy sekcji, przyciski i nazwy folderów.">
-          <OverrideSelect label="Etykiety" value={s.labels} choices={LABEL_STYLES} own={own?.labels} onChange={(v) => set('labels', v)} />
+        <SettingRow name={t('appearance.labels')} desc={t('appearance.labels.desc')}>
+          <OverrideSelect label={t('appearance.labels')} value={s.labels} choices={LABEL_STYLES} own={own?.labels} onChange={(v) => set('labels', v)} />
         </SettingRow>
       </div>
 
-      <span className="lbl settings-group">Kształt i gęstość</span>
+      <span className="lbl settings-group">{t('appearance.group.shape')}</span>
       <div className="settings-list">
         <SettingRow
-          name="Skalowanie interfejsu"
+          name={t('appearance.scale')}
           desc={
             s.uiScale === 'auto'
-              ? `Automatyczne dobiera skalę do szerokości okna — teraz ${Math.round(autoScale(window.innerWidth) * 100)}%.`
-              : 'Ustaw ręcznie, jeśli przy Twojej rozdzielczości tekst jest za mały lub za duży.'
+              ? t('appearance.scale.desc.auto', { pct: Math.round(autoScale(window.innerWidth, window.innerHeight) * 100) })
+              : t('appearance.scale.desc.manual')
           }
         >
-          <select value={s.uiScale} aria-label="Skalowanie interfejsu" onChange={(e) => set('uiScale', e.target.value as UiScale)}>
+          <select value={s.uiScale} aria-label={t('appearance.scale')} onChange={(e) => set('uiScale', e.target.value as UiScale)}>
             {SCALES.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
             ))}
           </select>
         </SettingRow>
-        <SettingRow name="Narożniki" desc="Karty, przyciski, pola i paski.">
-          <OverrideSelect label="Narożniki" value={s.corners} choices={CORNERS} own={own?.corners} onChange={(v) => set('corners', v)} />
+        <SettingRow name={t('appearance.corners')} desc={t('appearance.corners.desc')}>
+          <OverrideSelect label={t('appearance.corners')} value={s.corners} choices={CORNERS} own={own?.corners} onChange={(v) => set('corners', v)} />
         </SettingRow>
-        <SettingRow name="Linie" desc="Grubość ramek, podziałów i linii wykresu.">
-          <OverrideSelect label="Linie" value={s.lines} choices={LINES} own={own?.lines} onChange={(v) => set('lines', v)} />
+        <SettingRow name={t('appearance.lines')} desc={t('appearance.lines.desc')}>
+          <OverrideSelect label={t('appearance.lines')} value={s.lines} choices={LINES} own={own?.lines} onChange={(v) => set('lines', v)} />
         </SettingRow>
-        <SettingRow name="Gęstość" desc="Odstępy w listach, tabelach i pasku bocznym.">
-          <OverrideSelect label="Gęstość" value={s.density} choices={DENSITIES} own={own?.density} onChange={(v) => set('density', v)} />
+        <SettingRow name={t('appearance.density')} desc={t('appearance.density.desc')}>
+          <OverrideSelect label={t('appearance.density')} value={s.density} choices={DENSITIES} own={own?.density} onChange={(v) => set('density', v)} />
         </SettingRow>
       </div>
 
-      <span className="lbl settings-group">Ruch i wykresy</span>
+      <span className="lbl settings-group">{t('appearance.group.motion')}</span>
       <div className="settings-list">
-        <SettingRow name="Ruch" desc="Ograniczony zostawia przenikanie, ale nic się nie przesuwa. Wyłączony gasi każdą animację.">
-          <select value={s.motion} aria-label="Ruch" onChange={(e) => set('motion', e.target.value as Motion)}>
+        <SettingRow name={t('appearance.motion')} desc={t('appearance.motion.desc')}>
+          <select value={s.motion} aria-label={t('appearance.motion')} onChange={(e) => set('motion', e.target.value as Motion)}>
             {MOTIONS.map((m) => (
               <option key={m.value} value={m.value}>{m.label}</option>
             ))}
           </select>
         </SettingRow>
-        <SettingRow name="Siatka wykresu" desc="Poziome linie skali pod profilem procesora.">
-          <OverrideSelect label="Siatka wykresu" value={s.chartGrid} choices={GRIDS} own={own?.chartGrid} onChange={(v) => set('chartGrid', v)} />
+        <SettingRow name={t('appearance.grid')} desc={t('appearance.grid.desc')}>
+          <OverrideSelect label={t('appearance.grid')} value={s.chartGrid} choices={GRIDS} own={own?.chartGrid} onChange={(v) => set('chartGrid', v)} />
         </SettingRow>
-        <SettingRow name="Linia szczytu" desc="Najbardziej zajęty rdzeń, rysowany obok średniej.">
-          <OverrideSelect label="Linia szczytu" value={s.peakLine} choices={PEAKS} own={own?.peakLine} onChange={(v) => set('peakLine', v)} />
+        <SettingRow name={t('appearance.peak')} desc={t('appearance.peak.desc')}>
+          <OverrideSelect label={t('appearance.peak')} value={s.peakLine} choices={PEAKS} own={own?.peakLine} onChange={(v) => set('peakLine', v)} />
         </SettingRow>
       </div>
 
@@ -362,12 +365,12 @@ export function AppearanceSection({ settings }: { settings: SettingsState }) {
           disabled={!changed}
           onClick={() => OVERRIDE_KEYS.forEach((k) => set(k, APPEARANCE_DEFAULTS[k]))}
         >
-          Przywróć wygląd „{katalog ? look.name : world.name}”
+          {t('appearance.reset', { name: katalog ? look.name : world.name })}
         </button>
         <span className="st-desc">
           {changed
-            ? 'Cofa akcent, kontrast, kroje, etykiety, narożniki, linie, gęstość i wykres. Tryb, skala i ruch zostają.'
-            : 'Nic nie jest nadpisane — widzisz wygląd taki, jaki jest.'}
+            ? t('appearance.reset.desc')
+            : t('appearance.reset.none')}
         </span>
       </div>
     </>

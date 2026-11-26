@@ -4,6 +4,7 @@ import { formatBytes } from './TempCleanView'
 import { confirmAction } from '../../components/confirm'
 import { callModule } from '../../data/callModule'
 import { FullDiskAccessRow } from '../Settings'
+import { t } from '../../i18n'
 
 type Recovery = 'rebuilt' | 'refetched' | 'permanent'
 
@@ -38,9 +39,9 @@ interface CleanData {
 }
 
 const RECOVERY: Record<Recovery, { label: string; chip: string }> = {
-  rebuilt: { label: 'Odbuduje się', chip: 'low' },
-  refetched: { label: 'Pobierze się ponownie', chip: 'medium' },
-  permanent: { label: 'Bezpowrotne', chip: 'critical' },
+  rebuilt: { get label() { return t('view.xcode-cache.recovery.rebuilt') }, chip: 'low' },
+  refetched: { get label() { return t('view.xcode-cache.recovery.refetched') }, chip: 'medium' },
+  permanent: { get label() { return t('view.xcode-cache.recovery.permanent') }, chip: 'critical' },
 }
 
 /** What differs between the modules that clean a fixed list of Library places. */
@@ -56,10 +57,10 @@ export function XcodeCacheView() {
   return (
     <LibraryCleanView
       module="xcode-cache"
-      scanning="Sprawdzam, co zostawił Xcode"
-      scanningNote="Liczę rozmiary katalogów kompilacji i symboli urządzeń. Przy dużych projektach to chwilę trwa."
-      absent="Nie znaleziono katalogu Xcode — ten moduł nie ma tu czego sprzątać."
-      summary="zajmują pozostałości Xcode"
+      scanning={t('view.xcode-cache.xcode.scanning')}
+      scanningNote={t('view.xcode-cache.xcode.scanning-note')}
+      absent={t('view.xcode-cache.xcode.absent')}
+      summary={t('view.xcode-cache.xcode.summary')}
     />
   )
 }
@@ -68,10 +69,10 @@ export function MacosSlimView() {
   return (
     <LibraryCleanView
       module="macos-slim"
-      scanning="Sprawdzam Pocztę i Wiadomości"
-      scanningNote="Liczę kopie otwartych załączników, podglądy i cache. Wiadomości i rozmowy nie są tu nawet czytane."
-      absent="Poczta i Wiadomości nie były na tym Macu używane — nie ma tu czego odchudzać."
-      summary="zajmują kopie i cache Poczty i Wiadomości"
+      scanning={t('view.xcode-cache.macos-slim.scanning')}
+      scanningNote={t('view.xcode-cache.macos-slim.scanning-note')}
+      absent={t('view.xcode-cache.macos-slim.absent')}
+      summary={t('view.xcode-cache.macos-slim.summary')}
     />
   )
 }
@@ -147,9 +148,9 @@ function LibraryCleanView({ module, scanning, scanningNote, absent, summary }: L
   async function clean() {
     const warning =
       permanentPicked > 0
-        ? `\n\nWśród nich jest ${permanentPicked} pozycji, których nie da się odtworzyć.`
+        ? `\n\n${t('view.xcode-cache.clean.permanent-warning', { n: permanentPicked })}`
         : ''
-    if (!(await confirmAction(`Usunąć ${selected.length} pozycji (${formatBytes(selectedBytes)})?${warning}`))) return
+    if (!(await confirmAction(t('view.xcode-cache.clean.confirm', { n: selected.length, size: formatBytes(selectedBytes) }) + warning))) return
 
     setBusy(true)
     try {
@@ -175,7 +176,7 @@ function LibraryCleanView({ module, scanning, scanningNote, absent, summary }: L
       <div className="glass empty-state" style={{ color: 'var(--critical)' }}>
         {error}
         <br />
-        <button className="btn btn-ghost" onClick={load}>Spróbuj ponownie</button>
+        <button className="btn btn-ghost" onClick={load}>{t('view.xcode-cache.retry')}</button>
       </div>
     )
   }
@@ -195,7 +196,7 @@ function LibraryCleanView({ module, scanning, scanningNote, absent, summary }: L
       {scan.blocked.length > 0 && (
         <>
           <div className="xc-note">
-            macOS nie pokazał: {scan.blocked.join(', ')}. Bez pełnego dostępu do dysku te miejsca są dla POSMA zamknięte.
+            {t('view.xcode-cache.blocked', { list: scan.blocked.join(', ') })}
           </div>
           <FullDiskAccessRow />
         </>
@@ -210,13 +211,13 @@ function LibraryCleanView({ module, scanning, scanningNote, absent, summary }: L
           onClick={clean}
           disabled={busy || selected.length === 0}
         >
-          {busy ? 'Usuwam…' : `Usuń zaznaczone (${formatBytes(selectedBytes)})`}
+          {busy ? t('view.xcode-cache.removing') : t('view.xcode-cache.remove-selected', { size: formatBytes(selectedBytes) })}
         </button>
       </div>
 
       {result && (
         <div className="glass xc-result">
-          Zwolniono {formatBytes(result.freed_bytes)} z {result.removed} pozycji.
+          {t('view.xcode-cache.result', { size: formatBytes(result.freed_bytes), n: result.removed })}
           {result.errors.map((e, i) => (
             <div key={i} className="xc-error">{e}</div>
           ))}
@@ -230,7 +231,7 @@ function LibraryCleanView({ module, scanning, scanningNote, absent, summary }: L
             <span className={`chip ${RECOVERY[c.recovery].chip}`}>{RECOVERY[c.recovery].label}</span>
             <span className="count">{formatBytes(c.total_bytes)}</span>
             <button className="btn btn-ghost btn-mini" onClick={() => toggleCategory(c)}>
-              {c.entries.every((e) => picked.has(e.path)) ? 'Odznacz' : 'Zaznacz'} wszystko
+              {c.entries.every((e) => picked.has(e.path)) ? t('view.xcode-cache.deselect-all') : t('view.xcode-cache.select-all')}
             </button>
           </div>
           <div className="xc-note">{c.note}</div>

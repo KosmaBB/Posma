@@ -9,6 +9,7 @@ import { formatBytes } from './TempCleanView'
 import { squarify, type TreemapRect } from './diskmapTreemap'
 import { confirmAction } from '../../components/confirm'
 import { callModule } from '../../data/callModule'
+import { t, locale } from '../../i18n'
 
 interface Entry {
   name: string
@@ -34,6 +35,29 @@ function splitPath(path: string): string[] {
   return path.split(/[\\/]/).filter(Boolean)
 }
 
+/**
+ * Past this many tiles, or below this share of the whole, a tile is a
+ * sliver too small to label; those join one "Pozostałe" tile, and the bar
+ * view still lists every entry.
+ */
+const MAX_TILES = 16
+const MIN_TILE_SHARE = 0.01
+
+/** The menu's min-width in global.css, to keep it inside the view. */
+const MENU_WIDTH = 220
+
+type Tile = Entry & { key: string; size: number }
+
+function treemapTiles(entries: Entry[]): Tile[] {
+  const sized = entries.filter((e) => e.size_bytes > 0)
+  const floor = sized.reduce((sum, e) => sum + e.size_bytes, 0) * MIN_TILE_SHARE
+  const shown = sized.filter((e, i) => e.path !== null && i < MAX_TILES - 1 && e.size_bytes >= floor)
+  const rest = sized.filter((e) => !shown.includes(e))
+  const restBytes = rest.reduce((sum, e) => sum + e.size_bytes, 0)
+  const merged: Entry[] = rest.length > 1 ? [{ name: t('view.disk-map.rest-tile'), path: null, is_dir: false, size_bytes: restBytes }] : rest
+  return [...shown, ...merged].map((e) => ({ ...e, key: e.path ?? e.name, size: e.size_bytes })).sort((a, b) => b.size - a.size)
+}
+
 function loadViewMode(): ViewMode {
   const stored = localStorage.getItem(VIEW_MODE_KEY)
   return stored === 'treemap' || stored === 'rings' || stored === 'bars' ? stored : 'bars'
@@ -45,7 +69,9 @@ export function DiskMapView({ app }: { app: AppState }) {
   const [error, setError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<ViewMode>(loadViewMode)
   const [treemapWidth, setTreemapWidth] = useState(0)
-  const treemapRef = useRef<HTMLDivElement | null>(null)
+  // State, not a ref: the field appears only once the first scan is in,
+  // and measuring has to start then, not when the view mounts.
+  const [treemapEl, setTreemapEl] = useState<HTMLDivElement | null>(null)
 
   async function goTo(path?: string) {
     setLoading(true)
@@ -72,20 +98,44 @@ export function DiskMapView({ app }: { app: AppState }) {
   const [menu, setMenu] = useState<{ x: number; y: number; path: string; name: string } | null>(null)
   const [actionResult, setActionResult] = useState<string | null>(null)
 
-  // Any click elsewhere, or a scroll, dismisses it — a menu pinned to a
-  // position is wrong the moment the list moves under it.
+  const rootRef = useRef<HTMLDivElement | null>(null)
+
+  // Any click elsewhere, a scroll or Escape dismisses it — a menu pinned to
+  // a position is wrong the moment the list moves under it.
   useEffect(() => {
     if (!menu) return
     const close = () => setMenu(null)
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close()
     window.addEventListener('click', close)
     window.addEventListener('scroll', close, true)
     window.addEventListener('resize', close)
+    window.addEventListener('keydown', onKey)
     return () => {
       window.removeEventListener('click', close)
       window.removeEventListener('scroll', close, true)
       window.removeEventListener('resize', close)
+      window.removeEventListener('keydown', onKey)
     }
   }, [menu])
+
+  /**
+   * Opens the menu just under the item's first line, in this view's own
+   * pixels. Anchored to the item, not the pointer: under the interface's CSS
+   * zoom, engines disagree about pointer coordinates (see CpuProfile).
+   */
+  function openMenu(e: React.MouseEvent<HTMLElement>, entry: Entry) {
+    const root = rootRef.current
+    if (!entry.path || !root) return
+    e.preventDefault()
+    // The window's own click listener closes the menu; this click must not reach it.
+    e.stopPropagation()
+    const box = root.getBoundingClientRect()
+    const k = box.width / root.offsetWidth || 1
+    const item = e.currentTarget.getBoundingClientRect()
+    const x = Math.max(0, Math.min((item.left - box.left) / k + 12, root.offsetWidth - MENU_WIDTH))
+    const y = (item.top - box.top) / k + Math.min(item.height / k, 36)
+    setMenu({ x, y, path: entry.path, name: entry.name })
+  }
 
   async function revealInFileManager(path: string) {
     setActionResult(null)
@@ -99,7 +149,7 @@ export function DiskMapView({ app }: { app: AppState }) {
   async function deleteEntry(path: string, name: string) {
     if (
       !(await confirmAction(
-        `Usunąć „${name}" bezpowrotnie?\n\n${path}\n\nTo nie trafia do kosza — folderu nie da się odzyskać.`,
+        t('view.disk-map.delete.confirm', { name, path }),
       ))
     ) {
       return
@@ -114,7 +164,7 @@ export function DiskMapView({ app }: { app: AppState }) {
       if (res.ok) {
         setActionResult(
           res.data.success
-            ? `${res.data.message} — zwolniono ${formatBytes(res.data.freed_bytes)}`
+            ? t('view.disk-map.delete.freed', { message: res.data.message, size: formatBytes(res.data.freed_bytes) })
             : res.data.message,
         )
         if (res.data.success && data) goTo(data.path)
@@ -136,18 +186,17 @@ export function DiskMapView({ app }: { app: AppState }) {
   }, [viewMode])
 
   useEffect(() => {
-    const el = treemapRef.current
-    if (!el) return
+    if (!treemapEl) return
     const observer = new ResizeObserver((entries) => {
       const width = entries[0]?.contentRect.width
       if (width) setTreemapWidth(width)
     })
-    observer.observe(el)
+    observer.observe(treemapEl)
     return () => observer.disconnect()
-  }, [viewMode])
+  }, [treemapEl])
 
   async function pickFolder() {
-    const result = await open({ multiple: false, directory: true, title: 'Wybierz folder do przejrzenia' })
+    const result = await open({ multiple: false, directory: true, title: t('view.disk-map.pick-title') })
     if (typeof result === 'string') await goTo(result)
   }
 
@@ -156,15 +205,28 @@ export function DiskMapView({ app }: { app: AppState }) {
   const total = data?.total_bytes ?? 1
 
   const treemapRects = useMemo(() => {
-    if (!data || treemapWidth === 0) return [] as TreemapRect<Entry & { key: string; size: number }>[]
-    const items = data.entries.filter((e) => e.size_bytes > 0).map((e) => ({ ...e, key: e.path ?? e.name, size: e.size_bytes }))
-    const out: TreemapRect<typeof items[number]>[] = []
-    squarify(items, 0, 0, treemapWidth, TREEMAP_HEIGHT, out)
+    const out: TreemapRect<Tile>[] = []
+    if (data && treemapWidth > 0) squarify(treemapTiles(data.entries), 0, 0, treemapWidth, TREEMAP_HEIGHT, out)
     return out
   }, [data, treemapWidth])
 
   function entryTitle(entry: Entry): string | undefined {
-    return entry.path ? `${entry.path} — ${entry.size_bytes.toLocaleString('pl-PL')} B` : undefined
+    return entry.path ? `${entry.path} — ${entry.size_bytes.toLocaleString(locale())} B` : undefined
+  }
+
+  /** A folder is gone into; a file has nowhere to go, so it gets its menu. */
+  function activate(e: React.MouseEvent<HTMLElement>, entry: Entry) {
+    if (isDrillable(entry)) goTo(entry.path!)
+    else openMenu(e, entry)
+  }
+
+  function moreButton(entry: Entry) {
+    if (!entry.path) return null
+    return (
+      <button type="button" className="diskmap-more" aria-label={t('view.disk-map.actions-label', { name: entry.name })} title={t('view.disk-map.actions')} onClick={(e) => openMenu(e, entry)}>
+        <Icon name="more" />
+      </button>
+    )
   }
 
   function isDrillable(entry: Entry): boolean {
@@ -172,19 +234,18 @@ export function DiskMapView({ app }: { app: AppState }) {
   }
 
   return (
-    <div>
+    <div ref={rootRef} style={{ position: 'relative' }}>
       <div className="glass empty-state intro">
-        <div style={{ fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>Co zajmuje miejsce</div>
-        Przegląd folderu warstwa po warstwie — największe pozycje na górze. Kliknij folder żeby zejść głębiej,
-        albo wybierz inny punkt startowy poniżej. Widok jest wyłącznie do podglądu — nic tu nie usuwa plików.
+        <div style={{ fontWeight: 700, color: 'var(--ink)', marginBottom: 8 }}>{t('view.disk-map.intro.title')}</div>
+        {t('view.disk-map.intro.body')}
       </div>
 
       <div className="section-head">
-        <h2>Eksplorator</h2>
+        <h2>{t('view.disk-map.explorer')}</h2>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-ghost btn-mini" onClick={() => goTo()} disabled={loading}>Dom</button>
-          <button className="btn btn-ghost btn-mini" onClick={pickFolder} disabled={loading}>Wybierz folder...</button>
-          <button className="btn btn-ghost btn-mini" onClick={() => data && goTo(data.path)} disabled={loading || !data}>Odśwież</button>
+          <button className="btn btn-ghost btn-mini" onClick={() => goTo()} disabled={loading}>{t('view.disk-map.home')}</button>
+          <button className="btn btn-ghost btn-mini" onClick={pickFolder} disabled={loading}>{t('view.disk-map.pick')}</button>
+          <button className="btn btn-ghost btn-mini" onClick={() => data && goTo(data.path)} disabled={loading || !data}>{t('view.disk-map.refresh')}</button>
         </div>
       </div>
 
@@ -206,22 +267,22 @@ export function DiskMapView({ app }: { app: AppState }) {
         ) : <span />}
 
         <div className="diskmap-viewtabs">
-          <button className={`diskmap-viewtab ${viewMode === 'bars' ? 'active' : ''}`} onClick={() => setViewMode('bars')}>Paski</button>
-          <button className={`diskmap-viewtab ${viewMode === 'treemap' ? 'active' : ''}`} onClick={() => setViewMode('treemap')}>Kafelki</button>
-          <button className={`diskmap-viewtab ${viewMode === 'rings' ? 'active' : ''}`} onClick={() => setViewMode('rings')}>Pierścienie</button>
+          <button className={`diskmap-viewtab ${viewMode === 'bars' ? 'active' : ''}`} onClick={() => setViewMode('bars')}>{t('view.disk-map.mode.bars')}</button>
+          <button className={`diskmap-viewtab ${viewMode === 'treemap' ? 'active' : ''}`} onClick={() => setViewMode('treemap')}>{t('view.disk-map.mode.treemap')}</button>
+          <button className={`diskmap-viewtab ${viewMode === 'rings' ? 'active' : ''}`} onClick={() => setViewMode('rings')}>{t('view.disk-map.mode.rings')}</button>
         </div>
       </div>
 
       {error && (
-        <div className="glass empty-state" style={{ color: 'var(--critical)', marginTop: 12 }}>Błąd: {error}</div>
+        <div className="glass empty-state" style={{ color: 'var(--critical)', marginTop: 12 }}>{t('view.disk-map.error', { error })}</div>
       )}
 
-      {loading && !data && <Preparing title="Przygotowuję mapę dysku" note="Przechodzę przez każdy folder i sumuję rozmiary — inaczej nie da się pokazać, co naprawdę zajmuje miejsce." />}
+      {loading && !data && <Preparing title={t('view.disk-map.loading.title')} note={t('view.disk-map.loading.note')} />}
 
       {data && (
         <>
           {data.entries.length === 0 ? (
-            <div className="glass empty-state">Folder jest pusty.</div>
+            <div className="glass empty-state">{t('view.disk-map.empty')}</div>
           ) : viewMode === 'bars' ? (
             <div className="diskmap-list" style={{ opacity: loading ? 0.6 : 1 }}>
               {data.entries.map((entry) => {
@@ -231,8 +292,9 @@ export function DiskMapView({ app }: { app: AppState }) {
                   <div
                     key={entry.path ?? entry.name}
                     className="diskmap-row"
-                    onClick={() => drillable && goTo(entry.path!)}
-                    style={{ cursor: drillable ? 'pointer' : 'default' }}
+                    onClick={(e) => activate(e, entry)}
+                    onContextMenu={(e) => openMenu(e, entry)}
+                    style={{ cursor: entry.path ? 'pointer' : 'default' }}
                     title={entryTitle(entry)}
                   >
                     <span className="diskmap-icon"><Icon name={entry.is_dir ? 'folder' : 'file'} /></span>
@@ -242,17 +304,17 @@ export function DiskMapView({ app }: { app: AppState }) {
                     </span>
                     <span className="diskmap-size">{formatBytes(entry.size_bytes)}</span>
                     {drillable && <span className="diskmap-chevron"><Icon name="chevron" /></span>}
+                    {moreButton(entry)}
                   </div>
                 )
               })}
             </div>
           ) : viewMode === 'treemap' ? (
-            <div className="diskmap-treemap" ref={treemapRef} style={{ height: TREEMAP_HEIGHT, opacity: loading ? 0.6 : 1 }}>
+            <div className="diskmap-treemap" ref={setTreemapEl} style={{ height: TREEMAP_HEIGHT, opacity: loading ? 0.6 : 1 }}>
               {treemapRects.map((r) => {
                 const area = r.w * r.h
                 const sizeClass = area < 1800 ? 'tiny' : area < 5500 ? 'small' : ''
-                const drillable = isDrillable(r.item)
-                const t = r.item.size_bytes / maxSize
+                const tone = r.item.size_bytes / maxSize
                 const pct = ((r.item.size_bytes / total) * 100).toFixed(1)
                 return (
                   <div
@@ -261,12 +323,14 @@ export function DiskMapView({ app }: { app: AppState }) {
                     style={{
                       left: r.x, top: r.y, width: r.w, height: r.h,
                       // One grey scale, lighter as it grows: colour would suggest a category there is none of.
-                      background: `color-mix(in srgb, var(--ink) ${Math.round(6 + t * 22)}%, var(--bg))`,
-                      cursor: drillable ? 'pointer' : 'default',
+                      background: `color-mix(in srgb, var(--ink) ${Math.round(6 + tone * 22)}%, var(--bg))`,
+                      cursor: r.item.path ? 'pointer' : 'default',
                     }}
-                    onClick={() => drillable && goTo(r.item.path!)}
+                    onClick={(e) => activate(e, r.item)}
+                    onContextMenu={(e) => openMenu(e, r.item)}
                     title={entryTitle(r.item)}
                   >
+                    {moreButton(r.item)}
                     <div className="dt-name">{r.item.name}</div>
                     <div>
                       <div className="dt-size">{formatBytes(r.item.size_bytes)}</div>
@@ -279,7 +343,6 @@ export function DiskMapView({ app }: { app: AppState }) {
           ) : (
             <div className="diskmap-rings" style={{ opacity: loading ? 0.6 : 1 }}>
               {data.entries.map((entry, i) => {
-                const drillable = isDrillable(entry)
                 const R = 34
                 const C = 2 * Math.PI * R
                 const frac = maxSize > 0 ? entry.size_bytes / maxSize : 0
@@ -289,11 +352,13 @@ export function DiskMapView({ app }: { app: AppState }) {
                   <div
                     key={entry.path ?? entry.name}
                     className="diskmap-ring-card"
-                    onClick={() => drillable && goTo(entry.path!)}
-                    style={{ cursor: drillable ? 'pointer' : 'default' }}
+                    onClick={(e) => activate(e, entry)}
+                    onContextMenu={(e) => openMenu(e, entry)}
+                    style={{ cursor: entry.path ? 'pointer' : 'default' }}
                     title={entryTitle(entry)}
                   >
                     <span className="dr-rank mono">#{i + 1}</span>
+                    {moreButton(entry)}
                     <div className="dr-ring">
                       <svg viewBox="0 0 84 84">
                         <circle className="dr-track" cx="42" cy="42" r={R} />
@@ -308,17 +373,17 @@ export function DiskMapView({ app }: { app: AppState }) {
                     </div>
                     <div className="dr-name">{entry.name}</div>
                     <div className="dr-size mono">{formatBytes(entry.size_bytes)}</div>
-                    <div className="dr-pct mono">{pct}% całości</div>
+                    <div className="dr-pct mono">{t('view.disk-map.pct-of-total', { pct })}</div>
                   </div>
                 )
               })}
             </div>
           )}
-          <div className="diskmap-total">Razem: {formatBytes(data.total_bytes)}</div>
+          <div className="diskmap-total">{t('view.disk-map.total', { size: formatBytes(data.total_bytes) })}</div>
           {data.errors.length > 0 && (
             <div className="clean-errors mono">
               {data.errors.slice(0, 6).map((e) => <div key={e}>{e}</div>)}
-              {data.errors.length > 6 && <div>... i {data.errors.length - 6} więcej</div>}
+              {data.errors.length > 6 && <div>{t('view.disk-map.more-errors', { n: data.errors.length - 6 })}</div>}
             </div>
           )}
         </>
@@ -328,7 +393,7 @@ export function DiskMapView({ app }: { app: AppState }) {
       {menu && (
         <div
           className="ctx-menu"
-          style={{ left: menu.x, top: menu.y }}
+          style={{ position: 'absolute', left: menu.x, top: menu.y }}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="ctx-menu__path mono">{menu.name}</div>
@@ -339,7 +404,7 @@ export function DiskMapView({ app }: { app: AppState }) {
               setMenu(null)
             }}
           >
-            Pokaż w menedżerze plików
+            {t('view.disk-map.menu.reveal')}
           </button>
           <button
             className="ctx-menu__item ctx-menu__item--danger"
@@ -349,7 +414,7 @@ export function DiskMapView({ app }: { app: AppState }) {
               deleteEntry(path, name)
             }}
           >
-            Usuń bezpowrotnie
+            {t('view.disk-map.menu.delete')}
           </button>
         </div>
       )}

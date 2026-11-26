@@ -4,6 +4,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { formatBytes } from './TempCleanView'
 import { confirmAction } from '../../components/confirm'
 import { callModule } from '../../data/callModule'
+import { t } from '../../i18n'
 
 interface SnapRevisionEntry {
   name: string
@@ -44,7 +45,7 @@ function ResultBanner({ result }: { result: ExecResult }) {
           : { marginTop: 10, color: 'var(--critical)' }
       }
     >
-      {result.success ? 'Gotowe.' : `Nie udało się: ${result.error}`}
+      {result.success ? t('view.pkg-cache.done') : t('view.pkg-cache.failed', { error: result.error ?? '' })}
     </div>
   )
 }
@@ -83,8 +84,8 @@ export function PkgCacheView() {
     if (!scan.manager) return
     // Na dystrybucji kroczącej cache to także droga powrotu do poprzedniej
     // wersji pakietu po nieudanej aktualizacji.
-    const rollback = scan.manager === 'pacman' ? ' Znikną też poprzednie wersje, do których dałoby się wrócić po nieudanej aktualizacji.' : ''
-    if (!(await confirmAction(`Usunąć ${formatBytes(scan.cache_bytes)} cache ${scan.manager}? Pobrane pakiety trzeba będzie ściągnąć ponownie w razie potrzeby.${rollback}`))) return
+    const rollback = scan.manager === 'pacman' ? ' ' + t('view.pkg-cache.clean.rollback') : ''
+    if (!(await confirmAction(t('view.pkg-cache.clean.confirm', { size: formatBytes(scan.cache_bytes), manager: scan.manager }) + rollback))) return
     setAptCleaning(true)
     try {
       await invoke('request_permission', { capability: 'fs-system' })
@@ -101,7 +102,7 @@ export function PkgCacheView() {
 
   async function runAutoremove() {
     if (!scan || !scan.manager || scan.orphans.length === 0) return
-    if (!(await confirmAction(`Usunąć ${scan.orphans.length} nieużywanych pakietów (${scan.orphans.join(', ')})?`))) return
+    if (!(await confirmAction(t('view.pkg-cache.orphans.confirm', { n: scan.orphans.length, list: scan.orphans.join(', ') })))) return
     setAutoremoveRunning(true)
     try {
       await invoke('request_permission', { capability: 'pkg' })
@@ -133,7 +134,7 @@ export function PkgCacheView() {
 
   async function removeSelectedSnaps() {
     if (checkedSnaps.size === 0) return
-    if (!(await confirmAction(`Usunąć ${checkedSnaps.size} starych rewizji snapów? Tej operacji nie można cofnąć.`))) return
+    if (!(await confirmAction(t('view.pkg-cache.snaps.confirm', { n: checkedSnaps.size })))) return
     setSnapRemoving(true)
     const errors: string[] = []
     try {
@@ -160,14 +161,14 @@ export function PkgCacheView() {
   if (scanError) {
     return (
       <div className="glass empty-state" style={{ color: 'var(--critical)' }}>
-        Błąd: {scanError}
+        {t('view.pkg-cache.error', { error: scanError })}
         <br />
-        <button className="btn btn-ghost" onClick={loadScan}>Spróbuj ponownie</button>
+        <button className="btn btn-ghost" onClick={loadScan}>{t('view.pkg-cache.retry')}</button>
       </div>
     )
   }
   if (!scan) {
-    return <Preparing title="Liczę, ile da się odzyskać" note="Sprawdzam cache pobranych pakietów, pakiety osierocone i stare rewizje snapów." />
+    return <Preparing title={t('view.pkg-cache.preparing.title')} note={t('view.pkg-cache.preparing.note')} />
   }
 
   return (
@@ -176,29 +177,29 @@ export function PkgCacheView() {
         <>
           <div className="clean-summary glass">
             <div>
-              <div className="cs-label">Cache {scan.manager}</div>
+              <div className="cs-label">{t('view.pkg-cache.cache', { manager: scan.manager })}</div>
               <div className="cs-value mono">{formatBytes(scan.cache_bytes)}</div>
             </div>
             <div>
-              <div className="cs-label">Pliki w cache</div>
+              <div className="cs-label">{t('view.pkg-cache.cache-files')}</div>
               <div className="cs-value mono">{scan.cache_files}</div>
             </div>
             <div style={{ marginLeft: 'auto' }}>
               <button className="btn btn-primary" disabled={aptCleaning || scan.cache_bytes === 0} onClick={cleanAptCache}>
-                {aptCleaning ? 'Czyszczenie...' : `Wyczyść cache ${scan.manager}`}
+                {aptCleaning ? t('view.pkg-cache.cleaning') : t('view.pkg-cache.clean', { manager: scan.manager })}
               </button>
             </div>
           </div>
           {aptCleanResult && <ResultBanner result={aptCleanResult} />}
 
           <div className="section-head" style={{ marginTop: 18 }}>
-            <h2 style={{ fontSize: 14 }}>Nieużywane pakiety (osierocone zależności)</h2>
+            <h2 style={{ fontSize: 14 }}>{t('view.pkg-cache.orphans')}</h2>
             <button className="btn btn-primary btn-mini" disabled={autoremoveRunning || scan.orphans.length === 0} onClick={runAutoremove}>
-              {autoremoveRunning ? 'Usuwanie...' : 'Usuń nieużywane'}
+              {autoremoveRunning ? t('view.pkg-cache.removing') : t('view.pkg-cache.orphans.remove')}
             </button>
           </div>
           {scan.orphans.length === 0 ? (
-            <div className="glass empty-state">Brak osieroconych pakietów.</div>
+            <div className="glass empty-state">{t('view.pkg-cache.orphans.empty')}</div>
           ) : (
             <div className="clean-list">
               {scan.orphans.map((name) => (
@@ -215,20 +216,20 @@ export function PkgCacheView() {
       {scan.snap_available && (
         <>
           <div className="section-head" style={{ marginTop: 18 }}>
-            <h2 style={{ fontSize: 14 }}>Stare rewizje snapów</h2>
+            <h2 style={{ fontSize: 14 }}>{t('view.pkg-cache.snaps')}</h2>
             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
               {scan.snap_old_revisions.length > 1 && (
                 <button className="btn btn-ghost btn-mini" onClick={toggleAllSnaps}>
-                  {scan.snap_old_revisions.every((e) => checkedSnaps.has(snapKey(e))) ? 'Odznacz wszystko' : 'Zaznacz wszystko'}
+                  {scan.snap_old_revisions.every((e) => checkedSnaps.has(snapKey(e))) ? t('view.pkg-cache.deselect-all') : t('view.pkg-cache.select-all')}
                 </button>
               )}
               <button className="btn btn-primary btn-mini" disabled={checkedSnaps.size === 0 || snapRemoving} onClick={removeSelectedSnaps}>
-                {snapRemoving ? 'Usuwanie...' : `Usuń zaznaczone (${checkedSnaps.size})`}
+                {snapRemoving ? t('view.pkg-cache.removing') : t('view.pkg-cache.snaps.remove-selected', { count: checkedSnaps.size })}
               </button>
             </div>
           </div>
           {scan.snap_old_revisions.length === 0 ? (
-            <div className="glass empty-state">Brak starych rewizji do usunięcia.</div>
+            <div className="glass empty-state">{t('view.pkg-cache.snaps.empty')}</div>
           ) : (
             <div className="clean-list" style={{ maxHeight: 320, overflowY: 'auto' }}>
               {scan.snap_old_revisions.map((e) => {
@@ -236,7 +237,7 @@ export function PkgCacheView() {
                 return (
                   <label key={key} className={`glass clean-row${checkedSnaps.has(key) ? ' checked' : ''}`}>
                     <input type="checkbox" checked={checkedSnaps.has(key)} onChange={() => toggleSnap(key)} disabled={snapRemoving} />
-                    <span className="cr-path">{e.name} <span className="mono" style={{ color: 'var(--muted)', fontSize: 13 }}>rev. {e.revision}</span></span>
+                    <span className="cr-path">{e.name} <span className="mono" style={{ color: 'var(--muted)', fontSize: 13 }}>{t('view.pkg-cache.snaps.rev', { rev: e.revision })}</span></span>
                     <span className="cr-size mono">{formatBytes(e.size_bytes)}</span>
                   </label>
                 )

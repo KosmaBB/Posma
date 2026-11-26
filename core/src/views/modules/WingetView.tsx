@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { invoke } from '@tauri-apps/api/core'
 import { Preparing } from '../../components/Preparing'
 import { callModule, type ApiResponse } from '../../data/callModule'
+import { t } from '../../i18n'
 
 interface Upgrade {
   name: string
@@ -77,14 +78,14 @@ export function WingetView() {
   if (error && !scan) {
     return (
       <div className="glass empty-state" style={{ color: 'var(--critical)' }}>
-        Błąd: {error}
+        {t('view.winget.error', { error })}
         <br />
-        <button className="btn btn-ghost" onClick={load}>Spróbuj ponownie</button>
+        <button className="btn btn-ghost" onClick={load}>{t('view.winget.retry')}</button>
       </div>
     )
   }
   if (!scan) {
-    return <Preparing title="Sprawdzam aktualizacje" note="Pytam winget, które aplikacje mają nowsze wersje." />
+    return <Preparing title={t('view.winget.loading.title')} note={t('view.winget.loading.note')} />
   }
 
   return (
@@ -92,30 +93,30 @@ export function WingetView() {
       <div className="glass xc-summary">
         <div>
           <div className="xc-summary-value mono">{scan.upgrades.length}</div>
-          <div className="xc-summary-label">aplikacji z dostępną aktualizacją</div>
+          <div className="xc-summary-label">{t('view.winget.count-label')}</div>
         </div>
         <button className="btn btn-primary" onClick={upgrade} disabled={busy || picked.size === 0}>
-          {busy ? 'Aktualizuję…' : `Aktualizuj zaznaczone (${picked.size})`}
+          {busy ? t('view.winget.upgrading') : t('view.winget.upgrade-selected', { n: picked.size })}
         </button>
       </div>
 
       {(scan.error || result) && (
         <div className="glass xc-result">
           {scan.error && <div className="xc-error">{scan.error}</div>}
-          {result && result.upgraded.length > 0 && <div>Zaktualizowano: {result.upgraded.length}.</div>}
+          {result && result.upgraded.length > 0 && <div>{t('view.winget.upgraded', { n: result.upgraded.length })}</div>}
           {result?.errors.map((e, i) => <div key={i} className="xc-error">{e}</div>)}
         </div>
       )}
 
       {scan.upgrades.length === 0 ? (
-        <div className="glass empty-state">Wszystko aktualne.</div>
+        <div className="glass empty-state">{t('view.winget.up-to-date')}</div>
       ) : (
         <div className="clean-list">
           {scan.upgrades.map((u) => (
             <label
               key={u.id}
               className={`glass clean-row${picked.has(u.id) ? ' checked' : ''}`}
-              title={u.truncated ? 'winget skrócił identyfikator — zaktualizuj w terminalu: winget upgrade --all' : u.id}
+              title={u.truncated ? t('view.winget.truncated') : u.id}
             >
               <input type="checkbox" checked={picked.has(u.id)} disabled={u.truncated} onChange={() => toggle(u.id)} />
               <span className="cr-path">{u.name}</span>

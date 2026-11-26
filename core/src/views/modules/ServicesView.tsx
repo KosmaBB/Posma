@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { Preparing } from '../../components/Preparing'
 import { confirmAction } from '../../components/confirm'
 import { callModule, type ApiResponse } from '../../data/callModule'
+import { t } from '../../i18n'
 
 interface Service {
   name: string
@@ -59,8 +60,8 @@ export function ServicesView() {
   async function toggle(profile: Profile) {
     const enable = profile.off
     const question = enable
-      ? `Przywrócić domyślne ustawienia usług „${profile.name}”? Najpierw powstanie punkt przywracania systemu.`
-      : `Wyłączyć usługi „${profile.name}”? ${profile.effect} Najpierw powstanie punkt przywracania systemu — Windows raz zapyta o zgodę administratora.`
+      ? t('view.services.restore.confirm', { name: profile.name })
+      : t('view.services.disable.confirm', { name: profile.name, effect: profile.effect })
     if (!(await confirmAction(question))) return
     setBusy(profile.id)
     setResult(null)
@@ -80,14 +81,14 @@ export function ServicesView() {
   if (error && !scan) {
     return (
       <div className="glass empty-state" style={{ color: 'var(--critical)' }}>
-        Błąd: {error}
+        {t('view.services.error', { error })}
         <br />
-        <button className="btn btn-ghost" onClick={load}>Spróbuj ponownie</button>
+        <button className="btn btn-ghost" onClick={load}>{t('view.services.retry')}</button>
       </div>
     )
   }
   if (!scan) {
-    return <Preparing title="Sprawdzam usługi" note="Pytam Windows o stan usług z gotowych profili." />
+    return <Preparing title={t('view.services.loading.title')} note={t('view.services.loading.note')} />
   }
 
   return (
@@ -95,27 +96,27 @@ export function ServicesView() {
       {(scan.error || result) && (
         <div className="glass xc-result">
           {scan.error && <div className="xc-error">{scan.error}</div>}
-          {result && result.changed.length > 0 && <div>Zmieniono usług: {result.changed.length}.</div>}
+          {result && result.changed.length > 0 && <div>{t('view.services.changed', { n: result.changed.length })}</div>}
           {result?.errors.map((e, i) => <div key={i} className="xc-error">{e}</div>)}
         </div>
       )}
 
       {scan.profiles.length === 0 ? (
-        <div className="glass empty-state">Ta edycja Windows nie ma żadnej z usług, które obejmują profile.</div>
+        <div className="glass empty-state">{t('view.services.empty')}</div>
       ) : (
         scan.profiles.map((p) => (
           <div key={p.id} className="glass xc-summary">
             <div>
               <div className="xc-summary-value">
-                {p.name} {p.off && <span className="chip medium">wyłączony</span>}
+                {p.name} {p.off && <span className="chip medium">{t('view.services.profile-off')}</span>}
               </div>
               <div className="xc-summary-label">{p.effect}</div>
               <div className="xc-note mono">
-                {p.services.map((s) => `${s.display} — ${s.disabled ? 'wyłączona' : s.running ? 'działa' : 'zatrzymana'}`).join(' · ')}
+                {p.services.map((s) => t('view.services.service-state', { name: s.display, state: t(s.disabled ? 'view.services.state.disabled' : s.running ? 'view.services.state.running' : 'view.services.state.stopped') })).join(' · ')}
               </div>
             </div>
             <button className={p.off ? 'btn btn-ghost' : 'btn btn-primary'} onClick={() => toggle(p)} disabled={busy !== null}>
-              {busy === p.id ? 'Zmieniam…' : p.off ? 'Przywróć domyślne' : 'Wyłącz'}
+              {busy === p.id ? t('view.services.changing') : p.off ? t('view.services.restore') : t('view.services.disable')}
             </button>
           </div>
         ))

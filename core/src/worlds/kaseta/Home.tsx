@@ -4,13 +4,14 @@ import type { SettingsState } from '../../state/settings'
 import { catalogNumbers, type ModuleDef } from '../../data/modules'
 import { CpuProfile } from '../../components/CpuProfile'
 import {
-  DISK_WARN_PCT, HISTORY, UP_TO_ONE, gb, plural, size, systemName, usedPct,
+  DISK_WARN_PCT, HISTORY, UP_TO_ONE, gb, size, systemName, usedPct,
   type DiskInfo, type Machine, type ReclaimState,
 } from '../../state/machine'
 import { Band, Key, SideBox, Underline } from './parts'
+import { locale, t } from '../../i18n'
 
-const DAY = new Intl.DateTimeFormat('pl-PL', { day: 'numeric', month: 'numeric' })
-const CLOCK = new Intl.DateTimeFormat('pl-PL', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+const dayFormat = () => new Intl.DateTimeFormat(locale(), { day: 'numeric', month: 'numeric' })
+const clockFormat = () => new Intl.DateTimeFormat(locale(), { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 const NBSP = ' '
 
 /** "43,0" — gb() without its unit, for "used / total" pairs. */
@@ -28,7 +29,7 @@ function Counter({ bytes }: { bytes: number | null }) {
   const [whole, tenth] = bytes === null ? ['---', '-'] : (bytes / 1024 ** 3).toFixed(1).split('.')
   const digits = [...whole.padStart(3, '0'), ',', tenth]
   return (
-    <span className="ks-drums" role="img" aria-label={bytes === null ? 'Brak odczytu' : `${gb(bytes)} wolnego`}>
+    <span className="ks-drums" role="img" aria-label={bytes === null ? t('world.kaseta.counter.none') : t('world.kaseta.counter.free', { size: gb(bytes) })}>
       {digits.map((d, i) =>
         d === ',' ? (
           <span key={i} className="ks-drums__sep">,</span>
@@ -65,11 +66,11 @@ function diskTrack(d: DiskInfo, main: boolean): MachineTrack {
   const model = [d.solid_state === undefined ? null : d.solid_state ? 'SSD' : 'HDD', d.model].filter(Boolean).join(' · ')
   return {
     key: d.mount_point,
-    name: main ? 'Dysk systemowy' : 'Dysk',
+    name: main ? t('world.kaseta.track.disk-system') : t('world.kaseta.track.disk'),
     path: d.mount_point,
     value: main ? `${bare(d.total_bytes - d.available_bytes)} / ${gb(d.total_bytes)}` : `${pct.toFixed(0)}${NBSP}%`,
     warn: pct >= DISK_WARN_PCT,
-    title: [model, `${gb(d.available_bytes)} wolnego z ${gb(d.total_bytes)}`].filter(Boolean).join(' · '),
+    title: [model, t('world.kaseta.track.disk-free', { free: gb(d.available_bytes), total: gb(d.total_bytes) })].filter(Boolean).join(' · '),
   }
 }
 
@@ -106,11 +107,11 @@ export function Home({ app, settings, machine, reclaim }: HomeProps) {
   const tapePct = (bytes: number) => (mainDisk && mainDisk.total_bytes > 0 ? (bytes / mainDisk.total_bytes) * 100 : 0)
 
   function trackTime(m: ModuleDef): { text: string; pencil: boolean; title?: string; failed?: boolean } {
-    if (state.kind === 'idle') return { text: 'nie sprawdzono', pencil: true }
-    if (state.kind === 'scanning') return { text: 'sprawdzam…', pencil: true }
+    if (state.kind === 'idle') return { text: t('world.kaseta.track.not-checked'), pencil: true }
+    if (state.kind === 'scanning') return { text: t('world.kaseta.track.checking'), pencil: true }
     const hit = foundOf(m.id)
-    if (!hit) return { text: 'nic tu nie ma', pencil: true }
-    if (hit.error) return { text: 'nie odczytano', pencil: true, title: hit.error, failed: true }
+    if (!hit) return { text: t('world.kaseta.track.nothing'), pencil: true }
+    if (hit.error) return { text: t('world.kaseta.track.not-read'), pencil: true, title: hit.error, failed: true }
     return { text: size(hit.bytes ?? 0), pencil: false }
   }
 
@@ -119,14 +120,14 @@ export function Home({ app, settings, machine, reclaim }: HomeProps) {
   if (cpu) {
     tracks.push({
       key: 'cpu',
-      name: coreCount ? `Procesor · ${coreCount} ${plural(coreCount, 'rdzeń', 'rdzenie', 'rdzeni')}` : 'Procesor',
+      name: coreCount ? t('world.kaseta.cpu.title-cores', { cores: t('world.kaseta.cpu.cores', { n: coreCount }) }) : t('world.kaseta.cpu'),
       value: `${cpu.value.toFixed(0)}${NBSP}%`,
     })
   }
-  if (ram) tracks.push({ key: 'ram', name: 'Pamięć', value: ram.detail ?? `${ram.value.toFixed(0)}${NBSP}%` })
+  if (ram) tracks.push({ key: 'ram', name: t('world.kaseta.memory'), value: ram.detail ?? `${ram.value.toFixed(0)}${NBSP}%` })
   if (mainDisk) tracks.push(diskTrack(mainDisk, true))
   for (const d of disks) if (d !== mainDisk) tracks.push(diskTrack(d, false))
-  if (temp) tracks.push({ key: 'temp', name: 'Temperatura', value: `${temp.value.toFixed(0)}${NBSP}°C` })
+  if (temp) tracks.push({ key: 'temp', name: t('world.kaseta.temperature'), value: `${temp.value.toFixed(0)}${NBSP}°C` })
 
   const diskMapNo = numbers.get('disk-map')
   const canOpenMap = installedSet.has('disk-map')
@@ -135,17 +136,17 @@ export function Home({ app, settings, machine, reclaim }: HomeProps) {
     <section className="ks-side ks-side--a" data-tour="reclaim" aria-labelledby="ks-side-a">
       <div className="ks-side__head">
         <SideBox side="A" />
-        <span className="ks-printed">Strona A</span>
+        <span className="ks-printed">{t('world.kaseta.side-a.name')}</span>
       </div>
       <h2 className="ks-side__title" id="ks-side-a">
-        Do odzyskania
+        {t('world.kaseta.side-a.title')}
         <Underline />
       </h2>
       {mainDisk ? (
         <div className="ks-tape">
           <div className="ks-tape__lbl">
             <span className="ks-printed">
-              Taśma · dysk {mainDisk.mount_point} · {gb(mainDisk.total_bytes)}
+              {t('world.kaseta.tape.label', { mount: mainDisk.mount_point, size: gb(mainDisk.total_bytes) })}
             </span>
             <span className="ks-typed">{state.kind === 'done' ? `${bare(used)} → ${gb(used - freed)}` : gb(used)}</span>
           </div>
@@ -156,21 +157,21 @@ export function Home({ app, settings, machine, reclaim }: HomeProps) {
           </div>
         </div>
       ) : (
-        <p className="ks-pencil ks-tape__none">{error ? 'Bez odczytu dysku nie ma długości taśmy.' : 'Czekam na odczyt dysku…'}</p>
+        <p className="ks-pencil ks-tape__none">{t(error ? 'world.kaseta.tape.error' : 'world.kaseta.tape.waiting')}</p>
       )}
 
       {sources.length > 0 ? (
         <ol className="ks-tracks">
           {sources.map((m) => {
-            const t = trackTime(m)
-            const ok = state.kind === 'done' && !t.pencil
+            const tr = trackTime(m)
+            const ok = state.kind === 'done' && !tr.pencil
             return (
               <li key={m.id}>
-                <button type="button" className="ks-track" title={t.title} onClick={() => setView({ kind: 'module', moduleId: m.id })}>
+                <button type="button" className="ks-track" title={tr.title} onClick={() => setView({ kind: 'module', moduleId: m.id })}>
                   <span className="ks-track__no">{numbers.get(m.id)}</span>
                   <span className={`ks-tick${ok ? ' on' : ''}`} aria-hidden="true" />
                   <span className="ks-track__name">{m.name}</span>
-                  <span className={t.pencil ? `ks-track__note${t.failed ? ' failed' : ''}` : 'ks-track__time'}>{t.text}</span>
+                  <span className={tr.pencil ? `ks-track__note${tr.failed ? ' failed' : ''}` : 'ks-track__time'}>{tr.text}</span>
                 </button>
               </li>
             )
@@ -178,9 +179,9 @@ export function Home({ app, settings, machine, reclaim }: HomeProps) {
         </ol>
       ) : (
         <div className="ks-side__empty">
-          <p className="ks-pencil">Żaden włączony moduł nie zwalnia miejsca na dysku.</p>
+          <p className="ks-pencil">{t('world.kaseta.side-a.empty')}</p>
           <button type="button" className="btn btn-ghost btn-mini" onClick={() => setView({ kind: 'manager' })}>
-            Zarządzanie modułami
+            {t('page.manager')}
           </button>
         </div>
       )}
@@ -188,17 +189,17 @@ export function Home({ app, settings, machine, reclaim }: HomeProps) {
       {sources.length > 0 && (
         <div className="ks-total">
           <span className="ks-printed">
-            {state.kind === 'idle' && 'Razem · jeszcze nic nie sprawdzone'}
-            {state.kind === 'scanning' && `Sprawdzam · ${state.done} z ${sources.length}`}
-            {state.kind === 'done' && `Razem · ${sources.length} ${plural(sources.length, 'moduł sprawdzony', 'moduły sprawdzone', 'modułów sprawdzonych')}`}
+            {state.kind === 'idle' && t('world.kaseta.total.idle')}
+            {state.kind === 'scanning' && t('world.kaseta.total.scanning', { done: state.done, n: sources.length })}
+            {state.kind === 'done' && t('world.kaseta.total.done', { n: sources.length })}
           </span>
           {state.kind === 'done' && <span className="ks-total__sum">{size(total)}</span>}
         </div>
       )}
       <p className="ks-margin">
         {state.kind === 'done'
-          ? `taśma to dysk ${mainDisk?.mount_point ?? '/'} — kreskowanie to miejsce, które zwolnią moduły`
-          : 'ołówkiem = jeszcze nie sprawdzone; klawisz pod kasetą zapyta resztę'}
+          ? t('world.kaseta.margin.done', { mount: mainDisk?.mount_point ?? '/' })
+          : t('world.kaseta.margin.idle')}
       </p>
     </section>
   )
@@ -207,27 +208,27 @@ export function Home({ app, settings, machine, reclaim }: HomeProps) {
     <section className="ks-side ks-side--b" data-tour="machine" aria-labelledby="ks-side-b">
       <div className="ks-side__head">
         <SideBox side="B" />
-        <span className="ks-printed">Strona B</span>
+        <span className="ks-printed">{t('world.kaseta.side-b.name')}</span>
       </div>
       <h2 className="ks-side__title" id="ks-side-b">
-        Stan maszyny
+        {t('world.kaseta.side-b.title')}
         <Underline />
       </h2>
       <div className="ks-tape__lbl ks-side__sub">
-        <span className="ks-printed">Odczyt co {UP_TO_ONE.format(refreshMs / 1000)} s · na żywo</span>
-        <span className="ks-typed">{readAt ? CLOCK.format(readAt) : '—'}</span>
+        <span className="ks-printed">{t('world.kaseta.side-b.live', { s: UP_TO_ONE.format(refreshMs / 1000) })}</span>
+        <span className="ks-typed">{readAt ? clockFormat().format(readAt) : '—'}</span>
       </div>
       {tracks.length > 0 ? (
         <ol className="ks-tracks">
-          {tracks.map((t, i) => (
-            <li key={t.key} className="ks-track ks-track--static" title={t.title}>
+          {tracks.map((tk, i) => (
+            <li key={tk.key} className="ks-track ks-track--static" title={tk.title}>
               <span className="ks-track__no">{String(i + 1).padStart(2, '0')}</span>
               <span className="ks-track__name">
-                {t.name}
-                {t.path && (
+                {tk.name}
+                {tk.path && (
                   <span className="ks-track__path">
                     {/* Lines break after a slash, so a path is never cut inside a folder name. */}
-                    {t.path.split('/').map((seg, i) => (
+                    {tk.path.split('/').map((seg, i) => (
                       <Fragment key={i}>
                         {i > 0 && (
                           <>
@@ -240,32 +241,32 @@ export function Home({ app, settings, machine, reclaim }: HomeProps) {
                   </span>
                 )}
               </span>
-              <span className={`ks-track__time${t.warn ? ' ks-ring' : ''}`}>{t.value}</span>
+              <span className={`ks-track__time${tk.warn ? ' ks-ring' : ''}`}>{tk.value}</span>
             </li>
           ))}
         </ol>
       ) : (
         <p className="ks-pencil ks-side__wait">
-          {error ? 'Nie udało się odczytać stanu maszyny — moduł system-info nie odpowiada.' : 'Czekam na pierwszy odczyt…'}
+          {t(error ? 'world.kaseta.side-b.error' : 'world.kaseta.side-b.waiting')}
         </p>
       )}
       <div className="ks-total">
         <span className="ks-printed">
-          {mainDisk ? `Wolne na ${mainDisk.mount_point} · ${gb(mainDisk.available_bytes)}` : 'Wolne · —'}
+          {mainDisk ? t('world.kaseta.free.on', { mount: mainDisk.mount_point, size: gb(mainDisk.available_bytes) }) : t('world.kaseta.free.none')}
         </span>
         {disks.length > 0 && (
           <span className="ks-total__sum ks-total__sum--small">
-            {disks.length} {plural(disks.length, 'zamontowany', 'zamontowane', 'zamontowanych')}
+            {t('world.kaseta.mounted', { n: disks.length })}
           </span>
         )}
       </div>
       {anyCrowded &&
         (canOpenMap ? (
           <button type="button" className="ks-margin ks-margin--link" onClick={() => setView({ kind: 'module', moduleId: 'disk-map' })}>
-            prawie pełny dysk — mapa dysków ({diskMapNo}) pokaże, co zajmuje miejsce
+            {t('world.kaseta.crowded.link', { no: diskMapNo ?? '' })}
           </button>
         ) : (
-          <p className="ks-margin">prawie pełny dysk — mapa dysków pokaże, co zajmuje miejsce, gdy ją włączysz</p>
+          <p className="ks-margin">{t('world.kaseta.crowded.off')}</p>
         ))}
     </section>
   )
@@ -274,17 +275,18 @@ export function Home({ app, settings, machine, reclaim }: HomeProps) {
     <div className="ks-home">
       <article className="ks-jcard">
         {/* ------------------------------------------------ cover */}
-        <section className="ks-cover" aria-label="Okładka">
+        <section className="ks-cover" aria-label={t('world.kaseta.cover.aria')}>
           <Band />
           <div className="ks-cover__pad">
             <h1 className="ks-cover__title">
               <span className="ks-cover__big">{title}</span>
-              <span className="ks-cover__sub">mix na {DAY.format(readAt ?? new Date())}</span>
+              <span className="ks-cover__sub">{t('world.kaseta.cover.mix', { date: dayFormat().format(readAt ?? new Date()) })}</span>
             </h1>
           </div>
           <div className="ks-art" data-tour="cpu">
             <span className="ks-printed ks-art__cap">
-              Procesor · ostatnie {seconds} s{coreCount > 0 && ` · ${coreCount} ${plural(coreCount, 'rdzeń', 'rdzenie', 'rdzeni')}`}
+              {t('world.kaseta.cover.cap', { seconds })}
+              {coreCount > 0 && ` · ${t('world.kaseta.cpu.cores', { n: coreCount })}`}
             </span>
             {record.samples.length > 1 ? (
               <CpuProfile
@@ -297,53 +299,49 @@ export function Home({ app, settings, machine, reclaim }: HomeProps) {
               />
             ) : (
               <div className="cpu-box cpu-box--wait" role="status">
-                {error
-                  ? 'Nie udało się odczytać stanu maszyny — moduł system-info nie odpowiada.'
-                  : 'Linia potrzebuje dwóch odczytów — czekam na kolejny…'}
+                {t(error ? 'world.kaseta.side-b.error' : 'world.kaseta.cover.wait')}
               </div>
             )}
           </div>
           {watchedNow.length > 0 && (
             <div className="ks-watch">
-              <span className="ks-printed">Obserwujesz</span>
+              <span className="ks-printed">{t('world.kaseta.watch.label')}</span>
               <span className="ks-typed">{watchedNow.map((c) => String(c).padStart(2, '0')).join(' · ')}</span>
               <button type="button" className="btn btn-ghost btn-mini" onClick={() => settings.set('watchedCores', [])}>
-                Wyczyść
+                {t('world.kaseta.watch.clear')}
               </button>
             </div>
           )}
           <dl className="ks-caps">
             <div>
-              <dt className="ks-printed">Procesor</dt>
+              <dt className="ks-printed">{t('world.kaseta.cpu')}</dt>
               <dd>{cpu ? `${cpu.value.toFixed(0)}${NBSP}%` : '—'}</dd>
             </div>
             <div>
-              <dt className="ks-printed">Pamięć</dt>
+              <dt className="ks-printed">{t('world.kaseta.memory')}</dt>
               <dd>{ram ? (ram.detail ?? `${ram.value.toFixed(0)}${NBSP}%`) : '—'}</dd>
             </div>
             <div>
-              <dt className="ks-printed">Temperatura</dt>
+              <dt className="ks-printed">{t('world.kaseta.temperature')}</dt>
               <dd>{temp ? `${temp.value.toFixed(0)}${NBSP}°C` : '—'}</dd>
             </div>
           </dl>
           <dl className="ks-fields">
             <div>
-              <dt className="ks-printed">Nagrano</dt>
-              <dd>{readAt ? `${DAY.format(readAt)} · ${CLOCK.format(readAt).slice(0, 5)}` : '—'}</dd>
+              <dt className="ks-printed">{t('world.kaseta.field.recorded')}</dt>
+              <dd>{readAt ? `${dayFormat().format(readAt)} · ${clockFormat().format(readAt).slice(0, 5)}` : '—'}</dd>
             </div>
             <div>
-              <dt className="ks-printed">Źródło</dt>
+              <dt className="ks-printed">{t('world.kaseta.field.source')}</dt>
               <dd>{system}</dd>
             </div>
             <div>
-              <dt className="ks-printed">Dostęp</dt>
-              <dd>{onboarding?.accessLevel === 'full' ? 'pełny' : 'wybiórczy'}</dd>
+              <dt className="ks-printed">{t('world.kaseta.field.access')}</dt>
+              <dd>{t(onboarding?.accessLevel === 'full' ? 'world.kaseta.access.full' : 'world.kaseta.access.selective')}</dd>
             </div>
             <div>
-              <dt className="ks-printed">Moduły</dt>
-              <dd>
-                {enabled} z {numbers.size} {plural(numbers.size, 'włączony', 'włączonych', 'włączonych')}
-              </dd>
+              <dt className="ks-printed">{t('world.kaseta.field.modules')}</dt>
+              <dd>{t('world.kaseta.modules.enabled', { on: enabled, n: numbers.size })}</dd>
             </div>
           </dl>
         </section>
@@ -352,7 +350,7 @@ export function Home({ app, settings, machine, reclaim }: HomeProps) {
         <div className="ks-jspine" aria-hidden="true">
           <Band />
           <span className="ks-jspine__title">
-            {title} · mix na {DAY.format(readAt ?? new Date())}
+            {title} · {t('world.kaseta.cover.mix', { date: dayFormat().format(readAt ?? new Date()) })}
           </span>
           <span className="ks-jspine__no">000</span>
         </div>
@@ -367,13 +365,13 @@ export function Home({ app, settings, machine, reclaim }: HomeProps) {
       {/* -------------------------------------------------- deck */}
       <div className="ks-deck">
         <div className="ks-counter">
-          <span className="ks-printed">Licznik · wolne na {mainDisk?.mount_point ?? '/'}</span>
+          <span className="ks-printed">{t('world.kaseta.counter.label', { mount: mainDisk?.mount_point ?? '/' })}</span>
           <Counter bytes={mainDisk ? mainDisk.available_bytes : null} />
           <span className="ks-counter__after">
             {state.kind === 'done' && mainDisk
-              ? `po odzyskaniu → ${gb(mainDisk.available_bytes + freed)}`
+              ? t('world.kaseta.counter.after', { size: gb(mainDisk.available_bytes + freed) })
               : mainDisk
-                ? `z ${gb(mainDisk.total_bytes)}`
+                ? t('world.kaseta.counter.of', { size: gb(mainDisk.total_bytes) })
                 : ' '}
           </span>
         </div>
@@ -382,28 +380,28 @@ export function Home({ app, settings, machine, reclaim }: HomeProps) {
             <Key
               primary
               icon={state.kind === 'done' ? 'rescan' : 'play'}
-              label={state.kind === 'scanning' ? 'Sprawdzam' : state.kind === 'done' ? 'Sprawdź ponownie' : 'Sprawdź, co da się odzyskać'}
+              label={t(state.kind === 'scanning' ? 'world.kaseta.key.checking' : state.kind === 'done' ? 'world.kaseta.key.recheck' : 'world.kaseta.key.check')}
               sub={
                 state.kind === 'scanning'
-                  ? `${state.done} z ${sources.length} ${plural(sources.length, 'modułu', 'modułów', 'modułów')}`
-                  : 'pyta wszystkie moduły · tylko odczyt'
+                  ? t('world.kaseta.key.checking-sub', { done: state.done, n: sources.length })
+                  : t('world.kaseta.key.check-sub')
               }
               lamp={state.kind === 'scanning' ? 'busy' : state.kind === 'done' ? 'on' : undefined}
               disabled={state.kind === 'scanning'}
               onClick={check}
             />
           ) : (
-            <Key icon="eject" label="Zarządzanie modułami" sub="włącz moduł, który sprząta" onClick={() => setView({ kind: 'manager' })} />
+            <Key icon="eject" label={t('page.manager')} sub={t('world.kaseta.key.manage-sub')} onClick={() => setView({ kind: 'manager' })} />
           )}
           <Key
             icon="flip"
-            label="Obróć"
-            sub={flipped ? 'strona A na wierzch' : 'strona B na wierzch'}
+            label={t('world.kaseta.key.flip')}
+            sub={t(flipped ? 'world.kaseta.key.flip-a' : 'world.kaseta.key.flip-b')}
             aria-pressed={flipped}
             onClick={() => setTurns((n) => n + 1)}
           />
         </div>
-        <p className="ks-pen ks-deck__note">nic nie znika, dopóki nie wciśniesz klawisza w module</p>
+        <p className="ks-pen ks-deck__note">{t('world.kaseta.deck.note')}</p>
       </div>
     </div>
   )

@@ -498,7 +498,15 @@ impl Broker for LinuxBroker {
 
     fn pkg_cache_clean(&self, source: PkgSource) -> ExecResult {
         match native(source) {
-            Ok(manager) => run_cmd(manager.clean_cache()),
+            Ok(manager) => {
+                if manager == Manager::Pacman {
+                    for leftover in distro::pacman_leftover_downloads() {
+                        // Whatever stays, pacman names in its own error below.
+                        let _ = fs::remove_dir_all(leftover);
+                    }
+                }
+                run_cmd(manager.clean_cache())
+            }
             Err(why) => ExecResult::failed(why),
         }
     }

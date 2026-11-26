@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { Preparing } from '../../components/Preparing'
 import { confirmAction } from '../../components/confirm'
 import { callModule } from '../../data/callModule'
+import { t } from '../../i18n'
 
 interface App {
   name: string
@@ -61,7 +62,7 @@ export function BloatwareView() {
 
   async function remove() {
     const packages = [...picked]
-    if (!(await confirmAction(`Usunąć ${packages.length} aplikacji z tego konta? Najpierw powstanie punkt przywracania systemu — Windows raz zapyta o zgodę administratora; aplikacje da się potem zainstalować ze Sklepu.`))) return
+    if (!(await confirmAction(t('view.bloatware.remove.confirm', { n: packages.length })))) return
     setBusy(true)
     setResult(null)
     try {
@@ -80,14 +81,14 @@ export function BloatwareView() {
   if (error && !scan) {
     return (
       <div className="glass empty-state" style={{ color: 'var(--critical)' }}>
-        Błąd: {error}
+        {t('view.bloatware.error', { error })}
         <br />
-        <button className="btn btn-ghost" onClick={load}>Spróbuj ponownie</button>
+        <button className="btn btn-ghost" onClick={load}>{t('view.bloatware.retry')}</button>
       </div>
     )
   }
   if (!scan) {
-    return <Preparing title="Wczytuję aplikacje Sklepu" note="Pytam Windows o aplikacje zainstalowane dla tego konta." />
+    return <Preparing title={t('view.bloatware.loading.title')} note={t('view.bloatware.loading.note')} />
   }
 
   return (
@@ -95,17 +96,17 @@ export function BloatwareView() {
       <div className="glass xc-summary">
         <div>
           <div className="xc-summary-value mono">{scan.apps.filter((a) => a.preinstalled).length}</div>
-          <div className="xc-summary-label">fabrycznych z {scan.apps.length} aplikacji, które da się usunąć</div>
+          <div className="xc-summary-label">{t('view.bloatware.summary', { n: scan.apps.length })}</div>
         </div>
         <button className="btn btn-primary" onClick={remove} disabled={busy || picked.size === 0}>
-          {busy ? 'Usuwam…' : `Usuń zaznaczone (${picked.size})`}
+          {busy ? t('view.bloatware.removing') : t('view.bloatware.remove-selected', { n: picked.size })}
         </button>
       </div>
 
       {(scan.error || result) && (
         <div className="glass xc-result">
           {scan.error && <div className="xc-error">{scan.error}</div>}
-          {result && result.removed.length > 0 && <div>Usunięto: {result.removed.length}.</div>}
+          {result && result.removed.length > 0 && <div>{t('view.bloatware.removed', { n: result.removed.length })}</div>}
           {result?.errors.map((e, i) => <div key={i} className="xc-error">{e}</div>)}
         </div>
       )}
@@ -115,7 +116,7 @@ export function BloatwareView() {
           <label key={a.package} className={`glass clean-row${picked.has(a.package) ? ' checked' : ''}`}>
             <input type="checkbox" checked={picked.has(a.package)} onChange={() => toggle(a.package)} />
             <span className="cr-path mono" title={a.package}>{a.name}</span>
-            {a.preinstalled && <span className="chip medium">fabryczna</span>}
+            {a.preinstalled && <span className="chip medium">{t('view.bloatware.preinstalled')}</span>}
           </label>
         ))}
       </div>

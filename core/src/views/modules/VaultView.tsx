@@ -4,6 +4,7 @@ import { Icon } from '../../components/Icons'
 import { Modal } from '../../components/Modal'
 import { vaultCall, vaultStart } from './vaultApi'
 import { confirmAction } from '../../components/confirm'
+import { t } from '../../i18n'
 
 // ------------------------------------------------------------------ types
 
@@ -62,11 +63,11 @@ function isSecretFieldName(name: string): boolean {
 }
 
 const STRENGTH_LABEL: Record<number, { label: string; chip: string }> = {
-  0: { label: 'Bardzo słabe', chip: 'critical' },
-  1: { label: 'Słabe', chip: 'critical' },
-  2: { label: 'Średnie', chip: 'medium' },
-  3: { label: 'Dobre', chip: 'low' },
-  4: { label: 'Bardzo dobre', chip: 'low' },
+  0: { get label() { return t('view.vault.strength.0') }, chip: 'critical' },
+  1: { get label() { return t('view.vault.strength.1') }, chip: 'critical' },
+  2: { get label() { return t('view.vault.strength.2') }, chip: 'medium' },
+  3: { get label() { return t('view.vault.strength.3') }, chip: 'low' },
+  4: { get label() { return t('view.vault.strength.4') }, chip: 'low' },
 }
 
 async function copyToClipboard(text: string) {
@@ -100,39 +101,59 @@ export function VaultView() {
     refreshStatus()
   }, [refreshStatus])
 
-  if (phase === 'loading') return <Preparing title="Uruchamiam sejf" note="Otwieram zaszyfrowaną bazę i przygotowuję ją do odblokowania." />
-  if (phase === 'error') return <div className="glass empty-state" style={{ color: 'var(--critical)' }}>Błąd: {error}</div>
-  if (phase === 'create') return <UnlockOrCreate mode="create" onReady={() => setPhase('unlocked')} />
-  if (phase === 'locked') return <UnlockOrCreate mode="unlock" onReady={() => setPhase('unlocked')} />
+  if (phase === 'loading') return <Preparing title={t('view.vault.loading.title')} note={t('view.vault.loading.note')} />
+  if (phase === 'error') return <div className="glass empty-state" style={{ color: 'var(--critical)' }}>{t('view.vault.error', { error: error ?? '' })}</div>
+  if (phase === 'create') return <UnlockOrCreate key="create" mode="create" onReady={() => setPhase('unlocked')} />
+  if (phase === 'locked') return <UnlockOrCreate key="unlock" mode="unlock" onReady={() => setPhase('unlocked')} onReset={() => setPhase('create')} />
   return <VaultMain onLocked={() => setPhase('locked')} />
 }
 
 // --------------------------------------------------------- unlock / create
 
 interface UnlockResult {
-  status: 'success' | 'wrong_pin' | 'locked_out'
+  status: 'success' | 'wrong_pin' | 'locked_out' | 'key_missing'
   attempts_remaining?: number
   retry_after_secs?: number
+}
+
+interface UnlockOrCreateProps {
+  mode: 'create' | 'unlock'
+  onReady: () => void
+  onReset?: () => void
 }
 
 function digitsOnly(s: string): string {
   return s.replace(/\D/g, '').slice(0, 6)
 }
 
-function UnlockOrCreate({ mode, onReady }: { mode: 'create' | 'unlock'; onReady: () => void }) {
+function UnlockOrCreate({ mode, onReady, onReset }: UnlockOrCreateProps) {
   const [pin, setPin] = useState('')
   const [confirm, setConfirm] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [keyMissing, setKeyMissing] = useState(false)
+
+  async function startOver() {
+    if (!(await confirmAction(t('view.vault.unlock.confirm-reset')))) return
+    setBusy(true)
+    try {
+      // The sidecar refuses unless the key really is gone, whatever this screen believes.
+      await vaultCall<boolean>({ cmd: 'reset' })
+      onReset?.()
+    } catch (e) {
+      setError(String(e))
+      setBusy(false)
+    }
+  }
 
   async function submit() {
     setError(null)
     if (pin.length !== 6) {
-      setError('PIN musi mieć dokładnie 6 cyfr.')
+      setError(t('view.vault.pin-length'))
       return
     }
     if (mode === 'create' && pin !== confirm) {
-      setError('Kody PIN nie są takie same.')
+      setError(t('view.vault.unlock.pin-mismatch'))
       return
     }
     setBusy(true)
@@ -146,10 +167,12 @@ function UnlockOrCreate({ mode, onReady }: { mode: 'create' | 'unlock'; onReady:
           onReady()
           return
         }
-        if (result.status === 'wrong_pin') {
-          setError(`Nieprawidłowy PIN. Pozostało prób: ${result.attempts_remaining}.`)
+        if (result.status === 'key_missing') {
+          setKeyMissing(true)
+        } else if (result.status === 'wrong_pin') {
+          setError(t('view.vault.unlock.wrong-pin', { n: result.attempts_remaining ?? 0 }))
         } else {
-          setError(`Zbyt wiele prób. Spróbuj ponownie za ${result.retry_after_secs} s.`)
+          setError(t('view.vault.unlock.locked-out', { n: result.retry_after_secs ?? 0 }))
         }
         setBusy(false)
       }
@@ -164,15 +187,15 @@ function UnlockOrCreate({ mode, onReady }: { mode: 'create' | 'unlock'; onReady:
       <div className="ico-badge" style={{ margin: '0 auto 14px', width: 46, height: 46 }}>
         <Icon name="vault" />
       </div>
-      <h2 style={{ textAlign: 'center', marginBottom: 6 }}>{mode === 'create' ? 'Utwórz sejf haseł' : 'Odblokuj sejf'}</h2>
+      <h2 style={{ textAlign: 'center', marginBottom: 6 }}>{mode === 'create' ? t('view.vault.create.title') : t('view.vault.unlock.title')}</h2>
       <p style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13, marginBottom: 18 }}>
         {mode === 'create'
-          ? 'Właściwy klucz szyfrujący generujemy losowo i trzymamy w bezpiecznym magazynie systemowym (Secret Service / Keychain) — nigdy w pliku sejfu. 6-cyfrowy PIN to tylko szybka blokada dostępu, nie klucz.'
-          : 'Wpisz 6-cyfrowy PIN, żeby odblokować sejf.'}
+          ? t('view.vault.create.note')
+          : t('view.vault.unlock.note')}
       </p>
 
       <div className="form-field">
-        <span>Kod PIN</span>
+        <span>{t('view.vault.pin')}</span>
         <input
           type="password"
           inputMode="numeric"
@@ -186,7 +209,7 @@ function UnlockOrCreate({ mode, onReady }: { mode: 'create' | 'unlock'; onReady:
       </div>
       {mode === 'create' && (
         <div className="form-field">
-          <span>Powtórz PIN</span>
+          <span>{t('view.vault.create.repeat-pin')}</span>
           <input
             type="password"
             inputMode="numeric"
@@ -201,9 +224,18 @@ function UnlockOrCreate({ mode, onReady }: { mode: 'create' | 'unlock'; onReady:
 
       {error && <div className="form-warning" style={{ marginTop: 10 }}>{error}</div>}
 
-      <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 14 }} onClick={submit} disabled={busy || pin.length !== 6}>
-        {busy ? 'Proszę czekać...' : mode === 'create' ? 'Utwórz sejf' : 'Odblokuj'}
-      </button>
+      {keyMissing ? (
+        <>
+          <div className="form-warning" style={{ marginTop: 10 }}>{t('view.vault.unlock.key-missing')}</div>
+          <button className="btn btn-primary btn-danger" style={{ width: '100%', justifyContent: 'center', marginTop: 14 }} onClick={startOver} disabled={busy}>
+            {busy ? t('view.vault.wait') : t('view.vault.unlock.start-over')}
+          </button>
+        </>
+      ) : (
+        <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 14 }} onClick={submit} disabled={busy || pin.length !== 6}>
+          {busy ? t('view.vault.wait') : mode === 'create' ? t('view.vault.create.submit') : t('view.vault.unlock.submit')}
+        </button>
+      )}
     </div>
   )
 }
@@ -235,22 +267,22 @@ function PasswordGenerator({ onUse, onClose }: { onUse: (pw: string) => void; on
 
   return (
     <Modal onClose={onClose} style={{ maxWidth: 420 }}>
-        <h3 style={{ marginBottom: 12 }}>Generator haseł</h3>
+        <h3 style={{ marginBottom: 12 }}>{t('view.vault.generator.title')}</h3>
         <div className="form-preview mono" style={{ fontSize: 15, textAlign: 'center', marginBottom: 12, wordBreak: 'break-all' }}>{generated}</div>
         {error && <div className="form-warning">{error}</div>}
         <div className="form-field">
-          <span>Długość: {length}</span>
+          <span>{t('view.vault.generator.length', { n: length })}</span>
           <input type="range" min={8} max={64} value={length} onChange={(e) => setLength(Number(e.target.value))} />
         </div>
-        <label className="form-check"><input type="checkbox" checked={upper} onChange={(e) => setUpper(e.target.checked)} /><span>Wielkie litery (A-Z)</span></label>
-        <label className="form-check"><input type="checkbox" checked={lower} onChange={(e) => setLower(e.target.checked)} /><span>Małe litery (a-z)</span></label>
-        <label className="form-check"><input type="checkbox" checked={digits} onChange={(e) => setDigits(e.target.checked)} /><span>Cyfry (0-9)</span></label>
-        <label className="form-check"><input type="checkbox" checked={symbols} onChange={(e) => setSymbols(e.target.checked)} /><span>Symbole (!@#...)</span></label>
+        <label className="form-check"><input type="checkbox" checked={upper} onChange={(e) => setUpper(e.target.checked)} /><span>{t('view.vault.generator.upper')}</span></label>
+        <label className="form-check"><input type="checkbox" checked={lower} onChange={(e) => setLower(e.target.checked)} /><span>{t('view.vault.generator.lower')}</span></label>
+        <label className="form-check"><input type="checkbox" checked={digits} onChange={(e) => setDigits(e.target.checked)} /><span>{t('view.vault.generator.digits')}</span></label>
+        <label className="form-check"><input type="checkbox" checked={symbols} onChange={(e) => setSymbols(e.target.checked)} /><span>{t('view.vault.generator.symbols')}</span></label>
 
         <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-          <button className="btn btn-ghost" onClick={generate}>Losuj ponownie</button>
-          <button className="btn btn-ghost" onClick={() => copyToClipboard(generated)}>Kopiuj</button>
-          <button className="btn btn-primary" style={{ marginLeft: 'auto' }} onClick={() => { onUse(generated); onClose() }}>Użyj</button>
+          <button className="btn btn-ghost" onClick={generate}>{t('view.vault.generator.regenerate')}</button>
+          <button className="btn btn-ghost" onClick={() => copyToClipboard(generated)}>{t('view.vault.copy')}</button>
+          <button className="btn btn-primary" style={{ marginLeft: 'auto' }} onClick={() => { onUse(generated); onClose() }}>{t('view.vault.generator.use')}</button>
         </div>
     </Modal>
   )
@@ -300,7 +332,7 @@ function EntryForm({
 
   async function save() {
     if (!title.trim()) {
-      setError('Podaj tytuł wpisu.')
+      setError(t('view.vault.entry.title-required'))
       return
     }
     setBusy(true)
@@ -323,15 +355,15 @@ function EntryForm({
   return (
     <>
       <Modal onClose={onClose} style={{ maxWidth: 520 }}>
-        <h3 style={{ marginBottom: 12 }}>{existing ? 'Edytuj wpis' : 'Nowy wpis'}</h3>
+        <h3 style={{ marginBottom: 12 }}>{existing ? t('view.vault.entry.edit') : t('view.vault.entry.new')}</h3>
 
         <div className="form-field">
-          <span>Tytuł</span>
+          <span>{t('view.vault.entry.title')}</span>
           <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
         </div>
 
         <div className="form-field">
-          <span>Szablon</span>
+          <span>{t('view.vault.entry.template')}</span>
           <select
             value={templateId ?? ''}
             onChange={(e) => {
@@ -363,11 +395,11 @@ function EntryForm({
                 />
                 {isSecret && (
                   <>
-                    <button type="button" className="btn btn-ghost btn-mini" onClick={() => toggleReveal(f.name)}>{shown ? 'Ukryj' : 'Pokaż'}</button>
-                    <button type="button" className="btn btn-ghost btn-mini" onClick={() => setGeneratorFor(f.name)}>Generuj</button>
+                    <button type="button" className="btn btn-ghost btn-mini" onClick={() => toggleReveal(f.name)}>{shown ? t('view.vault.hide') : t('view.vault.show')}</button>
+                    <button type="button" className="btn btn-ghost btn-mini" onClick={() => setGeneratorFor(f.name)}>{t('view.vault.entry.generate')}</button>
                   </>
                 )}
-                <button type="button" className="btn btn-ghost btn-mini" onClick={() => copyToClipboard(value)}>Kopiuj</button>
+                <button type="button" className="btn btn-ghost btn-mini" onClick={() => copyToClipboard(value)}>{t('view.vault.copy')}</button>
               </div>
               {isSecret && strengthInfo && <span className={`chip ${strengthInfo.chip}`} style={{ marginTop: 4, alignSelf: 'flex-start' }}>{strengthInfo.label}</span>}
             </div>
@@ -377,8 +409,8 @@ function EntryForm({
         {error && <div className="form-warning">{error}</div>}
 
         <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-          <button className="btn btn-ghost" onClick={onClose} disabled={busy}>Anuluj</button>
-          <button className="btn btn-primary" style={{ marginLeft: 'auto' }} onClick={save} disabled={busy}>{busy ? 'Zapisywanie...' : 'Zapisz'}</button>
+          <button className="btn btn-ghost" onClick={onClose} disabled={busy}>{t('common.cancel')}</button>
+          <button className="btn btn-primary" style={{ marginLeft: 'auto' }} onClick={save} disabled={busy}>{busy ? t('view.vault.saving') : t('view.vault.save')}</button>
         </div>
       </Modal>
 
@@ -401,7 +433,7 @@ function EntryDetailModal({ id, onClose, onEdit, onDeleted }: { id: number; onCl
   }, [id])
 
   async function remove() {
-    if (!(await confirmAction('Usunąć ten wpis? Tej operacji nie można cofnąć.'))) return
+    if (!(await confirmAction(t('view.vault.detail.confirm-delete')))) return
     await vaultCall<boolean>({ cmd: 'delete_entry', id })
     onDeleted()
     onClose()
@@ -419,12 +451,12 @@ function EntryDetailModal({ id, onClose, onEdit, onDeleted }: { id: number; onCl
   return (
     <Modal onClose={onClose} style={{ maxWidth: 480 }}>
         {error && <div className="form-warning">{error}</div>}
-        {!entry && !error && <div className="glass empty-state">Odszyfrowywanie...</div>}
+        {!entry && !error && <div className="glass empty-state">{t('view.vault.detail.decrypting')}</div>}
         {entry && (
           <>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
               <h3>{entry.title}</h3>
-              <button className="btn btn-ghost btn-mini" onClick={onClose}>Zamknij</button>
+              <button className="btn btn-ghost btn-mini" onClick={onClose}>{t('view.vault.close')}</button>
             </div>
             {Object.entries(entry.fields).map(([name, value]) => {
               const secret = isSecretFieldName(name)
@@ -436,15 +468,15 @@ function EntryDetailModal({ id, onClose, onEdit, onDeleted }: { id: number; onCl
                     <span className="mono form-preview" style={{ flex: 1, padding: '8px 12px' }}>
                       {secret && !shown ? '•'.repeat(Math.min(value.length, 16) || 8) : value || '—'}
                     </span>
-                    {secret && <button className="btn btn-ghost btn-mini" onClick={() => toggleReveal(name)}>{shown ? 'Ukryj' : 'Pokaż'}</button>}
-                    <button className="btn btn-ghost btn-mini" onClick={() => copyToClipboard(value)}>Kopiuj</button>
+                    {secret && <button className="btn btn-ghost btn-mini" onClick={() => toggleReveal(name)}>{shown ? t('view.vault.hide') : t('view.vault.show')}</button>}
+                    <button className="btn btn-ghost btn-mini" onClick={() => copyToClipboard(value)}>{t('view.vault.copy')}</button>
                   </div>
                 </div>
               )
             })}
             <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
-              <button className="btn btn-ghost" onClick={remove} style={{ color: 'var(--critical)' }}>Usuń</button>
-              <button className="btn btn-primary" style={{ marginLeft: 'auto' }} onClick={onEdit}>Edytuj</button>
+              <button className="btn btn-ghost" onClick={remove} style={{ color: 'var(--critical)' }}>{t('view.vault.detail.delete')}</button>
+              <button className="btn btn-primary" style={{ marginLeft: 'auto' }} onClick={onEdit}>{t('view.vault.detail.edit')}</button>
             </div>
           </>
         )}
@@ -465,11 +497,11 @@ function ChangePinModal({ onClose }: { onClose: () => void }) {
   async function submit() {
     setError(null)
     if (newPin.length !== 6 || oldPin.length !== 6) {
-      setError('PIN musi mieć dokładnie 6 cyfr.')
+      setError(t('view.vault.pin-length'))
       return
     }
     if (newPin !== confirmPin) {
-      setError('Nowe kody PIN nie są takie same.')
+      setError(t('view.vault.change-pin.mismatch'))
       return
     }
     setBusy(true)
@@ -486,31 +518,31 @@ function ChangePinModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal onClose={onClose} style={{ maxWidth: 380 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <h3>Zmień PIN</h3>
-          <button className="btn btn-ghost btn-mini" onClick={onClose}>Zamknij</button>
+          <h3>{t('view.vault.change-pin.title')}</h3>
+          <button className="btn btn-ghost btn-mini" onClick={onClose}>{t('view.vault.close')}</button>
         </div>
         {done ? (
           <div className="glass empty-state" style={{ padding: 20 }}>
             <div className="done-badge"><Icon name="check" /></div>
-            PIN zmieniony. Klucz szyfrujący pozostał bez zmian — nic nie trzeba było ponownie szyfrować.
+            {t('view.vault.change-pin.done')}
           </div>
         ) : (
           <>
             <div className="form-field">
-              <span>Obecny PIN</span>
+              <span>{t('view.vault.change-pin.current')}</span>
               <input type="password" inputMode="numeric" maxLength={6} value={oldPin} onChange={(e) => setOldPin(digitsOnly(e.target.value))} style={{ letterSpacing: '0.3em', textAlign: 'center' }} autoFocus />
             </div>
             <div className="form-field">
-              <span>Nowy PIN</span>
+              <span>{t('view.vault.change-pin.new')}</span>
               <input type="password" inputMode="numeric" maxLength={6} value={newPin} onChange={(e) => setNewPin(digitsOnly(e.target.value))} style={{ letterSpacing: '0.3em', textAlign: 'center' }} />
             </div>
             <div className="form-field">
-              <span>Powtórz nowy PIN</span>
+              <span>{t('view.vault.change-pin.repeat')}</span>
               <input type="password" inputMode="numeric" maxLength={6} value={confirmPin} onChange={(e) => setConfirmPin(digitsOnly(e.target.value))} style={{ letterSpacing: '0.3em', textAlign: 'center' }} />
             </div>
             {error && <div className="form-warning">{error}</div>}
             <button className="btn btn-primary" style={{ width: '100%', justifyContent: 'center', marginTop: 10 }} onClick={submit} disabled={busy}>
-              {busy ? 'Zapisywanie...' : 'Zmień PIN'}
+              {busy ? t('view.vault.saving') : t('view.vault.change-pin.title')}
             </button>
           </>
         )}
@@ -531,23 +563,23 @@ function SecurityAuditModal({ onClose }: { onClose: () => void }) {
   return (
     <Modal onClose={onClose} style={{ maxWidth: 520 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <h3>Audyt bezpieczeństwa</h3>
-          <button className="btn btn-ghost btn-mini" onClick={onClose}>Zamknij</button>
+          <h3>{t('view.vault.audit.title')}</h3>
+          <button className="btn btn-ghost btn-mini" onClick={onClose}>{t('view.vault.close')}</button>
         </div>
         {error && <div className="form-warning">{error}</div>}
-        {!result && !error && <div className="glass empty-state">Analizowanie...</div>}
+        {!result && !error && <div className="glass empty-state">{t('view.vault.audit.analyzing')}</div>}
         {result && (
           <>
             {result.weak_count === 0 && result.reused_count === 0 ? (
               <div className="glass empty-state" style={{ padding: 24 }}>
                 <div className="done-badge"><Icon name="check" /></div>
-                Nie znaleziono słabych ani powtórzonych haseł.
+                {t('view.vault.audit.none')}
               </div>
             ) : (
               <>
                 {result.weak_count > 0 && (
                   <div style={{ marginBottom: 14 }}>
-                    <div className="section-head"><h2 style={{ fontSize: 13 }}>Słabe hasła ({result.weak_count})</h2></div>
+                    <div className="section-head"><h2 style={{ fontSize: 13 }}>{t('view.vault.audit.weak', { n: result.weak_count })}</h2></div>
                     <div className="clean-list">
                       {result.weak.map((w) => (
                         <div key={`${w.entry_id}-${w.field}`} className="glass clean-row" style={{ cursor: 'default', opacity: 1 }}>
@@ -560,7 +592,7 @@ function SecurityAuditModal({ onClose }: { onClose: () => void }) {
                 )}
                 {result.reused_count > 0 && (
                   <div>
-                    <div className="section-head"><h2 style={{ fontSize: 13 }}>Powtórzone hasła ({result.reused_count})</h2></div>
+                    <div className="section-head"><h2 style={{ fontSize: 13 }}>{t('view.vault.audit.reused', { n: result.reused_count })}</h2></div>
                     <div className="clean-list">
                       {result.reused.map((r, i) => (
                         <div key={i} className="glass clean-row" style={{ cursor: 'default', opacity: 1 }}>
@@ -640,11 +672,11 @@ function VaultMain({ onLocked }: { onLocked: () => void }) {
   return (
     <div>
       <div className="section-head">
-        <h2>Sejf</h2>
+        <h2>{t('view.vault.heading')}</h2>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-ghost btn-mini" onClick={() => setShowAudit(true)}>Audyt bezpieczeństwa</button>
-          <button className="btn btn-ghost btn-mini" onClick={() => setShowChangePin(true)}>Zmień PIN</button>
-          <button className="btn btn-ghost btn-mini" onClick={doLock}>Zablokuj</button>
+          <button className="btn btn-ghost btn-mini" onClick={() => setShowAudit(true)}>{t('view.vault.audit.title')}</button>
+          <button className="btn btn-ghost btn-mini" onClick={() => setShowChangePin(true)}>{t('view.vault.change-pin.title')}</button>
+          <button className="btn btn-ghost btn-mini" onClick={doLock}>{t('view.vault.lock')}</button>
         </div>
       </div>
 
@@ -661,24 +693,24 @@ function VaultMain({ onLocked }: { onLocked: () => void }) {
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addFolder()}
-              placeholder="Nazwa folderu"
+              placeholder={t('view.vault.folder-name')}
               autoFocus
               style={{ padding: '6px 10px', background: 'var(--bg)', border: '1px solid var(--border-strong)', color: 'var(--ink)', fontSize: 13 }}
             />
-            <button className="btn btn-ghost btn-mini" onClick={addFolder}>Dodaj</button>
+            <button className="btn btn-ghost btn-mini" onClick={addFolder}>{t('view.vault.add')}</button>
           </span>
         ) : (
-          <button className="btn btn-ghost btn-mini" onClick={() => setShowNewFolder(true)}>+ Folder</button>
+          <button className="btn btn-ghost btn-mini" onClick={() => setShowNewFolder(true)}>{t('view.vault.new-folder')}</button>
         )}
       </div>
 
       <div className="section-head">
-        <h2>Wpisy</h2>
-        <button className="btn btn-primary btn-mini" onClick={() => setEditing('new')}>+ Nowy wpis</button>
+        <h2>{t('view.vault.entries')}</h2>
+        <button className="btn btn-primary btn-mini" onClick={() => setEditing('new')}>{t('view.vault.new-entry')}</button>
       </div>
 
       {entriesInFolder.length === 0 ? (
-        <div className="glass empty-state">Brak wpisów w tym folderze.</div>
+        <div className="glass empty-state">{t('view.vault.empty')}</div>
       ) : (
         <div className="clean-list">
           {entriesInFolder.map((e) => {

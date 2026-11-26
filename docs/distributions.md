@@ -1,5 +1,7 @@
 # Linux distributions
 
+*[Polska wersja →](pl/distributions.md)*
+
 POSMA was written on Ubuntu, and for a long time that showed: four of the
 seven Linux modules assumed apt and dpkg, `update-grub` and a
 `/boot/vmlinuz` symlink. This page says where it runs now, what was
@@ -179,10 +181,10 @@ So a build travels forward, not back: built here, it runs on Debian 13,
 Fedora, Arch and their families, and not on Debian 12, Ubuntu 22.04 or
 RHEL 9. Built from source *on* each of those, it is fine.
 
-This matters when installers arrive. A release has to be built on the
-oldest system it is meant to support, not on whatever the development
-machine happens to run — and a rolling distribution is the newest there
-is.
+This is why the release workflow builds the Linux packages on Ubuntu
+22.04: a release has to be built on the oldest system it is meant to
+support, not on whatever the development machine happens to run — and a
+rolling distribution is the newest there is.
 
 ## Running the checks
 

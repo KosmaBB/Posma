@@ -233,7 +233,9 @@ mod uac {
     use windows_sys::Win32::Foundation::{CloseHandle, ERROR_CANCELLED};
     use windows_sys::Win32::System::Pipes::GetNamedPipeClientProcessId;
     use windows_sys::Win32::System::Threading::GetProcessId;
-    use windows_sys::Win32::UI::Shell::{ShellExecuteExW, SEE_MASK_NOASYNC, SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW};
+    use windows_sys::Win32::UI::Shell::{
+        ShellExecuteExW, SEE_MASK_FLAG_NO_UI, SEE_MASK_NOASYNC, SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW,
+    };
     use windows_sys::Win32::UI::WindowsAndMessaging::SW_HIDE;
 
     static SESSION: Mutex<Option<BufReader<NamedPipeServer>>> = Mutex::const_new(None);
@@ -256,7 +258,9 @@ mod uac {
         let (verb, file, params) = (wide("runas".as_ref()), wide(binary.as_os_str()), wide(args.as_ref()));
         let mut info = SHELLEXECUTEINFOW {
             cbSize: size_of::<SHELLEXECUTEINFOW>() as u32,
-            fMask: SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC,
+            // NO_UI: a missing or broken broker comes back as an error here, not as
+            // Explorer's own dialog that blocks this call until someone closes it.
+            fMask: SEE_MASK_NOCLOSEPROCESS | SEE_MASK_NOASYNC | SEE_MASK_FLAG_NO_UI,
             lpVerb: verb.as_ptr(),
             lpFile: file.as_ptr(),
             lpParameters: params.as_ptr(),
@@ -336,8 +340,15 @@ mod uac {
     #[ignore]
     async fn one_elevated_session_answers_every_call() {
         let exe = std::env::current_exe().expect("test binary");
-        let broker = exe.parent().and_then(Path::parent).expect("target dir").join("windows-broker.exe");
+        // Cargo has moved test binaries before (deps/, now build/<package>/<hash>/out/), so look upward.
+        let broker = exe
+            .ancestors()
+            .map(|dir| dir.join("windows-broker.exe"))
+            .find(|path| path.exists())
+            .expect("windows-broker.exe in the target dir: build the workspace first");
         let request = r#"{"op":"capabilities"}"#;
+        let missing = broker.with_file_name("no-such-broker.exe");
+        assert!(call(&missing, request).await.is_err(), "a missing broker is an error, not a dialog to wait on");
         assert_eq!(call(&broker, request).await.expect("first call")["data"]["os"], "windows");
         assert_eq!(call(&broker, request).await.expect("same session")["ok"], true);
     }

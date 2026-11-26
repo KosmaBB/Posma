@@ -166,8 +166,31 @@ fn allowed_roots() -> Vec<PathBuf> {
         if let Ok(tmp) = env::var("TEMP") {
             roots.push(PathBuf::from(tmp));
         }
+        roots.extend(windows_caches());
     }
     roots
+}
+
+/// What Windows and the graphics drivers rebuild by themselves, from the
+/// places Disk Cleanup offers too: crash dumps, error reports, shader caches.
+fn windows_caches() -> Vec<PathBuf> {
+    let Ok(local) = env::var("LOCALAPPDATA").map(PathBuf::from) else { return Vec::new() };
+    [
+        "CrashDumps",
+        r"Microsoft\Windows\WER\ReportArchive",
+        r"Microsoft\Windows\WER\ReportQueue",
+        "D3DSCache",
+        r"NVIDIA\DXCache",
+        r"NVIDIA\GLCache",
+        r"AMD\DxCache",
+        r"AMD\DxcCache",
+        r"AMD\GLCache",
+        r"AMD\VkCache",
+        r"Intel\ShaderCache",
+    ]
+    .iter()
+    .map(|dir| local.join(dir))
+    .collect()
 }
 
 /// /var/log is deliberately NOT a blanket-allowed root: it holds systemd's
@@ -315,6 +338,9 @@ fn scan() -> ScanResult {
                 scan_user_cache(&windows.join("SoftwareDistribution").join("Download"), &[]),
             )));
         }
+        let mut leftovers: Vec<Entry> = windows_caches().iter().flat_map(|dir| scan_user_cache(dir, &[])).collect();
+        leftovers.sort_by_key(|e| std::cmp::Reverse(e.size_bytes));
+        categories.push(category("wincache", "Zrzuty awarii, raporty błędów i cache shaderów", leftovers));
     }
 
     categories.push(category(
@@ -322,11 +348,14 @@ fn scan() -> ScanResult {
         "Miniatury",
         scan_single(&h.join(".cache/thumbnails")),
     ));
-    categories.push(category(
-        "trash",
-        "Kosz",
-        scan_single(&h.join(".local/share/Trash")),
-    ));
+    // The trash folder itself is an allowed root, which clean never removes:
+    // emptying it means its files and the notes describing them.
+    let trash = h.join(".local/share/Trash");
+    let mut trashed = scan_single(&trash.join("files"));
+    if !trashed.is_empty() {
+        trashed.extend(scan_single(&trash.join("info")));
+    }
+    categories.push(category("trash", "Kosz", trashed));
 
     let cache_root = if cfg!(target_os = "macos") { h.join("Library/Caches") } else { h.join(".cache") };
     categories.push(category(
@@ -417,4 +446,32 @@ fn main() {
     };
     println!("{}", output.expect("response must serialize"));
     io::stdout().flush().ok();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Emptying the trash takes its files and their notes, and never the
+    /// trash folder itself, which clean refuses as a root.
+    #[test]
+    fn the_trash_empties_but_stays() {
+        let home = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/test-home-temp-clean");
+        let trash = home.join(".local/share/Trash");
+        let _ = fs::remove_dir_all(&home);
+        fs::create_dir_all(trash.join("files")).unwrap();
+        fs::create_dir_all(trash.join("info")).unwrap();
+        fs::write(trash.join("files/old.txt"), "x").unwrap();
+        fs::write(trash.join("info/old.txt.trashinfo"), "[Trash Info]").unwrap();
+        // The only test here, so nothing else reads the environment meanwhile.
+        env::set_var("HOME", &home);
+        let listed: Vec<String> =
+            scan().categories.into_iter().filter(|c| c.id == "trash").flat_map(|c| c.entries).map(|e| e.path).collect();
+        assert_eq!(listed.len(), 2, "{listed:?}");
+        let emptied = clean(listed);
+        assert!(emptied.errors.is_empty() && emptied.removed == 2, "{:?}", emptied.errors);
+        assert!(trash.is_dir() && !trash.join("files").exists());
+        assert_eq!(clean(vec![trash.to_string_lossy().into_owned()]).removed, 0, "the trash folder itself stays");
+        fs::remove_dir_all(&home).unwrap();
+    }
 }

@@ -4,8 +4,9 @@ import type { SettingsState } from '../state/settings'
 import { catalogNumbers, folders, moduleById, orderedModules, type ModuleDef } from '../data/modules'
 import { CpuProfile } from '../components/CpuProfile'
 import {
-  DISK_WARN_PCT, HISTORY, UP_TO_ONE, fill, gb, plural, size, systemName, useMachine, useReclaim, usedPct,
+  DISK_WARN_PCT, HISTORY, UP_TO_ONE, fill, gb, size, systemName, useMachine, useReclaim, usedPct,
 } from '../state/machine'
+import { t } from '../i18n'
 
 function codeOf(m: ModuleDef): React.CSSProperties {
   return { '--code': folders.find((f) => f.id === m.folder)!.gradient.g1 } as React.CSSProperties
@@ -28,10 +29,10 @@ export function Dashboard({ app, settings }: { app: AppState; settings: Settings
   /** What the index can already say about a module, before anything is asked of it. */
   function reading(m: ModuleDef): string {
     const hit = foundOf(m.id)
-    if (hit && hit.bytes !== null) return `${size(hit.bytes)} do odzyskania`
-    if (m.id === 'disk-map' && mainDisk) return `${mainDisk.mount_point} zajęty w ${usedPct(mainDisk).toFixed(0)}%`
+    if (hit && hit.bytes !== null) return t('dashboard.reading.reclaim', { size: size(hit.bytes) })
+    if (m.id === 'disk-map' && mainDisk) return t('dashboard.reading.disk', { mount: mainDisk.mount_point, pct: usedPct(mainDisk).toFixed(0) })
     if (m.id === 'health-monitor' && cpu)
-      return [`CPU ${cpu.value.toFixed(0)}%`, temp && `${temp.value.toFixed(0)} °C`].filter(Boolean).join(' · ')
+      return [t('dashboard.reading.cpu', { pct: cpu.value.toFixed(0) }), temp && `${temp.value.toFixed(0)} °C`].filter(Boolean).join(' · ')
     return '—'
   }
 
@@ -40,10 +41,10 @@ export function Dashboard({ app, settings }: { app: AppState; settings: Settings
       {/* --------------------------------------------------- core record */}
       <section className="dash-plot" data-tour="cpu">
         <div className="dash-head">
-          <h2 className="lbl">Profil procesora</h2>
+          <h2 className="lbl">{t('dashboard.cpu.title')}</h2>
           {coreCount > 0 && (
             <span className="mono">
-              {coreCount} {plural(coreCount, 'rdzeń', 'rdzenie', 'rdzeni')} · odczyt co {UP_TO_ONE.format(refreshMs / 1000)} s
+              {t('dashboard.cpu.meta', { cores: `${coreCount} ${t('dashboard.cores', { n: coreCount })}`, s: UP_TO_ONE.format(refreshMs / 1000) })}
             </span>
           )}
         </div>
@@ -59,45 +60,44 @@ export function Dashboard({ app, settings }: { app: AppState; settings: Settings
         ) : (
           <div className="cpu-box cpu-box--wait" role="status">
             {error
-              ? 'Nie udało się odczytać stanu maszyny — moduł system-info nie odpowiada.'
-              : 'Linia potrzebuje dwóch odczytów — czekam na kolejny…'}
+              ? t('dashboard.cpu.error')
+              : t('dashboard.cpu.wait')}
           </div>
         )}
         {watchedNow.length > 0 && (
           <div className="cpu-watching">
-            <span className="lbl">Obserwowane</span>
+            <span className="lbl">{t('dashboard.watching')}</span>
             <span className="mono">{watchedNow.map((c) => String(c).padStart(2, '0')).join(' · ')}</span>
             <button className="btn btn-ghost btn-mini" onClick={() => settings.set('watchedCores', [])}>
-              Wyczyść
+              {t('dashboard.watching.clear')}
             </button>
           </div>
         )}
         <p className="dash-cap">
-          Linia to <b>średnia procesora</b>, przerywana — najbardziej zajęty rdzeń; skala dopasowuje się do obciążenia.
-          Słupki to rdzenie teraz, 0–100%. Najedź na słupek, żeby zobaczyć historię rdzenia; <b>kliknij</b> (albo Enter),
-          by obserwować go na stałe — także kilka naraz.
+          {t('dashboard.caption.a')} <b>{t('dashboard.caption.avg')}</b>{t('dashboard.caption.b')}{' '}
+          <b>{t('dashboard.caption.click')}</b> {t('dashboard.caption.c')}
         </p>
-        {error && record.samples.length > 0 && <p className="dash-note">Ostatni odczyt się nie udał: {error}</p>}
+        {error && record.samples.length > 0 && <p className="dash-note">{t('dashboard.cpu.last-failed', { error })}</p>}
       </section>
 
       {/* ------------------------------------------------- machine sheet */}
       <section className="dash-spec" data-tour="machine">
-        <h2 className="lbl">Ta maszyna</h2>
+        <h2 className="lbl">{t('dashboard.machine')}</h2>
         <div className="dash-no">POS 000</div>
         <p className="dash-sub">
-          Włączone moduły: <b>{enabled}</b> z {numbers.size}
+          {t('dashboard.enabled.a')} <b>{enabled}</b> {t('dashboard.enabled.b', { total: numbers.size })}
         </p>
 
         <table className="spec-table">
           <tbody>
             <tr>
-              <td>System</td>
+              <td>{t('dashboard.spec.system')}</td>
               <td>{system}</td>
             </tr>
             {!info && error && (
               <tr>
-                <td>Odczyt</td>
-                <td className="warn">system-info nie odpowiada</td>
+                <td>{t('dashboard.spec.reading')}</td>
+                <td className="warn">{t('dashboard.spec.no-answer')}</td>
               </tr>
             )}
             {!info &&
@@ -112,7 +112,7 @@ export function Dashboard({ app, settings }: { app: AppState; settings: Settings
             {mainDisk && (
               <tr>
                 <td>
-                  Dysk <span className="spec-path" title={mainDisk.mount_point}>{mainDisk.mount_point}</span>
+                  {t('dashboard.spec.disk')} <span className="spec-path" title={mainDisk.mount_point}>{mainDisk.mount_point}</span>
                 </td>
                 <td className={usedPct(mainDisk) >= DISK_WARN_PCT ? 'warn' : undefined}>{fill(mainDisk)}</td>
               </tr>
@@ -121,14 +121,14 @@ export function Dashboard({ app, settings }: { app: AppState; settings: Settings
             {crowded.map((d) => (
               <tr key={d.mount_point}>
                 <td>
-                  Dysk <span className="spec-path" title={d.mount_point}>{d.mount_point}</span>
+                  {t('dashboard.spec.disk')} <span className="spec-path" title={d.mount_point}>{d.mount_point}</span>
                 </td>
                 <td className="warn">{fill(d)}</td>
               </tr>
             ))}
             {ram && (
               <tr>
-                <td>Pamięć</td>
+                <td>{t('dashboard.spec.memory')}</td>
                 <td>
                   {ram.detail} · {ram.value.toFixed(0)}%
                 </td>
@@ -136,15 +136,15 @@ export function Dashboard({ app, settings }: { app: AppState; settings: Settings
             )}
             {cpu && (
               <tr>
-                <td>Procesor</td>
+                <td>{t('dashboard.spec.cpu')}</td>
                 <td>
-                  {cpu.value.toFixed(0)}% · {coreCount || '—'} {plural(coreCount, 'rdzeń', 'rdzenie', 'rdzeni')}
+                  {cpu.value.toFixed(0)}% · {coreCount || '—'} {t('dashboard.cores', { n: coreCount })}
                 </td>
               </tr>
             )}
             {temp && (
               <tr>
-                <td>Temperatura</td>
+                <td>{t('dashboard.spec.temp')}</td>
                 <td>{temp.value.toFixed(0)} °C</td>
               </tr>
             )}
@@ -153,7 +153,7 @@ export function Dashboard({ app, settings }: { app: AppState; settings: Settings
 
         {anyCrowded && (
           <button className="dash-more dash-more--warn" onClick={() => setView({ kind: 'module', moduleId: 'disk-map' })}>
-            Prawie pełny dysk — mapa dysków pokaże, co zajmuje miejsce ({numbers.get('disk-map')})
+            {t('dashboard.crowded', { code: numbers.get('disk-map') ?? '' })}
           </button>
         )}
 
@@ -176,7 +176,7 @@ export function Dashboard({ app, settings }: { app: AppState; settings: Settings
               {reclaim.kind === 'done' ? (
                 <>
                   <div className="reclaim-total">
-                    <span className="lbl">Do odzyskania</span>
+                    <span className="lbl">{t('dashboard.reclaim.total')}</span>
                     <b>{size(foundTotal)}</b>
                   </div>
                   <div className="reclaim">
@@ -192,30 +192,30 @@ export function Dashboard({ app, settings }: { app: AppState; settings: Settings
                         >
                           <span className="nav-no">{numbers.get(r.id)}</span>
                           <span>{m.name}</span>
-                          <em>{r.error ? 'nie odczytano' : size(r.bytes ?? 0)}</em>
+                          <em>{r.error ? t('dashboard.reclaim.failed') : size(r.bytes ?? 0)}</em>
                           <span className="code" style={codeOf(m)} />
                         </button>
                       )
                     })}
                   </div>
                   <button className="dash-more" onClick={checkReclaim}>
-                    Sprawdź ponownie
+                    {t('dashboard.reclaim.again')}
                   </button>
                 </>
               ) : (
                 <button className="btn btn-primary" disabled={reclaim.kind === 'scanning'} onClick={checkReclaim}>
-                  {reclaim.kind === 'scanning' ? 'Sprawdzam' : 'Sprawdź, co da się odzyskać'}
+                  {reclaim.kind === 'scanning' ? t('dashboard.reclaim.scanning') : t('dashboard.reclaim.check')}
                   {reclaim.kind === 'scanning' && <b>{`${reclaim.done} / ${sources.length}`}</b>}
                 </button>
               )}
-              {reclaim.kind !== 'done' && <p className="dash-note">Tylko odczyt. Usuwasz w module, po jego potwierdzeniu.</p>}
+              {reclaim.kind !== 'done' && <p className="dash-note">{t('dashboard.reclaim.note')}</p>}
             </div>
           </>
         ) : (
           <div className="dash-actions" data-tour="reclaim">
-            <p className="dash-note">Żaden włączony moduł nie zwalnia miejsca na dysku.</p>
+            <p className="dash-note">{t('dashboard.reclaim.none')}</p>
             <button className="btn btn-ghost" onClick={() => setView({ kind: 'manager' })}>
-              Zarządzanie modułami
+              {t('page.manager')}
             </button>
           </div>
         )}
@@ -225,12 +225,12 @@ export function Dashboard({ app, settings }: { app: AppState; settings: Settings
       <div className="dash-index">
         <section className="dash-idx" data-tour="index">
           <div className="dash-head">
-            <h2 className="lbl">Indeks</h2>
+            <h2 className="lbl">{t('dashboard.index')}</h2>
             {/* Surfaces modules the user never switched on — including ones
                 that arrived in an update and would otherwise stay unseen. */}
             {numbers.size > enabled && (
               <button className="dash-more" onClick={() => setView({ kind: 'manager' })}>
-                {numbers.size - enabled} {plural(numbers.size - enabled, 'niewłączony', 'niewłączone', 'niewłączonych')}
+                {t('dashboard.not-enabled', { n: numbers.size - enabled })}
               </button>
             )}
           </div>
@@ -249,9 +249,9 @@ export function Dashboard({ app, settings }: { app: AppState; settings: Settings
             </div>
           ) : (
             <div className="idx-empty">
-              Nie masz jeszcze włączonych modułów z szybkimi akcjami.
+              {t('dashboard.index.empty')}
               <button className="btn btn-ghost btn-mini" onClick={() => setView({ kind: 'manager' })}>
-                Przeglądaj moduły
+                {t('dashboard.index.browse')}
               </button>
             </div>
           )}
@@ -259,20 +259,20 @@ export function Dashboard({ app, settings }: { app: AppState; settings: Settings
 
         <section className="dash-disks">
           <div className="dash-head">
-            <h2 className="lbl">Nośniki</h2>
+            <h2 className="lbl">{t('dashboard.drives')}</h2>
             {disks.length > 0 && (
               <span className="mono">
-                {disks.length} {plural(disks.length, 'zamontowany', 'zamontowane', 'zamontowanych')}
+                {t('dashboard.mounted', { n: disks.length })}
               </span>
             )}
           </div>
           <div className="disk-rows">
             {!info && !error && <div className="ghost-line ghost-line--row" aria-hidden="true" />}
-            {!info && error && <p className="dash-note">Brak odczytu dysków.</p>}
+            {!info && error && <p className="dash-note">{t('dashboard.drives.none')}</p>}
             {disks.map((d) => {
               const pct = usedPct(d)
               return (
-                <div className="disk-row" key={d.mount_point} title={`${gb(d.available_bytes)} wolnego z ${gb(d.total_bytes)}`}>
+                <div className="disk-row" key={d.mount_point} title={t('dashboard.drives.free', { free: gb(d.available_bytes), total: gb(d.total_bytes) })}>
                   <span className="disk-row__mount">
                     <span className="mono">{d.mount_point}</span>
                     {/* Omitted by the sidecar when the kernel does not describe the device. */}

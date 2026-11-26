@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { open } from '@tauri-apps/plugin-dialog'
 import { confirmAction } from '../../components/confirm'
 import { callModule } from '../../data/callModule'
+import { t } from '../../i18n'
 
 interface Current {
   gtk_theme: string
@@ -47,10 +48,10 @@ interface InstallResult {
 }
 
 const KIND_LABEL: Record<string, string> = {
-  theme: 'motyw GTK',
-  icons: 'zestaw ikon',
-  cursor: 'motyw kursora',
-  font: 'czcionka',
+  get theme() { return t('view.desktop-theme.kind.theme') },
+  get icons() { return t('view.desktop-theme.kind.icons') },
+  get cursor() { return t('view.desktop-theme.kind.cursor') },
+  get font() { return t('view.desktop-theme.kind.font') },
 }
 
 /** Themes the user installed themselves are worth pointing out. */
@@ -75,11 +76,11 @@ function ThemeSelect({
     <label className="form-field">
       <span>{label}</span>
       <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
-        {missing && <option value={value}>{value} — nie znaleziono na dysku</option>}
+        {missing && <option value={value}>{t('view.desktop-theme.missing', { value })}</option>}
         {entries.map((e) => (
           <option key={e.name} value={e.name}>
             {e.name}
-            {e.user_installed ? ' — własny' : ''}
+            {e.user_installed ? t('view.desktop-theme.own') : ''}
           </option>
         ))}
       </select>
@@ -158,7 +159,7 @@ export function DesktopThemeView() {
     const dir = await open({
       directory: true,
       multiple: false,
-      title: 'Wybierz folder z motywem, zestawem ikon lub kursorem',
+      title: t('view.desktop-theme.install.pick-title'),
     })
     if (typeof dir !== 'string') return
     setInstalling(true)
@@ -186,8 +187,8 @@ export function DesktopThemeView() {
   async function installFont() {
     const file = await open({
       multiple: false,
-      title: 'Wybierz plik czcionki',
-      filters: [{ name: 'Czcionki', extensions: ['ttf', 'otf', 'ttc', 'woff', 'woff2'] }],
+      title: t('view.desktop-theme.install.pick-font'),
+      filters: [{ name: t('view.desktop-theme.install.fonts-filter'), extensions: ['ttf', 'otf', 'ttc', 'woff', 'woff2'] }],
     })
     if (typeof file !== 'string') return
     setInstalling(true)
@@ -226,7 +227,7 @@ export function DesktopThemeView() {
   }
 
   async function loadPreset(name: string) {
-    if (!(await confirmAction(`Wgrać zestaw „${name}"? Zmieni obecny wygląd pulpitu.`))) return
+    if (!(await confirmAction(t('view.desktop-theme.presets.apply.confirm', { name })))) return
     setPresetBusy(name)
     setApplyResult(null)
     try {
@@ -239,7 +240,7 @@ export function DesktopThemeView() {
   }
 
   async function deletePreset(name: string) {
-    if (!(await confirmAction(`Usunąć zestaw „${name}"?`))) return
+    if (!(await confirmAction(t('view.desktop-theme.presets.delete.confirm', { name })))) return
     setPresetBusy(name)
     try {
       await callModule<string[]>('desktop-theme', { cmd: 'delete_preset', name })
@@ -249,14 +250,14 @@ export function DesktopThemeView() {
     }
   }
 
-  if (loading) return <div className="scan-spinner">Sprawdzam ustawienia pulpitu…</div>
+  if (loading) return <div className="scan-spinner">{t('view.desktop-theme.scanning')}</div>
 
   if (scanError) {
     return (
       <div className="glass empty-state">
-        <p>Nie udało się odczytać ustawień pulpitu.</p>
+        <p>{t('view.desktop-theme.read-failed')}</p>
         <p className="mono" style={{ fontSize: 13 }}>{scanError}</p>
-        <button className="btn btn-ghost" onClick={loadScan}>Spróbuj ponownie</button>
+        <button className="btn btn-ghost" onClick={loadScan}>{t('view.desktop-theme.retry')}</button>
       </div>
     )
   }
@@ -264,8 +265,8 @@ export function DesktopThemeView() {
   if (!scan || !draft) {
     return (
       <div className="glass empty-state">
-        <p>Brak danych o pulpicie.</p>
-        <button className="btn btn-ghost" onClick={loadScan}>Odśwież</button>
+        <p>{t('view.desktop-theme.no-data')}</p>
+        <button className="btn btn-ghost" onClick={loadScan}>{t('view.desktop-theme.refresh')}</button>
       </div>
     )
   }
@@ -275,46 +276,44 @@ export function DesktopThemeView() {
   return (
     <>
       <div className="section-head">
-        <h2 style={{ fontSize: 14 }}>Środowisko</h2>
+        <h2 style={{ fontSize: 14 }}>{t('view.desktop-theme.environment')}</h2>
       </div>
       <div className="glass" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ fontSize: 13 }}>
-          Wykryto: <strong>{scan.desktop_name}</strong>
+          {t('view.desktop-theme.detected')} <strong>{scan.desktop_name}</strong>
         </div>
         {locked && (
           <div className="form-warning">
-            {scan.unsupported_reason ?? 'To środowisko nie jest obsługiwane.'} Motywy i czcionki
-            możesz nadal instalować — zmiana ustawień jest niedostępna.
+            {scan.unsupported_reason ?? t('view.desktop-theme.unsupported')} {t('view.desktop-theme.locked-note')}
           </div>
         )}
         {scan.desktop === 'plasma' && (
           <div className="form-warning">
-            Odczyt ustawień KDE Plasma sprawdzono na Plasmie 6, zapisu jeszcze nie. Zgłoś, jeśli coś
-            tu nie działa.
+            {t('view.desktop-theme.plasma-note')}
           </div>
         )}
       </div>
 
       <div className="section-head" style={{ marginTop: 20 }}>
-        <h2 style={{ fontSize: 14 }}>Wygląd</h2>
+        <h2 style={{ fontSize: 14 }}>{t('view.desktop-theme.appearance')}</h2>
       </div>
       <div className="glass" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <ThemeSelect
-          label="Motyw GTK"
+          label={t('view.desktop-theme.gtk')}
           value={draft.gtk_theme}
           entries={scan.gtk_themes}
           disabled={locked}
           onChange={(v) => setDraft({ ...draft, gtk_theme: v })}
         />
         <ThemeSelect
-          label="Ikony"
+          label={t('view.desktop-theme.icons')}
           value={draft.icon_theme}
           entries={scan.icon_themes}
           disabled={locked}
           onChange={(v) => setDraft({ ...draft, icon_theme: v })}
         />
         <ThemeSelect
-          label="Kursor"
+          label={t('view.desktop-theme.cursor')}
           value={draft.cursor_theme}
           entries={scan.cursor_themes}
           disabled={locked}
@@ -325,21 +324,21 @@ export function DesktopThemeView() {
             a greyed-out control invites the question "why not?". */}
         {scan.color_scheme_supported && (
           <label className="form-field">
-            <span>Tryb</span>
+            <span>{t('view.desktop-theme.mode')}</span>
             <select
               value={draft.color_scheme}
               disabled={locked}
               onChange={(e) => setDraft({ ...draft, color_scheme: e.target.value })}
             >
-              <option value="default">Domyślny</option>
-              <option value="prefer-light">Jasny</option>
-              <option value="prefer-dark">Ciemny</option>
+              <option value="default">{t('view.desktop-theme.mode.default')}</option>
+              <option value="prefer-light">{t('view.desktop-theme.mode.light')}</option>
+              <option value="prefer-dark">{t('view.desktop-theme.mode.dark')}</option>
             </select>
           </label>
         )}
 
         <label className="form-field">
-          <span>Czcionka interfejsu</span>
+          <span>{t('view.desktop-theme.font')}</span>
           <input
             type="text"
             value={draft.font}
@@ -349,7 +348,7 @@ export function DesktopThemeView() {
           />
         </label>
         <label className="form-field">
-          <span>Czcionka o stałej szerokości</span>
+          <span>{t('view.desktop-theme.font-mono')}</span>
           <input
             type="text"
             value={draft.monospace_font}
@@ -373,18 +372,18 @@ export function DesktopThemeView() {
             onClick={applyChanges}
             disabled={locked || saving || pendingCount === 0}
           >
-            {saving ? 'Zapisuję…' : pendingCount > 0 ? `Zastosuj (${pendingCount})` : 'Brak zmian'}
+            {saving ? t('view.desktop-theme.saving') : pendingCount > 0 ? t('view.desktop-theme.apply', { n: pendingCount }) : t('view.desktop-theme.no-changes')}
           </button>
           {pendingCount > 0 && (
             <button className="btn btn-ghost" onClick={() => setDraft(scan.current)} disabled={saving}>
-              Cofnij zmiany
+              {t('view.desktop-theme.revert')}
             </button>
           )}
         </div>
 
         {applyResult && (
           <div className={applyResult.success ? 'cr-path' : 'form-warning'}>
-            {applyResult.applied.length > 0 && <div>Zastosowano: {applyResult.applied.join(', ')}.</div>}
+            {applyResult.applied.length > 0 && <div>{t('view.desktop-theme.applied', { list: applyResult.applied.join(', ') })}</div>}
             {applyResult.failed.map((f, i) => (
               <div key={i}>{f}</div>
             ))}
@@ -393,26 +392,27 @@ export function DesktopThemeView() {
       </div>
 
       <div className="section-head" style={{ marginTop: 20 }}>
-        <h2 style={{ fontSize: 14 }}>Instalacja z folderu</h2>
+        <h2 style={{ fontSize: 14 }}>{t('view.desktop-theme.install')}</h2>
       </div>
       <div className="glass" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-          Rozpoznaje samo, czy wskazany folder jest motywem GTK, zestawem ikon czy kursorem, i kopiuje
-          go do Twojego katalogu domowego.
+          {t('view.desktop-theme.install.note')}
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <button className="btn btn-ghost" onClick={installTheme} disabled={installing}>
-            Zainstaluj motyw z folderu
+            {t('view.desktop-theme.install.theme')}
           </button>
           <button className="btn btn-ghost" onClick={installFont} disabled={installing}>
-            Zainstaluj czcionkę z pliku
+            {t('view.desktop-theme.install.font')}
           </button>
         </div>
         {installResult && (
           <div className="cr-path">
-            Zainstalowano {KIND_LABEL[installResult.kind] ?? installResult.kind}{' '}
-            „{installResult.name}" — {installResult.files}{' '}
-            {installResult.files === 1 ? 'plik' : 'plików'} w{' '}
+            {t('view.desktop-theme.install.done', {
+              kind: KIND_LABEL[installResult.kind] ?? installResult.kind,
+              name: installResult.name,
+              n: installResult.files,
+            })}{' '}
             <span className="mono">{installResult.destination}</span>
           </div>
         )}
@@ -420,16 +420,16 @@ export function DesktopThemeView() {
       </div>
 
       <div className="section-head" style={{ marginTop: 20 }}>
-        <h2 style={{ fontSize: 14 }}>Zestawy</h2>
+        <h2 style={{ fontSize: 14 }}>{t('view.desktop-theme.presets')}</h2>
       </div>
       <div className="glass" style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ fontSize: 13, color: 'var(--muted)' }}>
-          Zapisuje obecny wygląd pod nazwą, żeby móc do niego wrócić jednym kliknięciem.
+          {t('view.desktop-theme.presets.note')}
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
           <input
             type="text"
-            placeholder="nazwa zestawu"
+            placeholder={t('view.desktop-theme.presets.placeholder')}
             value={presetName}
             disabled={locked}
             onChange={(e) => setPresetName(e.target.value)}
@@ -439,11 +439,11 @@ export function DesktopThemeView() {
             onClick={savePreset}
             disabled={locked || !presetName.trim() || presetBusy !== null}
           >
-            Zapisz obecny
+            {t('view.desktop-theme.presets.save')}
           </button>
         </div>
         {scan.presets.length === 0 ? (
-          <div style={{ fontSize: 13, color: 'var(--muted)' }}>Brak zapisanych zestawów.</div>
+          <div style={{ fontSize: 13, color: 'var(--muted)' }}>{t('view.desktop-theme.presets.empty')}</div>
         ) : (
           <div className="clean-list">
             {scan.presets.map((name) => (
@@ -455,14 +455,14 @@ export function DesktopThemeView() {
                     onClick={() => loadPreset(name)}
                     disabled={locked || presetBusy === name}
                   >
-                    Wgraj
+                    {t('view.desktop-theme.presets.apply')}
                   </button>
                   <button
                     className="btn btn-ghost btn-mini"
                     onClick={() => deletePreset(name)}
                     disabled={presetBusy === name}
                   >
-                    Usuń
+                    {t('common.remove')}
                   </button>
                 </div>
               </div>

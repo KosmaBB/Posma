@@ -37,8 +37,20 @@ const FORBIDDEN_ROOTS: &[&str] = &[
 ];
 #[cfg(target_os = "macos")]
 const FORBIDDEN_ROOTS: &[&str] = &["/System", "/Library", "/usr", "/bin", "/sbin", "/private/var", "/private/etc"];
+
+#[cfg(not(target_os = "windows"))]
+fn forbidden_roots() -> Vec<PathBuf> {
+    FORBIDDEN_ROOTS.iter().map(PathBuf::from).collect()
+}
+
+/// Where this Windows keeps itself and its programs, which need not be C:.
 #[cfg(target_os = "windows")]
-const FORBIDDEN_ROOTS: &[&str] = &["C:\\Windows", "C:\\Program Files", "C:\\Program Files (x86)"];
+fn forbidden_roots() -> Vec<PathBuf> {
+    [("SystemRoot", r"C:\Windows"), ("ProgramFiles", r"C:\Program Files"), ("ProgramFiles(x86)", r"C:\Program Files (x86)")]
+        .iter()
+        .map(|(var, fallback)| std::env::var_os(var).map_or_else(|| PathBuf::from(fallback), PathBuf::from))
+        .collect()
+}
 
 #[derive(Deserialize)]
 #[serde(tag = "cmd", rename_all = "snake_case")]
@@ -74,9 +86,11 @@ fn is_forbidden(path: &Path) -> bool {
     let Some(parent) = path.parent() else { return true };
     let Ok(parent_canon) = parent.canonicalize() else { return true };
     let full = parent_canon.join(path.file_name().unwrap_or_default());
-    FORBIDDEN_ROOTS.iter().any(|root| {
-        let root = Path::new(root);
-        full == root || full.starts_with(root) || parent_canon == root || parent_canon.starts_with(root)
+    forbidden_roots().iter().any(|root| {
+        // Canonical as well: on Windows a canonical path starts with \\?\,
+        // and a root written plainly would never match one.
+        let root = root.canonicalize().unwrap_or_else(|_| root.clone());
+        full.starts_with(&root) || parent_canon.starts_with(&root)
     })
 }
 
@@ -96,6 +110,21 @@ fn random_suffix() -> String {
 fn overwrite_file(path: &Path) -> io::Result<u64> {
     let meta = fs::metadata(path)?;
     let len = meta.len();
+    // Read-only guards against an accident, and this file was picked to be
+    // destroyed: git keeps every object read-only, so a shredded project
+    // folder would otherwise fail file by file.
+    if meta.permissions().readonly() {
+        let mut writable = meta.permissions();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            writable.set_mode(writable.mode() | 0o200); // the owner only, as before
+        }
+        #[cfg(not(unix))]
+        #[allow(clippy::permissions_set_readonly_false)] // Windows has one read-only flag, no other users' bits
+        writable.set_readonly(false);
+        fs::set_permissions(path, writable)?;
+    }
     let mut file = fs::OpenOptions::new().write(true).open(path)?;
     let mut rng = rand::thread_rng();
     let mut buf = vec![0u8; 64 * 1024];
@@ -203,4 +232,38 @@ fn main() {
     };
     println!("{}", output.expect("response must serialize"));
     io::stdout().flush().ok();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The system's own folders are refused however the path comes written
+    /// (on Windows a canonical one starts with \\?\); a file of one's own is not.
+    #[test]
+    fn system_folders_are_refused_and_ones_own_files_are_not() {
+        #[cfg(windows)]
+        let system = PathBuf::from(std::env::var_os("SystemRoot").expect("SystemRoot")).join(r"System32\drivers\etc\hosts");
+        #[cfg(not(windows))]
+        let system = PathBuf::from("/usr/bin/env");
+        assert!(is_forbidden(&system), "{system:?}");
+        let own = Path::new(env!("CARGO_MANIFEST_DIR")).join("Cargo.toml");
+        assert!(!is_forbidden(&own), "{own:?}");
+    }
+
+    /// A read-only file, as git keeps its objects, goes like any other.
+    #[test]
+    fn a_read_only_file_is_shredded_too() {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../target/test-shredder-readonly");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(&dir).unwrap();
+        let file = dir.join("object");
+        fs::write(&file, "secret").unwrap();
+        let mut perms = fs::metadata(&file).unwrap().permissions();
+        perms.set_readonly(true);
+        fs::set_permissions(&file, perms).unwrap();
+        let done = shred(vec![file.to_string_lossy().into_owned()]);
+        assert!(done.errors.is_empty() && !file.exists(), "{:?}", done.errors);
+        fs::remove_dir_all(&dir).unwrap();
+    }
 }

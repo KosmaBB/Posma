@@ -1,5 +1,7 @@
 # Architecture
 
+*[Polska wersja →](pl/architecture.md)*
+
 POSMA is three layers with deliberately different privilege levels, talking
 over one protocol.
 
@@ -76,6 +78,25 @@ security argument only holds if this code is small enough to actually read.
 
 All three share `crates/broker-common`, which holds:
 
+- **the closed operation catalog** (`ops.rs`) — a Rust enum of every
+  permitted privileged operation across all OSes. There is no
+  "run arbitrary command" variant. An unrecognised operation is rejected by
+  the deserializer before reaching any logic.
+- **the `Broker` trait** (`broker.rs`) — one method per operation, each
+  defaulting to an honest "not supported on this system". A new OS broker
+  compiles and answers every operation correctly before a single operation is
+  implemented; each one lands by overriding one method.
+- **shared guards** (`guards.rs`) — path containment, package-name
+  validation, same-file detection, backup rotation, atomic writes. Each of
+  these exists because something went wrong without it (see
+  [Security model](security-model.md)).
+- **dispatch and transports** (`serve.rs`) — one request handler, used by
+  every run mode, so no transport can diverge in what it actually does.
+
+Each per-OS broker implements only what it can genuinely do on that platform
+and reports the rest as unsupported. `capabilities` is itself an operation,
+so a broker can be asked what it implements rather than found out by failing.
+
 ### The other shared crates
 
 Three more crates exist for the same reason: a rule that lives in one module
@@ -99,26 +120,7 @@ is not a rule.
   one — so the two cannot disagree about what the machine is. See
   [Linux distributions](distributions.md).
 
-- **the closed operation catalog** (`ops.rs`) — a Rust enum of every
-  permitted privileged operation across all OSes. There is no
-  "run arbitrary command" variant. An unrecognised operation is rejected by
-  the deserializer before reaching any logic.
-- **the `Broker` trait** (`broker.rs`) — one method per operation, each
-  defaulting to an honest "not supported on this system". A new OS broker
-  compiles and answers every operation correctly before a single operation is
-  implemented; each one lands by overriding one method.
-- **shared guards** (`guards.rs`) — path containment, package-name
-  validation, same-file detection, backup rotation, atomic writes. Each of
-  these exists because something went wrong without it (see
-  [Security model](security-model.md)).
-- **dispatch and transports** (`serve.rs`) — one request handler, used by
-  every run mode, so no transport can diverge in what it actually does.
-
-Each per-OS broker implements only what it can genuinely do on that platform
-and reports the rest as unsupported. `capabilities` is itself an operation,
-so a broker can be asked what it implements rather than found out by failing.
-
-### Two ways the broker is reached
+### Three ways the broker is reached
 
 | Mode | How | Trade-off |
 |---|---|---|

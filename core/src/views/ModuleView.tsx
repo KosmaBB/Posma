@@ -1,6 +1,7 @@
 import type { AppState } from '../state/appState'
 import { catalogNumbers, folders, moduleById, riskLabel, type ModuleDef } from '../data/modules'
 import { lazy, Suspense } from 'react'
+import { t } from '../i18n'
 
 type ViewProps = { app: AppState }
 
@@ -50,9 +51,9 @@ export function ModuleView({ app, moduleId }: { app: AppState; moduleId: string 
     return (
       <div className="view-enter">
         <div className="glass empty-state">
-          Nie znaleziono modułu.
+          {t('module-view.missing')}
           <br />
-          <button className="btn btn-primary" onClick={() => setView({ kind: 'dashboard' })}>Wróć na pulpit</button>
+          <button className="btn btn-primary" onClick={() => setView({ kind: 'dashboard' })}>{t('module-view.back')}</button>
         </div>
       </div>
     )
@@ -89,9 +90,9 @@ export function ModuleBody({ app, mod }: { app: AppState; mod: ModuleDef }) {
     </Suspense>
   ) : (
     <div className="glass placeholder-body">
-      Interfejs modułu „{mod.name}" powstanie w kolejnych etapach —
+      {t('module-view.placeholder.1', { name: mod.name })}
       <br />
-      tu trafi właściwe UI skanowania, podglądu i akcji tego modułu.
+      {t('module-view.placeholder.2')}
     </div>
   )
 }

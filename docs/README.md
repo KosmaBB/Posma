@@ -1,5 +1,7 @@
 # POSMA documentation
 
+*[Polska wersja →](pl/)*
+
 Developer and reviewer documentation. If you're here to understand what POSMA
 does with administrator rights before trusting it, start with
 [Security model](security-model.md) — that's the document written for exactly
@@ -11,10 +13,13 @@ that question.
 | [Security model](security-model.md) | The privilege model in full: what can reach root, what stops it, and what is *not* protected |
 | [Writing a module](writing-a-module.md) | The module contract — protocol, manifest, capabilities, safety rules |
 | [Writing a theme](writing-a-theme.md) | Your own look for the whole app: language, variable names, the starter template, the rules |
-| [Building and development](building.md) | Toolchain, build order, the sidecar sync step, testing |
+| [Writing a translation](writing-a-translation.md) | POSMA in your language: the file format, plural forms, the template, the check |
+| [Building and development](building.md) | Toolchain, build order, the sidecar sync step, testing, installers |
+| [Linux distributions](distributions.md) | Which distributions POSMA runs on, what each module does there, and what was actually run to find out |
 
-Docs are written in English so they stay usable for contributors who don't
-read Polish; the user-facing README exists in both
+The documentation exists in English and in [Polish](pl/). If the two
+ever disagree, the code decides — and the difference is worth reporting like
+any other bug. The user-facing README exists in both too:
 [English](https://github.com/KosmaBB/Posma/blob/master/README.md) and [Polish](https://github.com/KosmaBB/Posma/blob/master/README.pl.md).
 
 ## Design documents

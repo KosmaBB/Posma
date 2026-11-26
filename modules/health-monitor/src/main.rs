@@ -191,10 +191,21 @@ fn list_block_devices() -> Vec<BlockDevice> {
     numbers.into_iter().map(|n| BlockDevice { device: format!("/dev/disk{n}"), size_bytes: None }).collect()
 }
 
-#[cfg(not(any(target_os = "linux", target_os = "macos")))]
+/// Every physical drive Windows numbers, under the name smartctl gives it:
+/// \\.\PhysicalDrive0 is /dev/sda. Opening one to ask nothing of it needs
+/// no administrator; reading its size would, so there is none.
+// shortcut: PhysicalDrive0–25 only (sda–sdz); more drives than that is a server.
+#[cfg(windows)]
 fn list_block_devices() -> Vec<BlockDevice> {
-    // Windows device enumeration is unimplemented — untested territory,
-    // same as this app's other OS-specific paths. Returns empty rather than guessing.
+    use std::os::windows::fs::OpenOptionsExt;
+    (0u8..26)
+        .filter(|n| std::fs::OpenOptions::new().access_mode(0).open(format!(r"\\.\PhysicalDrive{n}")).is_ok())
+        .map(|n| BlockDevice { device: format!("/dev/sd{}", char::from(b'a' + n)), size_bytes: None })
+        .collect()
+}
+
+#[cfg(not(any(target_os = "linux", target_os = "macos", windows)))]
+fn list_block_devices() -> Vec<BlockDevice> {
     Vec::new()
 }
 

@@ -1,3 +1,5 @@
+import { t } from '../i18n'
+
 /**
  * Reusable notice for "this feature needs an external tool that isn't
  * installed" — e.g. smartctl for S.M.A.R.T. reads. The install button is
@@ -10,15 +12,15 @@
 export function MissingDependency({ tool, installHint }: { tool: string; installHint?: string }) {
   return (
     <span className="missing-dep">
-      <span className="chip os">Niezainstalowane</span>
-      <span className="missing-dep-text">{tool} nie jest zainstalowany.</span>
+      <span className="chip os">{t('missing.chip')}</span>
+      <span className="missing-dep-text">{t('missing.text', { tool })}</span>
       {installHint && (
         <button
           className="btn btn-ghost btn-mini"
           disabled
-          title="Instalacja pakietów wymaga uprawnień administratora — ta funkcja pojawi się po wdrożeniu brokera uprawnień (Access_plan.md). Na razie uruchom to polecenie ręcznie."
+          title={t('missing.hint')}
         >
-          Zainstaluj: <span className="mono">{installHint}</span>
+          {t('missing.install')} <span className="mono">{installHint}</span>
         </button>
       )}
     </span>

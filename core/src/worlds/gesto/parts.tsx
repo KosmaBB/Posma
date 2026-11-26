@@ -8,6 +8,7 @@ import type { SettingsState } from '../../state/settings'
 import { size, usedPct, type Machine, type ReclaimState } from '../../state/machine'
 import { applyOrder, modulesInFolder, type FolderId, type ModuleDef } from '../../data/modules'
 import { Icon } from '../../components/Icons'
+import { t } from '../../i18n'
 
 /** Everything a Gęsto page reads, gathered once by the shell so the machine is polled once. */
 export interface Ctx {
@@ -61,7 +62,7 @@ export function Bar({ pct, hot }: { pct: number; hot?: boolean }) {
 
 export function Crumbs({ items }: { items: { label: string; onClick?: () => void }[] }) {
   return (
-    <nav className="g-crumbs" aria-label="Ścieżka">
+    <nav className="g-crumbs" aria-label={t('world.gesto.crumbs')}>
       {items.map((it, i) => (
         <span key={it.label}>
           {i > 0 && <Icon name="chevron" />}
@@ -88,7 +89,7 @@ export function installedIn({ app }: Ctx, folder: FolderId): ModuleDef[] {
 /** What the portal can say about a module without asking it anything; `hot` marks bytes to reclaim. */
 export function readingOf(m: ModuleDef, { reclaim, machine }: Ctx): { text: string; hot: boolean } | null {
   const hit = reclaim.foundOf(m.id)
-  if (hit) return hit.error || hit.bytes === null ? { text: 'nie odczytano', hot: false } : { text: size(hit.bytes), hot: true }
+  if (hit) return hit.error || hit.bytes === null ? { text: t('world.gesto.unread'), hot: false } : { text: size(hit.bytes), hot: true }
   if (m.id === 'disk-map' && machine.mainDisk)
     return { text: `${machine.mainDisk.mount_point} · ${usedPct(machine.mainDisk).toFixed(0)}%`, hot: false }
   if (m.id === 'health-monitor' && machine.cpu)

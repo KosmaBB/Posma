@@ -4,6 +4,7 @@ import { Icon } from '../../components/Icons'
 import { formatBytes } from './TempCleanView'
 import { confirmAction } from '../../components/confirm'
 import { callModule } from '../../data/callModule'
+import { t } from '../../i18n'
 
 interface FileEntry {
   path: string
@@ -58,7 +59,7 @@ export function BigFilesView() {
     const paths = [...checked]
     if (paths.length === 0) return
     const bytes = selectedBytes(scan)
-    if (!(await confirmAction(`Usunąć ${paths.length} plików (${formatBytes(bytes)})? Tej operacji nie można cofnąć.`))) {
+    if (!(await confirmAction(t('view.big-files.confirm', { n: paths.length, size: formatBytes(bytes) })))) {
       return
     }
     setPhase({ kind: 'cleaning', scan })
@@ -95,7 +96,7 @@ export function BigFilesView() {
     <div>
       <div className="glass scan-options">
         <label className="scan-option">
-          <span>Minimalny rozmiar</span>
+          <span>{t('view.big-files.min-size')}</span>
           <div className="scan-option-input">
             <input
               type="number"
@@ -109,7 +110,7 @@ export function BigFilesView() {
           </div>
         </label>
         <label className="scan-option">
-          <span>Maks. liczba wyników</span>
+          <span>{t('view.big-files.max-results')}</span>
           <div className="scan-option-input">
             <input
               type="number"
@@ -125,33 +126,32 @@ export function BigFilesView() {
 
       {phase.kind === 'idle' && (
         <div className="glass empty-state">
-          Przeszukaj katalog domowy w poszukiwaniu plików większych niż {minSizeMb} MB — od instalatorów po
-          zapomniane obrazy maszyn wirtualnych. Katalog .git jest pomijany.
+          {t('view.big-files.intro', { mb: minSizeMb })}
           <br />
-          <button className="btn btn-primary" onClick={runScan}>Skanuj</button>
+          <button className="btn btn-primary" onClick={runScan}>{t('view.big-files.scan')}</button>
         </div>
       )}
 
       {phase.kind === 'scanning' && (
         <div className="glass empty-state">
           <span className="scan-spinner" aria-hidden />
-          Szukanie dużych plików...
+          {t('view.big-files.scanning')}
         </div>
       )}
 
       {phase.kind === 'error' && (
         <div className="glass empty-state" style={{ color: 'var(--critical)' }}>
-          Błąd: {phase.message}
+          {t('view.big-files.error', { message: phase.message })}
           <br />
-          <button className="btn btn-ghost" onClick={runScan}>Spróbuj ponownie</button>
+          <button className="btn btn-ghost" onClick={runScan}>{t('view.big-files.retry')}</button>
         </div>
       )}
 
       {scan && scan.files.length === 0 && (
         <div className="glass empty-state">
-          Nie znaleziono plików większych niż {minSizeMb} MB.
+          {t('view.big-files.none', { mb: minSizeMb })}
           <br />
-          <button className="btn btn-ghost" onClick={runScan}>Skanuj ponownie</button>
+          <button className="btn btn-ghost" onClick={runScan}>{t('view.big-files.rescan')}</button>
         </div>
       )}
 
@@ -159,31 +159,33 @@ export function BigFilesView() {
         <>
           <div className="clean-summary glass">
             <div>
-              <div className="cs-label">Łącznie</div>
+              <div className="cs-label">{t('view.big-files.total')}</div>
               <div className="cs-value mono">{formatBytes(scan.total_bytes)}</div>
             </div>
             <div>
-              <div className="cs-label">Zaznaczone</div>
+              <div className="cs-label">{t('view.big-files.selected')}</div>
               <div className="cs-value mono" style={{ color: 'var(--accent)' }}>{formatBytes(selectedBytes(scan))}</div>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
               <button className="btn btn-ghost" onClick={runScan} disabled={phase.kind === 'cleaning'}>
-                Skanuj ponownie
+                {t('view.big-files.rescan')}
               </button>
               <button
                 className="btn btn-primary"
                 disabled={checked.size === 0 || phase.kind === 'cleaning'}
                 onClick={() => runClean(scan)}
               >
-                {phase.kind === 'cleaning' ? 'Czyszczenie...' : 'Usuń zaznaczone'}
+                {phase.kind === 'cleaning' ? t('view.big-files.cleaning') : t('view.big-files.remove-selected')}
               </button>
             </div>
           </div>
 
           <div className="section-head">
-            <h2>Największe pliki</h2>
+            <h2>{t('view.big-files.heading')}</h2>
             <span className="count">
-              {scan.files.length} {scan.truncated ? `(pokazano ${maxResults} największych)` : 'plików'}
+              {scan.truncated
+                ? t('view.big-files.count-truncated', { n: scan.files.length, max: maxResults })
+                : t('view.big-files.count', { n: scan.files.length })}
             </span>
           </div>
 
@@ -210,19 +212,19 @@ export function BigFilesView() {
             <Icon name="check" />
           </div>
           <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', fontFamily: 'var(--sans)' }}>
-            Odzyskano {formatBytes(phase.result.freed_bytes)}
+            {t('view.big-files.recovered', { size: formatBytes(phase.result.freed_bytes) })}
           </div>
-          Usunięto {phase.result.removed} plików.
+          {t('view.big-files.removed', { n: phase.result.removed })}
           {phase.result.errors.length > 0 && (
             <div className="clean-errors mono">
               {phase.result.errors.slice(0, 8).map((err) => (
                 <div key={err}>{err}</div>
               ))}
-              {phase.result.errors.length > 8 && <div>... i {phase.result.errors.length - 8} więcej</div>}
+              {phase.result.errors.length > 8 && <div>{t('view.big-files.more-errors', { n: phase.result.errors.length - 8 })}</div>}
             </div>
           )}
           <br />
-          <button className="btn btn-primary" onClick={runScan}>Skanuj ponownie</button>
+          <button className="btn btn-primary" onClick={runScan}>{t('view.big-files.rescan')}</button>
         </div>
       )}
     </div>

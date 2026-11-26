@@ -4,6 +4,7 @@
  * is aria-hidden and drawn in the faint guilloche ink, never under figures.
  */
 import { useId } from 'react'
+import { t } from '../../i18n'
 
 interface Rosette {
   cx: number
@@ -97,7 +98,7 @@ export function Seal({ label }: { label: string }) {
       {(['hi', 'lo'] as const).map((tone, i) => (
         <g key={tone} className={`kz-seal__${tone}`} transform={`translate(${i ? -0.6 : 0.8} ${i ? -0.6 : 0.8})`}>
           <text className="kz-seal__ring">
-            <textPath href={`#${id}`}>POSMA · KSIĄŻECZKA · BROKER · </textPath>
+            <textPath href={`#${id}`}>{t('world.ksiazeczka.seal.ring')}</textPath>
           </text>
           <circle cx="46" cy="46" r="25" />
           <text className="kz-seal__no" x="46" y="51" textAnchor="middle">

@@ -4,6 +4,7 @@ import { Icon } from '../../components/Icons'
 import { formatBytes } from './TempCleanView'
 import { confirmAction } from '../../components/confirm'
 import { callModule } from '../../data/callModule'
+import { t } from '../../i18n'
 
 interface Group {
   hash: string
@@ -118,7 +119,7 @@ export function DuplicatesView() {
       const g = scan.groups.find((gr) => gr.paths.includes(p))
       return acc + (g?.size_bytes ?? 0)
     }, 0)
-    if (!(await confirmAction(`Usunąć ${paths.length} plików (${formatBytes(bytes)}), zachowując zaznaczone kopie z każdej grupy? Tej operacji nie można cofnąć.`))) {
+    if (!(await confirmAction(t('view.duplicates.confirm', { n: paths.length, size: formatBytes(bytes) })))) {
       return
     }
     setPhase({ kind: 'cleaning', scan })
@@ -193,7 +194,7 @@ export function DuplicatesView() {
       const item = g?.items.find((i) => i.path === p)
       return acc + (item?.size_bytes ?? 0)
     }, 0)
-    if (!(await confirmAction(`Usunąć ${paths.length} starszych wersji (${formatBytes(bytes)}), zachowując zaznaczone wersje z każdej grupy? Tej operacji nie można cofnąć.`))) {
+    if (!(await confirmAction(t('view.duplicates.confirm-versions', { n: paths.length, size: formatBytes(bytes) })))) {
       return
     }
     setVerPhase({ kind: 'cleaning', scan })
@@ -260,33 +261,32 @@ export function DuplicatesView() {
     <div>
       {phase.kind === 'idle' && (
         <div className="glass empty-state">
-          Przeszukaj Pobrane, Dokumenty, Obrazy, Pulpit, Wideo i Muzykę w poszukiwaniu identycznych plików
-          (SHA-256). Katalogi narzędzi deweloperskich (node_modules, build, .git...) są pomijane.
+          {t('view.duplicates.intro')}
           <br />
-          <button className="btn btn-primary" onClick={runScan}>Skanuj</button>
+          <button className="btn btn-primary" onClick={runScan}>{t('view.duplicates.scan')}</button>
         </div>
       )}
 
       {phase.kind === 'scanning' && (
         <div className="glass empty-state">
           <span className="scan-spinner" aria-hidden />
-          Liczenie sum SHA-256...
+          {t('view.duplicates.hashing')}
         </div>
       )}
 
       {phase.kind === 'error' && (
         <div className="glass empty-state" style={{ color: 'var(--critical)' }}>
-          Błąd: {phase.message}
+          {t('view.duplicates.error', { message: phase.message })}
           <br />
-          <button className="btn btn-ghost" onClick={runScan}>Spróbuj ponownie</button>
+          <button className="btn btn-ghost" onClick={runScan}>{t('view.duplicates.retry')}</button>
         </div>
       )}
 
       {scan && scan.groups.length === 0 && (
         <div className="glass empty-state">
-          Brak duplikatów w przeszukanych folderach.
+          {t('view.duplicates.none')}
           <br />
-          <button className="btn btn-ghost" onClick={runScan}>Skanuj ponownie</button>
+          <button className="btn btn-ghost" onClick={runScan}>{t('view.duplicates.rescan')}</button>
         </div>
       )}
 
@@ -294,33 +294,33 @@ export function DuplicatesView() {
         <>
           <div className="clean-summary glass">
             <div>
-              <div className="cs-label">Zmarnowane miejsce</div>
+              <div className="cs-label">{t('view.duplicates.wasted')}</div>
               <div className="cs-value mono">{formatBytes(scan.wasted_bytes)}</div>
             </div>
             <div>
-              <div className="cs-label">Do usunięcia</div>
+              <div className="cs-label">{t('view.duplicates.to-delete')}</div>
               <div className="cs-value mono" style={{ color: 'var(--accent)' }}>{formatBytes(selectedBytes(scan))}</div>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
               <button className="btn btn-ghost" onClick={runScan} disabled={phase.kind === 'cleaning'}>
-                Skanuj ponownie
+                {t('view.duplicates.rescan')}
               </button>
               <button
                 className="btn btn-primary"
                 disabled={pathsToDelete(scan).length === 0 || phase.kind === 'cleaning'}
                 onClick={() => runClean(scan)}
               >
-                {phase.kind === 'cleaning' ? 'Czyszczenie...' : 'Usuń zaznaczone duplikaty'}
+                {phase.kind === 'cleaning' ? t('view.duplicates.cleaning') : t('view.duplicates.delete-selected')}
               </button>
             </div>
           </div>
 
           <div className="section-head">
-            <h2>Grupy duplikatów</h2>
+            <h2>{t('view.duplicates.groups')}</h2>
             <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-              <span className="count">{scan.groups.length} grup</span>
+              <span className="count">{t('view.duplicates.group-count', { n: scan.groups.length })}</span>
               <button className="btn btn-ghost btn-mini" onClick={() => toggleCollapseAll(scan)}>
-                {scan.groups.every((g) => collapsed.has(g.hash)) ? 'Rozwiń wszystkie' : 'Zwiń wszystkie'}
+                {scan.groups.every((g) => collapsed.has(g.hash)) ? t('view.duplicates.expand-all') : t('view.duplicates.collapse-all')}
               </button>
             </div>
           </div>
@@ -335,14 +335,14 @@ export function DuplicatesView() {
                   <div className="dup-group-head">
                     <label className="dup-group-toggle">
                       <input type="checkbox" checked={isIncluded} onChange={() => toggleGroup(g.hash)} />
-                      <span>{formatBytes(g.size_bytes)} &times; {g.paths.length} kopii</span>
+                      <span>{t('view.duplicates.copies', { size: formatBytes(g.size_bytes), n: g.paths.length })}</span>
                     </label>
                     <span className="dup-group-waste mono">
-                      odzyskasz {formatBytes(g.size_bytes * (g.paths.length - 1))}
+                      {t('view.duplicates.reclaim', { size: formatBytes(g.size_bytes * (g.paths.length - 1)) })}
                     </span>
                     <button
                       className="dup-group-collapse"
-                      aria-label={isCollapsed ? 'Rozwiń grupę' : 'Zwiń grupę'}
+                      aria-label={isCollapsed ? t('view.duplicates.expand-group') : t('view.duplicates.collapse-group')}
                       onClick={() => toggleCollapse(g.hash)}
                     >
                       <span className={isCollapsed ? '' : 'rot'}><Icon name="chevron" /></span>
@@ -361,7 +361,7 @@ export function DuplicatesView() {
                               onChange={() => setKeepSets((prev) => toggleKeep(prev, g.hash, p, g.paths[0]))}
                             />
                             <span className="mono dp-path">{p}</span>
-                            {isKept && <span className="chip low">zachowaj</span>}
+                            {isKept && <span className="chip low">{t('view.duplicates.keep')}</span>}
                           </label>
                         )
                       })}
@@ -380,29 +380,29 @@ export function DuplicatesView() {
             <Icon name="check" />
           </div>
           <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', fontFamily: 'var(--sans)' }}>
-            Odzyskano {formatBytes(phase.result.freed_bytes)}
+            {t('view.duplicates.recovered', { size: formatBytes(phase.result.freed_bytes) })}
           </div>
-          Usunięto {phase.result.removed} plików.
+          {t('view.duplicates.removed-files', { n: phase.result.removed })}
           {phase.result.errors.length > 0 && (
             <div className="clean-errors mono">
               {phase.result.errors.slice(0, 8).map((err) => (
                 <div key={err}>{err}</div>
               ))}
-              {phase.result.errors.length > 8 && <div>... i {phase.result.errors.length - 8} więcej</div>}
+              {phase.result.errors.length > 8 && <div>{t('view.duplicates.more-errors', { n: phase.result.errors.length - 8 })}</div>}
             </div>
           )}
           <br />
-          <button className="btn btn-primary" onClick={runScan}>Skanuj ponownie</button>
+          <button className="btn btn-primary" onClick={runScan}>{t('view.duplicates.rescan')}</button>
         </div>
       )}
 
       <div className="section-head" style={{ marginTop: 32 }}>
-        <h2>Stare wersje tego samego pliku/folderu</h2>
+        <h2>{t('view.duplicates.versions.heading')}</h2>
         {verScan && verScan.groups.length > 0 && (
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <span className="count">{verScan.groups.length} grup</span>
+            <span className="count">{t('view.duplicates.group-count', { n: verScan.groups.length })}</span>
             <button className="btn btn-ghost btn-mini" onClick={() => toggleVerCollapseAll(verScan)}>
-              {verScan.groups.map(groupKey).every((k) => verCollapsed.has(k)) ? 'Rozwiń wszystkie' : 'Zwiń wszystkie'}
+              {verScan.groups.map(groupKey).every((k) => verCollapsed.has(k)) ? t('view.duplicates.expand-all') : t('view.duplicates.collapse-all')}
             </button>
           </div>
         )}
@@ -410,33 +410,32 @@ export function DuplicatesView() {
 
       {verPhase.kind === 'idle' && (
         <div className="glass empty-state">
-          Wykryj pliki i foldery o nazwach różniących się tylko numerem wersji (np. AppName_2.2.zip
-          obok AppName_2.5.zip) — zwykle oznacza to zaległą, starą kopię.
+          {t('view.duplicates.versions.intro')}
           <br />
-          <button className="btn btn-primary" onClick={runVerScan}>Skanuj</button>
+          <button className="btn btn-primary" onClick={runVerScan}>{t('view.duplicates.scan')}</button>
         </div>
       )}
 
       {verPhase.kind === 'scanning' && (
         <div className="glass empty-state">
           <span className="scan-spinner" aria-hidden />
-          Szukanie wersjonowanych nazw...
+          {t('view.duplicates.versions.scanning')}
         </div>
       )}
 
       {verPhase.kind === 'error' && (
         <div className="glass empty-state" style={{ color: 'var(--critical)' }}>
-          Błąd: {verPhase.message}
+          {t('view.duplicates.error', { message: verPhase.message })}
           <br />
-          <button className="btn btn-ghost" onClick={runVerScan}>Spróbuj ponownie</button>
+          <button className="btn btn-ghost" onClick={runVerScan}>{t('view.duplicates.retry')}</button>
         </div>
       )}
 
       {verScan && verScan.groups.length === 0 && (
         <div className="glass empty-state">
-          Nie znaleziono nazw różniących się tylko wersją.
+          {t('view.duplicates.versions.none')}
           <br />
-          <button className="btn btn-ghost" onClick={runVerScan}>Skanuj ponownie</button>
+          <button className="btn btn-ghost" onClick={runVerScan}>{t('view.duplicates.rescan')}</button>
         </div>
       )}
 
@@ -444,23 +443,23 @@ export function DuplicatesView() {
         <>
           <div className="clean-summary glass">
             <div>
-              <div className="cs-label">Miejsce po starych wersjach</div>
+              <div className="cs-label">{t('view.duplicates.versions.space')}</div>
               <div className="cs-value mono">{formatBytes(verScan.total_bytes)}</div>
             </div>
             <div>
-              <div className="cs-label">Do usunięcia</div>
+              <div className="cs-label">{t('view.duplicates.to-delete')}</div>
               <div className="cs-value mono" style={{ color: 'var(--accent)' }}>{formatBytes(verSelectedBytes(verScan))}</div>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
               <button className="btn btn-ghost" onClick={runVerScan} disabled={verPhase.kind === 'cleaning'}>
-                Skanuj ponownie
+                {t('view.duplicates.rescan')}
               </button>
               <button
                 className="btn btn-primary"
                 disabled={verPathsToDelete(verScan).length === 0 || verPhase.kind === 'cleaning'}
                 onClick={() => runVerClean(verScan)}
               >
-                {verPhase.kind === 'cleaning' ? 'Czyszczenie...' : 'Usuń starsze wersje'}
+                {verPhase.kind === 'cleaning' ? t('view.duplicates.cleaning') : t('view.duplicates.versions.delete-older')}
               </button>
             </div>
           </div>
@@ -476,14 +475,14 @@ export function DuplicatesView() {
                   <div className="dup-group-head">
                     <label className="dup-group-toggle">
                       <input type="checkbox" checked={isIncluded} onChange={() => toggleVerGroup(key)} />
-                      <span>{g.base_name} &times; {g.items.length} wersje</span>
+                      <span>{t('view.duplicates.versions.count', { name: g.base_name, n: g.items.length })}</span>
                     </label>
                     <span className="dup-group-waste mono">
-                      odzyskasz {formatBytes(g.items.slice(1).reduce((acc, i) => acc + i.size_bytes, 0))}
+                      {t('view.duplicates.reclaim', { size: formatBytes(g.items.slice(1).reduce((acc, i) => acc + i.size_bytes, 0)) })}
                     </span>
                     <button
                       className="dup-group-collapse"
-                      aria-label={isCollapsed ? 'Rozwiń grupę' : 'Zwiń grupę'}
+                      aria-label={isCollapsed ? t('view.duplicates.expand-group') : t('view.duplicates.collapse-group')}
                       onClick={() => toggleVerCollapse(key)}
                     >
                       <span className={isCollapsed ? '' : 'rot'}><Icon name="chevron" /></span>
@@ -501,12 +500,12 @@ export function DuplicatesView() {
                               disabled={!isIncluded || (isKept && keep.size === 1)}
                               onChange={() => setVerKeepSets((prev) => toggleKeep(prev, key, item.path, g.items[0].path))}
                             />
-                            <span className="chip os">{item.version}{i === 0 ? ' (najnowsza)' : ''}</span>
+                            <span className="chip os">{item.version}{i === 0 ? t('view.duplicates.versions.newest') : ''}</span>
                             <span className="mono dp-path">
                               {item.path}{item.is_dir ? ' /' : ''}
                             </span>
                             <span className="cr-size mono">{formatBytes(item.size_bytes)}</span>
-                            {isKept && <span className="chip low">zachowaj</span>}
+                            {isKept && <span className="chip low">{t('view.duplicates.keep')}</span>}
                           </label>
                         )
                       })}
@@ -525,19 +524,19 @@ export function DuplicatesView() {
             <Icon name="check" />
           </div>
           <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', fontFamily: 'var(--sans)' }}>
-            Odzyskano {formatBytes(verPhase.result.freed_bytes)}
+            {t('view.duplicates.recovered', { size: formatBytes(verPhase.result.freed_bytes) })}
           </div>
-          Usunięto {verPhase.result.removed} pozycji.
+          {t('view.duplicates.removed-items', { n: verPhase.result.removed })}
           {verPhase.result.errors.length > 0 && (
             <div className="clean-errors mono">
               {verPhase.result.errors.slice(0, 8).map((err) => (
                 <div key={err}>{err}</div>
               ))}
-              {verPhase.result.errors.length > 8 && <div>... i {verPhase.result.errors.length - 8} więcej</div>}
+              {verPhase.result.errors.length > 8 && <div>{t('view.duplicates.more-errors', { n: verPhase.result.errors.length - 8 })}</div>}
             </div>
           )}
           <br />
-          <button className="btn btn-primary" onClick={runVerScan}>Skanuj ponownie</button>
+          <button className="btn btn-primary" onClick={runVerScan}>{t('view.duplicates.rescan')}</button>
         </div>
       )}
     </div>

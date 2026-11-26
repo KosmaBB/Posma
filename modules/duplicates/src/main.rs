@@ -137,7 +137,8 @@ fn scan(blacklist: Vec<String>) -> ScanResult {
                 continue;
             }
             let Ok(meta) = entry.metadata() else { continue };
-            if meta.len() < MIN_SIZE {
+            // A cloud-only file would be downloaded just to be hashed.
+            if meta.len() < MIN_SIZE || scan_filter::is_cloud_only(&meta) {
                 continue;
             }
             by_size.entry(meta.len()).or_default().push(entry.path().to_path_buf());

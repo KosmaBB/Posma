@@ -1,5 +1,6 @@
 import { moduleById } from '../../data/modules'
 import type { AppState, View } from '../../state/appState'
+import { t } from '../../i18n'
 
 export interface TourStep {
   /** Where the step sits in the sleeve: side and chapter, shown on the card. */
@@ -32,118 +33,118 @@ export function tourSteps(app: AppState): TourStep[] {
   const moduleSteps: TourStep[] = moduleId
     ? [
         {
-          chapter: 'Strona A · T03 Moduł',
+          chapter: t('tour.chapter.module'),
           view: { kind: 'module', moduleId },
           target: at('module-hero'),
-          title: 'Moduł',
-          text: 'Nagłówek mówi, co moduł robi i jak bardzo jest ryzykowny: Bezpieczny, Ostrożnie albo Krytyczny. Im wyższe ryzyko, tym więcej pytań przed zmianą.',
+          title: t('tour.module.hero.title'),
+          text: t('tour.module.hero.text'),
         },
         {
-          chapter: 'Strona A · T03 Moduł',
+          chapter: t('tour.chapter.module'),
           view: { kind: 'module', moduleId },
           target: `${at('module')} > :nth-child(2)`,
-          title: 'Skan, przegląd, potwierdzenie',
-          text: 'Moduł najpierw tylko czyta. Dostajesz listę z rozmiarami, sam wybierasz pozycje, a nic nie znika, dopóki tego nie potwierdzisz.',
+          title: t('tour.module.flow.title'),
+          text: t('tour.module.flow.text'),
         },
       ]
     : []
 
   return [
     {
-      chapter: 'Strona A · T01 Pulpit',
+      chapter: t('tour.chapter.dashboard'),
       view: dashboard,
       target: at('cpu'),
-      title: 'Przyrząd procesora',
+      title: t('tour.cpu.title'),
       text: katalog
-        ? 'Linia to średnia całego procesora, przerywana — najbardziej zajęty rdzeń. Słupki to każdy rdzeń teraz. Kliknij słupek, a ten rdzeń zostanie na wykresie na stałe.'
-        : 'Obciążenie procesora na żywo: średnia ze wszystkich rdzeni i najbardziej zajęty rdzeń. Odczyt odświeża się sam.',
+        ? t('tour.cpu.text.katalog')
+        : t('tour.cpu.text.other'),
     },
     {
-      chapter: 'Strona A · T01 Pulpit',
+      chapter: t('tour.chapter.dashboard'),
       view: dashboard,
       target: at('machine'),
-      title: 'Ta maszyna',
+      title: t('tour.machine.title'),
       text: katalog
-        ? 'System, dyski, pamięć i temperatura w jednej tabeli. Wartość w kolorze ostrzeżenia to rzecz, którą warto się zająć — skrót do właściwego modułu stoi tuż pod nią.'
-        : 'System, dyski, pamięć i temperatura. Wartość oznaczona jako ostrzeżenie to rzecz, którą warto się zająć.',
+        ? t('tour.machine.text.katalog')
+        : t('tour.machine.text.other'),
     },
     {
-      chapter: 'Strona A · T01 Pulpit',
+      chapter: t('tour.chapter.dashboard'),
       view: dashboard,
       // The block shrinks inside its scrolling column; its children are the real extent.
       target: `${at('reclaim')} > *`,
-      title: 'Ile da się odzyskać',
-      text: 'Jeden przycisk pyta wszystkie włączone moduły, ile miejsca zwolnią. To tylko odczyt: usuwasz zawsze w module, po jego potwierdzeniu.',
+      title: t('tour.reclaim.title'),
+      text: t('tour.reclaim.text'),
     },
     {
-      chapter: 'Strona A · T01 Pulpit',
+      chapter: t('tour.chapter.dashboard'),
       view: dashboard,
       target: at('index'),
-      title: 'Indeks',
+      title: t('tour.index.title'),
       text: katalog
-        ? 'Główne akcje włączonych modułów w jednej liście, z numerem katalogowym i odczytem obok. Kolorowy pasek mówi, z którego folderu pochodzą.'
-        : 'Główne akcje włączonych modułów zebrane w jednym miejscu. Każda prowadzi do swojego modułu.',
+        ? t('tour.index.text.katalog')
+        : t('tour.index.text.other'),
     },
     {
-      chapter: 'Strona A · T02 Katalog',
+      chapter: t('tour.chapter.catalog'),
       view: dashboard,
       target: at('folder'),
-      title: 'Numery katalogowe',
-      text: 'Setki to foldery: 100 dane i pliki, 200 system, 300 bezpieczeństwo, 400 aplikacje, 500 własne. Każdy moduł ma swój numer, a 900 to sama aplikacja.',
+      title: t('tour.numbers.title'),
+      text: t('tour.numbers.text'),
     },
     {
-      chapter: 'Strona A · T02 Katalog',
+      chapter: t('tour.chapter.catalog'),
       view: { kind: 'folder', folderId: 'data' },
       target: at('folder-list'),
-      title: 'Folder',
+      title: t('tour.folder.title'),
       text: katalog
-        ? 'Każdy wiersz to moduł: numer, opis, poziom ryzyka i jedna główna akcja. Kolejność zmieniasz, przeciągając wiersz, a pasek boczny ją przejmie.'
-        : 'Moduły tego folderu: numer, opis, poziom ryzyka i jedna główna akcja.',
+        ? t('tour.folder.text.katalog')
+        : t('tour.folder.text.other'),
     },
     ...moduleSteps,
     {
-      chapter: 'Strona A · T04 Bezpieczeństwo',
+      chapter: t('tour.chapter.security'),
       view: { kind: 'folder', folderId: 'security' },
       target: at('folder-list'),
-      title: 'Bezpieczeństwo',
-      text: 'Higiena przeglądarek czyści cache, ciasteczka i historię. Vault to lokalna, szyfrowana baza haseł z audytem bezpieczeństwa.',
+      title: t('tour.security.title'),
+      text: t('tour.security.text'),
     },
     {
-      chapter: 'Strona B · T05 Moduły',
+      chapter: t('tour.chapter.modules'),
       view: { kind: 'manager' },
       target: `${at('manager')} > section:first-of-type .cat-row:nth-child(-n+3)`,
-      title: 'Zarządzanie modułami',
+      title: t('tour.manager.title'),
       text: katalog
-        ? 'Włącz tylko to, czego potrzebujesz. Wyłączony moduł znika z paska bocznego i z indeksu, a jego numer w katalogu zostaje.'
-        : 'Włącz tylko to, czego potrzebujesz. Wyłączony moduł znika z nawigacji i z pulpitu, a jego numer w katalogu zostaje.',
+        ? t('tour.manager.text.katalog')
+        : t('tour.manager.text.other'),
     },
     {
-      chapter: 'Strona B · T06 Ustawienia',
+      chapter: t('tour.chapter.settings'),
       view: { kind: 'settings' },
       target: at('access'),
-      title: 'Poziom dostępu',
-      text: 'Pełny zbiera wszystkie zgody z góry i je zapamiętuje. Wybiórczy nadaje uprawnienia na jedno uruchomienie i pyta ponownie po restarcie.',
+      title: t('tour.access.title'),
+      text: t('tour.access.text'),
     },
     {
-      chapter: 'Strona B · T06 Ustawienia',
+      chapter: t('tour.chapter.settings'),
       view: { kind: 'settings' },
       target: at('blacklist'),
-      title: 'Czarna lista',
-      text: 'Ścieżki, których żaden skaner nie wylistuje ani nie zaproponuje do usunięcia: dysk innego systemu, archiwum zdjęć, dokumenty klienta.',
+      title: t('tour.blacklist.title'),
+      text: t('tour.blacklist.text'),
     },
     {
-      chapter: 'Strona B · T06 Ustawienia',
+      chapter: t('tour.chapter.settings'),
       view: { kind: 'settings' },
       target: at('look'),
-      title: 'Wygląd',
-      text: 'Sześć światów, każdy z własną nawigacją i pulpitem, jasny i ciemny; Katalog ma jeszcze pięć odmian. Niżej nadpiszesz akcent, kontrast, krój, etykiety, narożniki, gęstość, ruch i wykres — jeden przycisk wraca do ustawień świata.',
+      title: t('tour.look.title'),
+      text: t('tour.look.text'),
     },
     {
-      chapter: 'Strona B · T07 Powrót',
+      chapter: t('tour.chapter.return'),
       view: dashboard,
       target: at('tour'),
-      title: 'Samouczek zostaje tutaj',
-      text: 'Wrócisz do niego w każdej chwili pod 904. To koniec oprowadzenia.',
+      title: t('tour.return.title'),
+      text: t('tour.return.text'),
     },
   ]
 }

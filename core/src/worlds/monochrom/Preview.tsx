@@ -1,3 +1,5 @@
+import { t } from '../../i18n'
+
 /** Monochrom in miniature: a claim, the panel that proves it, the rail beside them. */
 export function Preview() {
   return (
@@ -7,7 +9,7 @@ export function Preview() {
         <i /><i /><i /><i />
       </span>
       <span className="mono-prev__claim">
-        <b>Zostało 47,5 GB.</b>
+        <b>{t('world.monochrom.preview.claim')}</b>
         <i />
       </span>
       <span className="mono-prev__proof">

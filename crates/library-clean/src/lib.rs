@@ -99,8 +99,11 @@ enum Response<T> {
     Err { ok: bool, error: String },
 }
 
-fn home() -> PathBuf {
-    env::var("HOME").map(PathBuf::from).unwrap_or_else(|_| PathBuf::from("/"))
+/// The person's home, or nothing when HOME is unset, empty or relative.
+/// Falling back to `/` would aim every location at the system's own
+/// `/Library` instead of theirs.
+fn home() -> Option<PathBuf> {
+    env::var_os("HOME").map(PathBuf::from).filter(|h| h.is_absolute())
 }
 
 /// Size of a directory tree. Unreadable entries are skipped rather than
@@ -143,7 +146,8 @@ fn scan(home: &Path, locations: &[Location], markers: &[&str]) -> ScanResult {
 
         let mut entries: Vec<Entry> = if loc.per_child {
             read.flatten()
-                .filter(|c| c.path().is_dir())
+                // file_type does not follow links: a link to ~/Documents is not a project.
+                .filter(|c| c.file_type().is_ok_and(|t| t.is_dir()))
                 .map(|c| entry(c.file_name().to_string_lossy().into_owned(), &c.path()))
                 .collect()
         } else {
@@ -201,6 +205,11 @@ fn clean(home: &Path, locations: &[Location], paths: Vec<String>) -> CleanResult
     let mut errors = Vec::new();
 
     for raw in paths {
+        // Gone since the scan (Xcode tidies DerivedData itself): nothing left to
+        // delete, and "outside the known places" would be a false alarm.
+        if fs::symlink_metadata(&raw).is_err_and(|e| e.kind() == io::ErrorKind::NotFound) {
+            continue;
+        }
         let Some((path, root)) = owning_root(home, locations, Path::new(&raw)) else {
             errors.push(format!("{raw}: poza katalogami, które ten moduł obsługuje"));
             continue;
@@ -244,11 +253,14 @@ pub fn serve(locations: &[Location], markers: &[&str]) {
         return;
     }
 
-    let h = home();
-    let response = match serde_json::from_str::<Request>(line.trim()) {
-        Ok(Request::Scan) => serde_json::to_string(&Response::Ok { ok: true, data: scan(&h, locations, markers) }),
-        Ok(Request::Clean { paths }) => serde_json::to_string(&Response::Ok { ok: true, data: clean(&h, locations, paths) }),
-        Err(e) => serde_json::to_string(&Response::<()>::Err { ok: false, error: format!("Nieprawidłowe żądanie: {e}") }),
+    let response = match (home(), serde_json::from_str::<Request>(line.trim())) {
+        (None, _) => serde_json::to_string(&Response::<()>::Err {
+            ok: false,
+            error: "Nie wiadomo, gdzie jest katalog domowy: zmienna HOME jest pusta albo względna.".into(),
+        }),
+        (Some(h), Ok(Request::Scan)) => serde_json::to_string(&Response::Ok { ok: true, data: scan(&h, locations, markers) }),
+        (Some(h), Ok(Request::Clean { paths })) => serde_json::to_string(&Response::Ok { ok: true, data: clean(&h, locations, paths) }),
+        (Some(_), Err(e)) => serde_json::to_string(&Response::<()>::Err { ok: false, error: format!("Nieprawidłowe żądanie: {e}") }),
     }
     .unwrap_or_else(|e| format!(r#"{{"ok":false,"error":"{e}"}}"#));
 
@@ -335,6 +347,30 @@ mod tests {
         let result = clean(&home, LOCATIONS, vec![outside, sibling.to_string_lossy().into_owned(), "/".into()]);
         assert_eq!((result.removed, result.errors.len()), (0, 3));
         assert!(home.join("Documents/thesis").exists() && sibling.exists());
+        fs::remove_dir_all(home).unwrap();
+    }
+
+    /// A link inside a per-project location is not a project: not listed,
+    /// and its target's size is not counted as reclaimable.
+    #[cfg(unix)]
+    #[test]
+    fn a_linked_child_is_not_listed() {
+        let home = sandbox("link");
+        std::os::unix::fs::symlink(home.join("Documents"), home.join("Library/Each/link")).unwrap();
+        let result = scan(&home, LOCATIONS, &[]);
+        let each = result.categories.iter().find(|c| c.id == "each").unwrap();
+        assert_eq!(each.entries.iter().map(|e| e.name.as_str()).collect::<Vec<_>>(), ["one"]);
+        fs::remove_dir_all(home).unwrap();
+    }
+
+    /// An entry that disappeared between the scan and the clean is neither
+    /// counted nor reported as an error.
+    #[test]
+    fn a_path_gone_since_the_scan_is_not_an_error() {
+        let home = sandbox("gone");
+        let gone = home.join("Library/Each/gone").to_string_lossy().into_owned();
+        let result = clean(&home, LOCATIONS, vec![gone]);
+        assert_eq!((result.removed, result.errors.len()), (0, 0));
         fs::remove_dir_all(home).unwrap();
     }
 

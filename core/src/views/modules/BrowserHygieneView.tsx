@@ -3,6 +3,7 @@ import { Icon } from '../../components/Icons'
 import { formatBytes } from './TempCleanView'
 import { confirmAction } from '../../components/confirm'
 import { callModule } from '../../data/callModule'
+import { t } from '../../i18n'
 
 interface Entry {
   label: string
@@ -72,7 +73,7 @@ export function BrowserHygieneView() {
     const paths = [...checked]
     if (paths.length === 0) return
     const total = selectedBytes(scan)
-    if (!(await confirmAction(`Usunąć ${paths.length} pozycji (${formatBytes(total)})? Tej operacji nie można cofnąć.`))) {
+    if (!(await confirmAction(t('view.browser-hygiene.clean.confirm', { n: paths.length, size: formatBytes(total) })))) {
       return
     }
     setPhase({ kind: 'cleaning', scan })
@@ -121,60 +122,58 @@ export function BrowserHygieneView() {
     <div>
       {phase.kind === 'idle' && (
         <div className="glass empty-state">
-          Wykryje zainstalowane przeglądarki (Firefox, Chrome i pochodne) i pokaże ile miejsca zajmuje cache,
-          ciasteczka i historia w każdym profilu. Nic nie zostanie usunięte bez Twojego potwierdzenia.
+          {t('view.browser-hygiene.intro')}
           <br />
-          <button className="btn btn-primary" onClick={runScan}>Skanuj</button>
+          <button className="btn btn-primary" onClick={runScan}>{t('view.browser-hygiene.scan')}</button>
         </div>
       )}
 
       {phase.kind === 'scanning' && (
         <div className="glass empty-state">
           <span className="scan-spinner" aria-hidden />
-          Wykrywanie przeglądarek...
+          {t('view.browser-hygiene.scanning')}
         </div>
       )}
 
       {phase.kind === 'error' && (
         <div className="glass empty-state" style={{ color: 'var(--critical)' }}>
-          Błąd: {phase.message}
+          {t('view.browser-hygiene.error', { error: phase.message })}
           <br />
-          <button className="btn btn-ghost" onClick={runScan}>Spróbuj ponownie</button>
+          <button className="btn btn-ghost" onClick={runScan}>{t('view.browser-hygiene.retry')}</button>
         </div>
       )}
 
       {scan && (
         <>
           {scan.categories.length === 0 ? (
-            <div className="glass empty-state">Nie wykryto obsługiwanych przeglądarek (Firefox, Chrome, Chromium, Brave, Edge, Opera, Vivaldi).</div>
+            <div className="glass empty-state">{t('view.browser-hygiene.none')}</div>
           ) : (
             <>
               {scan.running_browsers.length > 0 && (
                 <div className="form-warning" style={{ marginBottom: 14 }}>
-                  Uruchomione: {scan.running_browsers.join(', ')}. Czyszczenie danych działającej przeglądarki
-                  zwykle działa, ale dla pewności warto ją najpierw zamknąć.
+                  {t('view.browser-hygiene.running', { names: scan.running_browsers.join(', ') })}
                 </div>
               )}
 
               <div className="clean-summary glass">
                 <div>
-                  <div className="cs-label">Znaleziono do wyczyszczenia</div>
+                  <div className="cs-label">{t('view.browser-hygiene.found')}</div>
                   <div className="cs-value mono">{formatBytes(scan.total_bytes)}</div>
                 </div>
                 <div>
-                  <div className="cs-label">Zaznaczone</div>
+                  <div className="cs-label">{t('view.browser-hygiene.selected')}</div>
                   <div className="cs-value mono" style={{ color: 'var(--accent)' }}>{formatBytes(selectedBytes(scan))}</div>
                 </div>
                 <div style={{ marginLeft: 'auto', display: 'flex', gap: 10 }}>
                   <button className="btn btn-ghost" onClick={runScan} disabled={phase.kind === 'cleaning'}>
-                    Skanuj ponownie
+                    {t('view.browser-hygiene.scan-again')}
                   </button>
                   <button
                     className="btn btn-primary"
                     disabled={checked.size === 0 || phase.kind === 'cleaning'}
                     onClick={() => runClean(scan)}
                   >
-                    {phase.kind === 'cleaning' ? 'Czyszczenie...' : 'Wyczyść zaznaczone'}
+                    {phase.kind === 'cleaning' ? t('view.browser-hygiene.cleaning') : t('view.browser-hygiene.clean-selected')}
                   </button>
                 </div>
               </div>
@@ -188,7 +187,7 @@ export function BrowserHygieneView() {
                       <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                         <span className="count">{formatBytes(cat.total_bytes)}</span>
                         <button className="btn btn-ghost btn-mini" onClick={() => toggleCategory(cat)}>
-                          {allOn ? 'Odznacz wszystko' : 'Zaznacz wszystko'}
+                          {allOn ? t('view.browser-hygiene.deselect-all') : t('view.browser-hygiene.select-all')}
                         </button>
                       </div>
                     </div>
@@ -220,19 +219,19 @@ export function BrowserHygieneView() {
             <Icon name="check" />
           </div>
           <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--ink)', fontFamily: 'var(--sans)' }}>
-            Odzyskano {formatBytes(phase.result.freed_bytes)}
+            {t('view.browser-hygiene.freed', { size: formatBytes(phase.result.freed_bytes) })}
           </div>
-          Usunięto {phase.result.removed} pozycji.
+          {t('view.browser-hygiene.removed', { n: phase.result.removed })}
           {phase.result.errors.length > 0 && (
             <div className="clean-errors mono">
               {phase.result.errors.slice(0, 8).map((err) => (
                 <div key={err}>{err}</div>
               ))}
-              {phase.result.errors.length > 8 && <div>... i {phase.result.errors.length - 8} więcej</div>}
+              {phase.result.errors.length > 8 && <div>{t('view.browser-hygiene.more-errors', { n: phase.result.errors.length - 8 })}</div>}
             </div>
           )}
           <br />
-          <button className="btn btn-primary" onClick={runScan}>Skanuj ponownie</button>
+          <button className="btn btn-primary" onClick={runScan}>{t('view.browser-hygiene.scan-again')}</button>
         </div>
       )}
     </div>

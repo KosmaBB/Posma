@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { version } from '../../../package.json'
 import type { ShellProps } from '../index'
 import { catalogNumbers, folderNumber, folders, type ModuleDef } from '../../data/modules'
-import { UP_TO_ONE, plural, size, systemName, usedPct, useMachine, useReclaim } from '../../state/machine'
+import { UP_TO_ONE, size, systemName, usedPct, useMachine, useReclaim } from '../../state/machine'
 import { FolderView } from '../../views/FolderView'
 import { ModuleManager } from '../../views/ModuleManager'
 import { Settings } from '../../views/Settings'
@@ -12,6 +12,7 @@ import { Shelf } from './Shelf'
 import { Home } from './Home'
 import { ModuleFrame } from './ModuleFrame'
 import { Page } from './Page'
+import { t } from '../../i18n'
 
 /** Away from the home screen the readings only feed the shelf's spines. */
 const SHELF_REFRESH_MS = 15000
@@ -39,7 +40,7 @@ export function Shell({ app, settings }: ShellProps) {
   /** What a spine can say about its module without asking it anything. */
   function reading(m: ModuleDef): string | null {
     const hit = reclaim.foundOf(m.id)
-    if (hit) return hit.error ? 'błąd' : size(hit.bytes ?? 0)
+    if (hit) return hit.error ? t('world.kaseta.top.error') : size(hit.bytes ?? 0)
     if (m.id === 'disk-map' && machine.mainDisk) return `${usedPct(machine.mainDisk).toFixed(0)} %`
     if (m.id === 'health-monitor' && machine.temp) return `${machine.temp.value.toFixed(0)} °C`
     return null
@@ -53,10 +54,10 @@ export function Shell({ app, settings }: ShellProps) {
         <b>POSMA</b>
         <span>{version}</span>
         <span>{systemName(app)}</span>
-        <span>odczyt co {UP_TO_ONE.format(refreshMs / 1000)} s</span>
-        <span>dostęp {onboarding?.accessLevel === 'full' ? 'pełny' : 'wybiórczy'}</span>
+        <span>{t('world.kaseta.top.live', { s: UP_TO_ONE.format(refreshMs / 1000) })}</span>
+        <span>{t('world.kaseta.top.access', { level: t(onboarding?.accessLevel === 'full' ? 'world.kaseta.access.full' : 'world.kaseta.access.selective') })}</span>
         <span className="ks-top__push">
-          Półka · {enabled} {plural(enabled, 'kaseta', 'kasety', 'kaset')}
+          {t('world.kaseta.top.shelf', { n: enabled })}
         </span>
       </header>
 
@@ -66,24 +67,24 @@ export function Shell({ app, settings }: ShellProps) {
         {view.kind === 'dashboard' && <Home app={app} settings={settings} machine={machine} reclaim={reclaim} />}
         {view.kind === 'module' && <ModuleFrame key={view.moduleId} app={app} moduleId={view.moduleId} />}
         {view.kind === 'folder' && (
-          <Page no={folder ? folderNumber(folder.id) : '—'} spine={folder?.name ?? 'Folder'}>
+          <Page no={folder ? folderNumber(folder.id) : '—'} spine={folder?.name ?? t('world.kaseta.spine.folder')}>
             <div className="ks-folder">
               <FolderView app={app} folderId={view.folderId} />
             </div>
           </Page>
         )}
         {view.kind === 'manager' && (
-          <Page no="901" title="Zarządzanie modułami" spine="Moduły">
+          <Page no="901" title={t('page.manager')} spine={t('world.kaseta.spine.modules')}>
             <ModuleManager app={app} />
           </Page>
         )}
         {view.kind === 'settings' && (
-          <Page no="902" title="Ustawienia" spine="Ustawienia">
+          <Page no="902" title={t('page.settings')} spine={t('page.settings')}>
             <Settings app={app} settings={settings} />
           </Page>
         )}
         {view.kind === 'links' && (
-          <Page no="903" title="Linki" spine="Linki">
+          <Page no="903" title={t('page.links')} spine={t('page.links')}>
             <Links />
           </Page>
         )}

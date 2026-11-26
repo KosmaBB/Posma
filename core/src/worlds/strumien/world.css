@@ -24,7 +24,11 @@
   --peek: 44px;
   --gutter: 48px;
   --bar-h: 64px;
+  /* Familjen Grotesk's hinting merges the dot of i and j into the stem at 15–16 px. */
+  text-rendering: geometricPrecision;
 }
+/* The browser resets controls to auto, so they do not inherit it. */
+[data-world='strumien'] :is(button, input, select, textarea) { text-rendering: inherit; }
 
 [data-world='strumien'][data-theme='dark'] {
   --bg: #05070d; --bg-2: #0e121c; --bg-3: #181d2a;
@@ -190,6 +194,8 @@
   width: min(780px, calc(100% - var(--gutter) - 230px));
 }
 [data-world='strumien'] .sm-source { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 15px; font-weight: 600; }
+/* The processor's lines run under the source line; a soft patch of the field clears them off the words. */
+[data-world='strumien'] .sm-field--machine .sm-source { width: fit-content; background: var(--field); box-shadow: 0 0 12px 10px var(--field); border-radius: 999px; }
 [data-world='strumien'] .sm-source > i { width: 9px; height: 9px; border-radius: 50%; background: currentColor; flex: none; }
 [data-world='strumien'] .sm-source > span { font-weight: 400; color: var(--on-field-2); }
 [data-world='strumien'] .sm-source .chip { color: var(--on-field); border-color: color-mix(in srgb, var(--on-field) 50%, transparent); }
@@ -320,6 +326,10 @@
 [data-world='strumien'] .sm-tile[data-hot] { background-color: color-mix(in srgb, var(--field-ink) 24%, transparent); }
 [data-world='strumien'] .sm-tile[data-quiet] { background-color: color-mix(in srgb, var(--on-field) 5%, transparent); background-image: none; }
 [data-world='strumien'] .sm-tile__label { position: absolute; left: 16px; top: 14px; right: 12px; font-size: 15px; font-weight: 600; line-height: 1.3; }
+/* A patch the tile's own tint (field + 13 % ink, as above) hides the dots behind the words without a visible edge. */
+[data-world='strumien'] .sm-tile__label { width: fit-content; padding: 2px 8px; margin: -2px -8px; background: color-mix(in srgb, var(--field), var(--on-field) 13%); }
+[data-world='strumien'] .sm-tile[data-hot] .sm-tile__label { background: color-mix(in srgb, var(--field), var(--field-ink) 24%); }
+[data-world='strumien'] .sm-tile[data-quiet] .sm-tile__label { background: none; }
 [data-world='strumien'] .sm-tile__label span { display: block; font-weight: 400; color: var(--on-field-2); font-variant-numeric: tabular-nums; }
 /* The top shade covers the first labels; push them under the bar. */
 [data-world='strumien'] .sm-tile[data-top] .sm-tile__label { top: calc(var(--bar-h) + 40px); }
@@ -372,22 +382,22 @@
 }
 [data-world='strumien'] .sm-body { scroll-snap-align: start; min-height: 100%; padding: 0 var(--gutter) 96px; background: var(--bg); }
 [data-world='strumien'] .sm-body__head {
-  position: sticky; top: 0; z-index: 5; max-width: 1180px; margin: 0 auto 22px;
+  position: sticky; top: 0; z-index: 5; margin: 0 0 22px;
   display: flex; align-items: center; gap: 16px; padding: 18px 0; background: var(--bg); box-shadow: 0 1px 0 var(--border);
 }
 [data-world='strumien'] .sm-body__no { font-family: var(--display); font-stretch: 66%; font-weight: 800; font-size: 36px; line-height: 1; }
 [data-world='strumien'] .sm-body__head h1 { flex: 1; min-width: 0; font-size: 22px; font-weight: 650; }
-[data-world='strumien'] .sm-body__inner { max-width: 1180px; margin: 0 auto; }
+[data-world='strumien'] .sm-body__inner { min-width: 0; }
 
 /* ---------------------------------------------------------------- pages */
 [data-world='strumien'] .sm-page { position: absolute; inset: 0; overflow-y: auto; padding: 44px var(--gutter) 96px; }
-[data-world='strumien'] .sm-page__head { max-width: 1180px; margin: 0 auto 10px; display: flex; align-items: baseline; gap: 24px; }
+[data-world='strumien'] .sm-page__head { margin: 0 0 10px; display: flex; align-items: baseline; gap: 24px; }
 [data-world='strumien'] .sm-page__no {
   font-family: var(--display); font-stretch: 58%; font-weight: 800; font-size: clamp(84px, 13vh, 132px);
   line-height: 0.82; letter-spacing: -0.02em;
 }
 [data-world='strumien'] .sm-page__head h1 { font-size: 34px; font-weight: 650; }
-[data-world='strumien'] .sm-page__body { max-width: 1180px; margin: 0 auto; }
+[data-world='strumien'] .sm-page__body { min-width: 0; }
 
 /* ---------------------------------------------------------------- menu */
 [data-world='strumien'] .sm-menu {
@@ -451,7 +461,6 @@
 [data-world='strumien'] :is(.settings-list, .clean-list, .autostart-list, .diskmap-list) {
   border: 0; border-radius: var(--radius); background: var(--panel-bg); box-shadow: var(--panel-shadow); overflow: hidden;
 }
-[data-world='strumien'] .settings-list { max-width: 900px; }
 [data-world='strumien'] :is(.settings-list, .clean-list, .autostart-list, .diskmap-list) > .glass { border-color: var(--border); background: transparent; }
 [data-world='strumien'] .setting-row { gap: 20px; padding: calc(18px * var(--d)) 24px; }
 [data-world='strumien'] .setting-row .st-name { font-size: 16px; font-weight: 600; }
@@ -495,7 +504,7 @@
 [data-world='strumien'] .cat-row__name { font-size: 17px; font-weight: 650; }
 [data-world='strumien'] .cat-row__desc { font-size: 14px; }
 
-[data-world='strumien'] .links-grid { gap: 14px; max-width: 1000px; border: 0; }
+[data-world='strumien'] .links-grid { gap: 14px; border: 0; }
 [data-world='strumien'] .links-grid > * { border: var(--hair) solid var(--border); border-radius: var(--radius); }
 [data-world='strumien'] .link-card { padding: 24px; gap: 16px; }
 [data-world='strumien'] .link-card .lk-name { font-size: 17px; font-weight: 650; }

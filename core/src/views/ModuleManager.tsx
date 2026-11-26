@@ -1,4 +1,5 @@
 import type { AppState } from '../state/appState'
+import { t } from '../i18n'
 import { applyOrder, catalogNumbers, folderNumber, folders, modulesForOs, riskLabel } from '../data/modules'
 
 /**
@@ -25,7 +26,7 @@ export function ModuleManager({ app }: { app: AppState }) {
                 {folder.name}
               </h2>
               <span className="count">
-                włączone: {items.filter((m) => installedSet.has(m.id)).length} z {items.length}
+                {t('manager.enabled', { n: items.filter((m) => installedSet.has(m.id)).length, total: items.length })}
               </span>
             </div>
             <div className="cat-list">
@@ -41,7 +42,7 @@ export function ModuleManager({ app }: { app: AppState }) {
                     <span className="cat-row__meta">
                       <span className={`chip ${m.risk}`}>{riskLabel[m.risk]}</span>
                       {m.os.length === 3 ? (
-                        <span className="chip os">wszystkie systemy</span>
+                        <span className="chip os">{t('manager.os.all')}</span>
                       ) : (
                         m.os.map((o) => (
                           <span key={o} className="chip os">
@@ -53,7 +54,7 @@ export function ModuleManager({ app }: { app: AppState }) {
                     <button
                       className={`toggle${installed ? ' on' : ''}`}
                       aria-pressed={installed}
-                      aria-label={`${installed ? 'Wyłącz' : 'Włącz'} moduł ${m.name}`}
+                      aria-label={t(installed ? 'manager.toggle.off' : 'manager.toggle.on', { name: m.name })}
                       onClick={() => setModuleInstalled(m.id, !installed)}
                     />
                     <span className="code" />

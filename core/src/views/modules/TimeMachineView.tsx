@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core'
 import { Preparing } from '../../components/Preparing'
 import { confirmAction } from '../../components/confirm'
 import { callModule } from '../../data/callModule'
+import { t } from '../../i18n'
 
 interface ScanData {
   /** Oldest first, as tmutil names them: 2026-10-19-101500. */
@@ -53,8 +54,8 @@ export function TimeMachineView() {
 
   async function remove(keepLatest: boolean) {
     const question = keepLatest
-      ? 'Usunąć wszystkie lokalne migawki Time Machine oprócz najnowszej?'
-      : 'Usunąć wszystkie lokalne migawki Time Machine? Kopie na dysku zapasowym zostają, ale do następnej kopii nie da się wrócić do stanu sprzed niej z tego Maca.'
+      ? t('view.time-machine.remove.confirm-keep')
+      : t('view.time-machine.remove.confirm-all')
     if (!(await confirmAction(question))) return
     setBusy(true)
     setResult(null)
@@ -73,14 +74,14 @@ export function TimeMachineView() {
   if (error && !scan) {
     return (
       <div className="glass empty-state" style={{ color: 'var(--critical)' }}>
-        Błąd: {error}
+        {t('view.time-machine.error', { error })}
         <br />
-        <button className="btn btn-ghost" onClick={load}>Spróbuj ponownie</button>
+        <button className="btn btn-ghost" onClick={load}>{t('view.time-machine.retry')}</button>
       </div>
     )
   }
   if (!scan) {
-    return <Preparing title="Sprawdzam migawki Time Machine" note="Pytam tmutil o lokalne migawki dysku startowego." />
+    return <Preparing title={t('view.time-machine.preparing.title')} note={t('view.time-machine.preparing.note')} />
   }
 
   return (
@@ -88,14 +89,14 @@ export function TimeMachineView() {
       <div className="glass xc-summary">
         <div>
           <div className="xc-summary-value mono">{scan.snapshots.length}</div>
-          <div className="xc-summary-label">lokalnych migawek na dysku startowym</div>
+          <div className="xc-summary-label">{t('view.time-machine.count', { n: scan.snapshots.length })}</div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <button className="btn btn-ghost" onClick={() => remove(true)} disabled={busy || scan.snapshots.length < 2}>
-            Zostaw najnowszą
+            {t('view.time-machine.keep-latest')}
           </button>
           <button className="btn btn-primary" onClick={() => remove(false)} disabled={busy || scan.snapshots.length === 0}>
-            {busy ? 'Usuwam…' : 'Usuń wszystkie'}
+            {busy ? t('view.time-machine.removing') : t('view.time-machine.remove-all')}
           </button>
         </div>
       </div>
@@ -103,18 +104,18 @@ export function TimeMachineView() {
       {(scan.error || result) && (
         <div className="glass xc-result">
           {scan.error && <div className="xc-error">tmutil: {scan.error}</div>}
-          {result && (result.success ? result.output : <div className="xc-error">Nie udało się: {result.error}</div>)}
+          {result && (result.success ? result.output : <div className="xc-error">{t('view.time-machine.failed', { error: result.error ?? '' })}</div>)}
         </div>
       )}
 
       {scan.snapshots.length === 0 ? (
-        <div className="glass empty-state">Brak lokalnych migawek — nic tu nie zajmuje miejsca.</div>
+        <div className="glass empty-state">{t('view.time-machine.empty')}</div>
       ) : (
         <div className="clean-list">
           {[...scan.snapshots].reverse().map((s, i) => (
             <div key={s} className="glass clean-row" style={{ cursor: 'default', opacity: 1 }}>
               <span className="cr-path mono">{snapshotDate(s)}</span>
-              {i === 0 && <span className="chip low">najnowsza</span>}
+              {i === 0 && <span className="chip low">{t('view.time-machine.chip.latest')}</span>}
             </div>
           ))}
         </div>

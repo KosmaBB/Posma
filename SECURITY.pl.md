@@ -52,7 +52,7 @@ Wszystko, co pozwala komuś lub czemuś zrobić więcej, niż powinno:
 - **Brak zabezpieczeń w kodzie opisanym jako nieukończony** — brokery macOS i
   Windows nigdy nie działały na prawdziwym sprzęcie, a Windows nie ma w ogóle
   trybu demona. Zgłoszenia, że są niezweryfikowane, są słuszne, ale już znane;
-  patrz [docs/security-model.md](docs/security-model.md) (w języku angielskim).
+  patrz [docs/pl/security-model.md](docs/pl/security-model.md).
 
 ## Wspierane wersje
 
@@ -62,11 +62,10 @@ wskazywać, które wersje otrzymują poprawki.
 
 ## Kontekst projektowy
 
-[docs/security-model.md](docs/security-model.md) opisuje model uprawnień w
+[docs/pl/security-model.md](docs/pl/security-model.md) opisuje model uprawnień w
 całości — co może sięgnąć do roota, co go przed tym powstrzymuje oraz jawną
 listę tego, co **nie** jest chronione. Przeczytanie go najpierw pozwoli
 stwierdzić, czy coś jest błędem, czy udokumentowanym ograniczeniem.
 
-> Dokumentacja techniczna prowadzona jest po angielsku, żeby pozostała
-> użyteczna dla osób, które nie czytają po polsku. Zgłoszenia przyjmowane są w
-> obu językach.
+> Dokumentacja techniczna istnieje po polsku i po angielsku. Zgłoszenia
+> przyjmowane są w obu językach.
